@@ -63,7 +63,6 @@ const ChooseGoal = () => {
         <View style={tw`flex-1 bg-[#0f1418] px-6`}>
             <StatusBar style='light' />
             <View style={tw`mt-14 flex-1`}>
-                {/* Header */}
                 <View style={tw`mb-6`}>
                     <View style={tw`flex-row justify-between items-start`}>
                         <Text style={tw`text-white text-3xl font-bold flex-1 mr-4`}>
@@ -80,8 +79,6 @@ const ChooseGoal = () => {
                         All goals selected. Deselect any you don't want — your plan adapts automatically.
                     </Text>
                 </View>
-
-                {/* Goals List */}
                 <View style={tw`flex-row flex-wrap gap-3`}>
                     {goals.map((goal, index) => (
                         <GoalItem
@@ -101,8 +98,6 @@ const ChooseGoal = () => {
                 </View>
                 */}
             </View>
-
-            {/* Bottom Button */}
             <View style={tw`pb-8`}>
                 <CustomButton
                     name="Set My Goals"
