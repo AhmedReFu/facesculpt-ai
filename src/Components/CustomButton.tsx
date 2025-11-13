@@ -12,7 +12,7 @@ const CustomButton = ({ name, route }: any) => {
           }
           activeOpacity={0.8}
           style={tw`bg-[#60A5FB] p-5 my-6 rounded-xl flex-row gap-2 items-center justify-center`}>
-          <Text style={tw`text-center text-xl `}>{name}</Text>
+          <Text style={tw`text-center text-xl font-semibold`}>{name}</Text>
       </TouchableOpacity>
   )
 }
