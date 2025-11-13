@@ -60,7 +60,7 @@ const ChooseGoal = () => {
     }
 
     return (
-        <View style={tw`flex-1 bg-[#0f1418] px-6`}>
+        <View style={tw`flex-1 bg-[#000000] px-6`}>
             <StatusBar style='light' />
             <View style={tw`mt-14 flex-1`}>
                 <View style={tw`mb-6`}>
