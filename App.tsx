@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as React from 'react';
 import DailyRoutine from './src/GymWorkout/DailyRoutine';
+import Exercise from './src/GymWorkout/Exercise';
 import ChooseGoal from './src/Home/ChooseGoal';
 import FaceMetrics from './src/Home/FaceMetrics';
 import FaceScan from './src/Home/FaceScan';
@@ -21,6 +22,7 @@ function RootStack() {
       <Stack.Screen name="ChooseGoal" component={ChooseGoal} />
       <Stack.Screen name="UnlockFacialGym" component={UnlockFacialGym} />
       <Stack.Screen name="DailyRoutine" component={DailyRoutine} />
+      <Stack.Screen name="Exercise" component={Exercise} />
     </Stack.Navigator>
   );
 }
