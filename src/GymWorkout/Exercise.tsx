@@ -2,8 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
-
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import tw from "twrnc";
 import CustomButton from '../Components/CustomButton';
 
@@ -30,47 +29,66 @@ const Exercise = () => {
         'Breathe steadily through your nose.',
         'Release slowly and reset posture.',
     ];
-  return (
-      <View style={tw`flex-1 bg-[#000000] px-6`}>
-          <StatusBar style='light' />
-          <View style={tw`mt-14 flex-1`}>
-              <View style={tw`mb-6`}>
-                  <View style={tw`flex-row items-center justify-center py-4 relative`}>
-                      <TouchableOpacity
-                          onPress={() => navigator.goBack()}
-                          style={tw`right-34`}
-                      >
-                          <Ionicons name="arrow-back" size={28} color="white" />
-                      </TouchableOpacity>
 
-                      <Text style={tw`text-white text-xl font-semibold`}>
-                          Exercise
-                      </Text>
-                  </View>
-              </View>
-              <Text style={tw`text-white text-2xl my-4`}>Jaw Clench Hold</Text>
-              <View style={tw`bg-[#1D2229] rounded-2xl p-20 flex-row gap-4`}>
-                  <View style={tw``}>
-                      <Ionicons name="image" size={28} color="#60A5FB" />
-                  </View>
-                  <View ><Text style={tw`text-white text-lg`}>Diagram coming soon</Text></View>
-              </View>
-              <View>
-                  <Text style={tw`text-white text-lg my-4`}>How to do it</Text>
-              </View>
-              <View style={tw` rounded-2xl`}>
-                  
+    return (
+        <View style={tw`flex-1 bg-[#000000]`}>
+            <StatusBar style='light' />
 
-                  {instructions.map((instruction, index) => (
-                      <InstructionItem key={index} text={instruction} />
-                  ))}
-              </View>
-          </View>
-          <View style={tw`my-4`}>
-              <CustomButton name="Start Exercise" route="Exercise" />
-          </View>
-          </View>
-  )
-}
+            <View style={tw`px-6 mt-14`}>
+                <View style={tw`mb-2`}>
+                    <View style={tw`flex-row items-center py-4`}>
+                        <TouchableOpacity
+                            onPress={() => navigator.goBack()}
+                            style={tw`absolute left-0 z-10`}
+                        >
+                            <Ionicons name="arrow-back" size={28} color="white" />
+                        </TouchableOpacity>
 
-export default Exercise
+                        <Text style={tw`text-white text-xl font-semibold flex-1 text-center`}>
+                            Exercise Details
+                        </Text>
+                    </View>
+                </View>
+                <Text style={tw`text-[#9CA3AF] text-base leading-6`}>
+                    Personalized from your latest scan.
+                </Text>
+            </View>
+
+            <ScrollView
+                style={tw`flex-1 px-6`}
+                showsVerticalScrollIndicator={false}
+            >
+                <Text style={tw`text-white text-2xl font-semibold my-4`}>
+                    Jaw Clench Hold
+                </Text>
+
+                <View style={tw`bg-[#1D2229] rounded-2xl p-10 flex-row items-center mb-6`}>
+                    <View style={tw`bg-[#202F41] p-4 rounded-xl mr-4`}>
+                        <Ionicons name="image" size={32} color="#60A5FB" />
+                    </View>
+                    <Text style={tw`text-white text-lg`}>
+                        Diagram coming soon
+                    </Text>
+                </View>
+
+                <Text style={tw`text-white text-lg font-semibold mb-4`}>
+                    How to do it
+                </Text>
+
+                <View style={tw`mb-6`}>
+                    {instructions.map((instruction, index) => (
+                        <InstructionItem key={index} text={instruction} />
+                    ))}
+                </View>
+
+                <View style={tw`h-24`} />
+            </ScrollView>
+
+            <View style={tw`px-6 pb-6 pt-4 bg-[#000000]`}>
+                <CustomButton name="Start Exercise" route="Exercise" />
+            </View>
+        </View>
+    );
+};
+
+export default Exercise;

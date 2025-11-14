@@ -68,7 +68,9 @@ const FaceMetrics = () => {
               <Text style={tw`text-white text-xl mt-6`}>Next, choose your focus goal</Text>
               <Text style={tw`text-[#9CA3AF] text-[4] my-2`}>We'll tailor a 7-day routine around it. You can change anytime.</Text>
           </View>
-          <CustomButton name="Choose goals" route="ChooseGoal"/>
+          <View style={tw`my-6`}>
+              <CustomButton name="Choose goals" route="ChooseGoal" />
+          </View>
       </View>
     
   )

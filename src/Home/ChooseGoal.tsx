@@ -98,7 +98,7 @@ const ChooseGoal = () => {
                 </View>
                 */}
             </View>
-            <View style={tw`pb-8`}>
+            <View style={tw`my-6`}>
                 <CustomButton
                     name="Set My Goals"
                     route="UnlockFacialGym"

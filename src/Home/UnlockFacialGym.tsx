@@ -31,7 +31,6 @@ const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanP
   >
     <View style={tw`flex-row items-center justify-between`}>
       <View style={tw`flex-row items-center flex-1`}>
-        {/* Radio Button */}
         <View style={tw`w-6 h-6 rounded-full border-2 ${isSelected ? 'border-[#60A5FA]' : 'border-gray-500'
           } items-center justify-center mr-3`}>
           {isSelected && (
@@ -39,7 +38,6 @@ const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanP
           )}
         </View>
 
-        {/* Plan Details */}
         <View style={tw`flex-1`}>
           <View style={tw`flex-row items-center`}>
             <Text style={tw`text-white text-xl font-bold`}>
@@ -123,21 +121,21 @@ const UnlockFacialGym = () => {
           </Text>
         </View>
         <View>
-          <View style={tw`flex-row items-center gap-4`}>
+          <View style={tw`flex-row items-center gap-4 my-1`}>
             <MaterialIcons name="auto-awesome" size={28} color="#60A5FB" />
-            <Text style={tw`text-[#9CA3AF] text-lg my-2 `}>Adaptive plans</Text>
+            <Text style={tw`text-[#9CA3AF] text-lg  `}>Adaptive plans</Text>
           </View>
-          <View style={tw`flex-row items-center gap-4`}>
+          <View style={tw`flex-row items-center gap-4 my-1`}>
             <MaterialCommunityIcons name="head-cog" size={28} color="#60A5FB" />
-            <Text style={tw`text-[#9CA3AF] text-lg my-2 `}>Al FaceCoach</Text>
+            <Text style={tw`text-[#9CA3AF] text-lg  `}>Al FaceCoach</Text>
           </View>
-          <View style={tw`flex-row items-center gap-4`}>
+          <View style={tw`flex-row items-center gap-4 my-1`}>
             <MaterialCommunityIcons name="chart-timeline-variant-shimmer" size={28} color="#60A5FB" />
-            <Text style={tw`text-[#9CA3AF] text-lg my-2 `}>Private leaderboard</Text>
+            <Text style={tw`text-[#9CA3AF] text-lg `}>Private leaderboard</Text>
           </View>
-          <View style={tw`flex-row items-center gap-4`}>
+          <View style={tw`flex-row items-center gap-4 my-1`}>
             <MaterialIcons name="bar-chart" size={28} color="#60A5FB" />
-            <Text style={tw`text-[#9CA3AF] text-lg my-2 `}>Progress graph</Text>
+            <Text style={tw`text-[#9CA3AF] text-lg `}>Progress graph</Text>
           </View>
 
         </View>
@@ -157,11 +155,13 @@ const UnlockFacialGym = () => {
           ))}
         </View>
 
-        <CustomButton name="Start Free 7-Day Trial" route="DailyRoutine" />
+        <View style={tw`my-4`}>
+          <CustomButton name="Start Free 7-Day Trial" route="DailyRoutine" />
+        </View>
         <Text style={tw`text-white text-center text-lg `} >7-day free trial, cancel anytime.</Text>
         <View style={tw`my-6 `}>
           <Text style={tw`text-[#60A5FBE5]  text-lg `}>Restore Purchases</Text>
-          <Text style={tw`text-white text-lg `}>Cancel anytime. After trial, plan auto-renews. Terms & Privacy</Text>
+          <Text style={tw`text-white text-md `}>Cancel anytime. After trial, plan auto-renews. Terms & Privacy</Text>
         </View>
       </View>
 
