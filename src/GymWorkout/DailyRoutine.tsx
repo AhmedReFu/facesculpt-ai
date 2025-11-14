@@ -37,6 +37,20 @@ const DailyRoutine = () => {
                       <MaterialIcons name="auto-awesome" size={28} color="#60A5FB" />
                       <Text style={tw`text-white text-lg  px-4 `}>Based on your facial scan, these workouts were created to strengthen and balance your features.</Text>
                   </View>
+                  <TouchableOpacity onPress={() => (navigator as any).navigate('Exercise')} activeOpacity={0.8}>
+                  <View style={tw`flex-row justify-between items-center  bg-[#1D2229] rounded-xl p-4 my-2`}> <View style={tw`flex-row items-center`}>
+                      <View style={tw`bg-[#202F41] p-3 rounded-xl mr-4`}>
+                          <MaterialCommunityIcons name="meditation" size={28} color="#60A5FB" />
+                      </View>
+                      <View>
+                          <Text style={tw`text-white text-lg `}>Jaw Clench Hold</Text>
+                          <Text style={tw`text-white`}>8s</Text>
+                      </View>
+                  </View>
+                      <MaterialIcons name="keyboard-arrow-right" size={30} color="white" />
+                      </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => (navigator as any).navigate('Exercise')} activeOpacity={0.8}>
                   <View style={tw`flex-row justify-between items-center  bg-[#1D2229] rounded-xl p-4 my-2`}> <View style={tw`flex-row items-center`}>
                       <View style={tw`bg-[#202F41] p-3 rounded-xl mr-4`}>
                           <MaterialCommunityIcons name="meditation" size={28} color="#60A5FB" />
@@ -48,6 +62,8 @@ const DailyRoutine = () => {
                   </View>
                       <MaterialIcons name="keyboard-arrow-right" size={30} color="white" />
                   </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => (navigator as any).navigate('Exercise')} activeOpacity={0.8}>
                   <View style={tw`flex-row justify-between items-center  bg-[#1D2229] rounded-xl p-4 my-2`}> <View style={tw`flex-row items-center`}>
                       <View style={tw`bg-[#202F41] p-3 rounded-xl mr-4`}>
                           <MaterialCommunityIcons name="meditation" size={28} color="#60A5FB" />
@@ -59,34 +75,26 @@ const DailyRoutine = () => {
                   </View>
                       <MaterialIcons name="keyboard-arrow-right" size={30} color="white" />
                   </View>
-                  <View style={tw`flex-row justify-between items-center  bg-[#1D2229] rounded-xl p-4 my-2`}> <View style={tw`flex-row items-center`}>
-                      <View style={tw`bg-[#202F41] p-3 rounded-xl mr-4`}>
-                          <MaterialCommunityIcons name="meditation" size={28} color="#60A5FB" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => (navigator as any).navigate('Exercise')} activeOpacity={0.8}>
+                      <View style={tw`flex-row justify-between items-center  bg-[#1D2229] rounded-xl p-4 my-2`} > <View style={tw`flex-row items-center`}>
+                          <View style={tw`bg-[#202F41] p-3 rounded-xl mr-4`}>
+                              <MaterialCommunityIcons name="meditation" size={28} color="#60A5FB" />
+                          </View>
+                          <View>
+                              <Text style={tw`text-white text-lg `}>Jaw Clench Hold</Text>
+                              <Text style={tw`text-white`}>8s</Text>
+                          </View>
                       </View>
-                      <View>
-                          <Text style={tw`text-white text-lg `}>Jaw Clench Hold</Text>
-                          <Text style={tw`text-white`}>8s</Text>
+                          <MaterialIcons name="keyboard-arrow-right" size={30} color="white" />
                       </View>
-                  </View>
-                      <MaterialIcons name="keyboard-arrow-right" size={30} color="white" />
-                  </View>
-                  <View style={tw`flex-row justify-between items-center  bg-[#1D2229] rounded-xl p-4 my-2`}> <View style={tw`flex-row items-center`}>
-                      <View style={tw`bg-[#202F41] p-3 rounded-xl mr-4`}>
-                          <MaterialCommunityIcons name="meditation" size={28} color="#60A5FB" />
-                      </View>
-                      <View>
-                          <Text style={tw`text-white text-lg `}>Jaw Clench Hold</Text>
-                          <Text style={tw`text-white`}>8s</Text>
-                      </View>
-                  </View>
-                      <MaterialIcons name="keyboard-arrow-right" size={30} color="white" />
-                  </View>
+                  </TouchableOpacity>
               </View>
               <View> 
               </View>
           </View>
           <View style={tw`my-4`}>
-              <CustomButton name="Start Workout" route="DailyRoutine" />
+              <CustomButton name="Start Workout" route="Exercise" />
         </View>
       </View>
   )
