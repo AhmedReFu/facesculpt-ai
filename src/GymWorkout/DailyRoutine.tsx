@@ -10,12 +10,77 @@ import CustomButton from '../Components/CustomButton';
 const DailyRoutine = () => {
     const navigator = useNavigation();
 
+    // Exercise data with instructions
+    const exercises = [
+        {
+            id: 1,
+            name: 'Jaw Clench Hold',
+            duration: '8s',
+            icon: 'meditation',
+            instructions: [
+                'Sit upright with relaxed shoulders.',
+                'Engage the target muscle gently first.',
+                'Increase tension to a firm, pain-free hold.',
+                'Breathe steadily through your nose.',
+                'Release slowly and reset posture.',
+            ]
+        },
+        {
+            id: 2,
+            name: 'Eye Circle Massage',
+            duration: '12s',
+            icon: 'face-man',
+            instructions: [
+                'Close your eyes gently.',
+                'Use your fingertips to massage in circular motions.',
+                'Apply light pressure around the eye area.',
+                'Continue for the specified duration.',
+                'Relax and breathe deeply.',
+            ]
+        },
+        {
+            id: 3,
+            name: 'Chew Motion',
+            duration: '10s',
+            icon: 'food-apple',
+            instructions: [
+                'Sit in a comfortable position.',
+                'Perform slow chewing motions.',
+                'Keep your jaw relaxed.',
+                'Maintain steady breathing.',
+                'Focus on the jaw muscles.',
+            ]
+        },
+        {
+            id: 4,
+            name: 'Cheek Lift',
+            duration: '15s',
+            icon: 'emoticon-happy',
+            instructions: [
+                'Smile widely to engage cheek muscles.',
+                'Hold the position steadily.',
+                'Keep breathing normally.',
+                'Feel the muscle tension.',
+                'Release gently.',
+            ]
+        },
+    ];
+
+    const handleExercisePress = (exercise: any) => {
+        // Pass exercise data when navigating
+        (navigator as any).navigate('Exercise', {
+            name: exercise.name,
+            duration: exercise.duration,
+            instructions: exercise.instructions,
+        });
+    };
+
     return (
-        <View style={tw`flex-1 bg-[#000000]`}>
+        <View style={tw`flex-1 bg-[#000000] px-6`}>
             <StatusBar style='light' />
-            <View style={tw`px-6 mt-14`}>
+            <View style={tw`flex-1  mt-14`}>
                 <View style={tw`mb-2`}>
-                    <View style={tw`flex-row items-center py-4`}>
+                    <View style={tw`flex-row items-center`}>
                         <TouchableOpacity
                             onPress={() => navigator.goBack()}
                             style={tw`absolute left-0 z-10`}
@@ -28,105 +93,52 @@ const DailyRoutine = () => {
                         </Text>
                     </View>
 
-                    <Text style={tw`text-[#9CA3AF] text-lg mt-4 leading-6`}>
-                        Personalized from your latest scan.
-                    </Text>
-                </View>
-            </View>
 
+                </View>
+
+                <Text style={tw`text-[#9CA3AF] text-lg mt-4 leading-6`}>
+                    Personalized from your latest scan.
+                </Text>
             <ScrollView
-                style={tw`flex-1 px-6`}
+                    style={tw``}
                 showsVerticalScrollIndicator={false}
             >
                 <View style={tw`flex-row bg-[#1D2229] rounded-xl p-4 my-3`}>
-                    <MaterialIcons name="auto-awesome" size={32} color="#60A5FB" />
-                    <View style={tw`flex-1 pl-4`}>
-                        <Text style={tw`text-white text-lg`}>
-                            Based on your facial scan these workouts were created to strengthen and balance your features
+                        <MaterialIcons name="auto-awesome" size={28} color="#60A5FB" style={tw`mt-1`} />
+                        <View style={tw`flex-1 ml-3`}>
+                            <Text style={tw`text-white text-lg leading-8`}>
+                                Based on your facial scan, these workouts were created to strengthen and balance your features.
                         </Text>
                     </View>
                 </View>
 
-
-                <TouchableOpacity
-
-                    onPress={() => (navigator as any).navigate('Exercise')}
-                    activeOpacity={0.8}
-                >
-                    <View style={tw`flex-row justify-between items-center bg-[#1D2229] rounded-xl p-4 my-2`}>
-                        <View style={tw`flex-row items-center`}>
-                            <View style={tw`bg-[#202F41] p-3 rounded-xl mr-4`}>
-                                <MaterialCommunityIcons name="meditation" size={28} color="#60A5FB" />
+                    {exercises.map((exercise) => (
+                        <TouchableOpacity
+                            key={exercise.id}
+                            onPress={() => handleExercisePress(exercise)}
+                            activeOpacity={0.8}
+                        >
+                            <View style={tw`flex-row justify-between items-center bg-[#1D2229] rounded-xl p-4 my-2`}>
+                                <View style={tw`flex-row items-center`}>
+                                    <View style={tw`bg-[#202F41] p-3 rounded-xl mr-4`}>
+                                        <MaterialCommunityIcons name={exercise.icon as any} size={28} color="#60A5FB" />
+                                    </View>
+                                    <View>
+                                        <Text style={tw`text-white text-lg font-medium`}>{exercise.name}</Text>
+                                        <Text style={tw`text-[#9CA3AF] text-sm mt-1`}>{exercise.duration}</Text>
+                                    </View>
+                                </View>
+                                <MaterialIcons name="keyboard-arrow-right" size={30} color="white" />
                             </View>
-                            <View>
-                                <Text style={tw`text-white text-lg`}>Jaw Clench Hold</Text>
-                                <Text style={tw`text-[#9CA3AF] text-sm`}>8s</Text>
-                            </View>
-                        </View>
-                        <MaterialIcons name="keyboard-arrow-right" size={30} color="white" />
-                    </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-
-                    onPress={() => (navigator as any).navigate('Exercise')}
-                    activeOpacity={0.8}
-                >
-                    <View style={tw`flex-row justify-between items-center bg-[#1D2229] rounded-xl p-4 my-2`}>
-                        <View style={tw`flex-row items-center`}>
-                            <View style={tw`bg-[#202F41] p-3 rounded-xl mr-4`}>
-                                <MaterialCommunityIcons name="meditation" size={28} color="#60A5FB" />
-                            </View>
-                            <View>
-                                <Text style={tw`text-white text-lg`}>Eye Circle Massage</Text>
-                                <Text style={tw`text-[#9CA3AF] text-sm`}>8s</Text>
-                            </View>
-                        </View>
-                        <MaterialIcons name="keyboard-arrow-right" size={30} color="white" />
-                    </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-
-                    onPress={() => (navigator as any).navigate('Exercise')}
-                    activeOpacity={0.8}
-                >
-                    <View style={tw`flex-row justify-between items-center bg-[#1D2229] rounded-xl p-4 my-2`}>
-                        <View style={tw`flex-row items-center`}>
-                            <View style={tw`bg-[#202F41] p-3 rounded-xl mr-4`}>
-                                <MaterialCommunityIcons name="meditation" size={28} color="#60A5FB" />
-                            </View>
-                            <View>
-                                <Text style={tw`text-white text-lg`}>Chew Motion</Text>
-                                <Text style={tw`text-[#9CA3AF] text-sm`}>8s</Text>
-                            </View>
-                        </View>
-                        <MaterialIcons name="keyboard-arrow-right" size={30} color="white" />
-                    </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-
-                    onPress={() => (navigator as any).navigate('Exercise')}
-                    activeOpacity={0.8}
-                >
-                    <View style={tw`flex-row justify-between items-center bg-[#1D2229] rounded-xl p-4 my-2`}>
-                        <View style={tw`flex-row items-center`}>
-                            <View style={tw`bg-[#202F41] p-3 rounded-xl mr-4`}>
-                                <MaterialCommunityIcons name="meditation" size={28} color="#60A5FB" />
-                            </View>
-                            <View>
-                                <Text style={tw`text-white text-lg`}>Cheek Lift</Text>
-                                <Text style={tw`text-[#9CA3AF] text-sm`}>8s</Text>
-                            </View>
-                        </View>
-                        <MaterialIcons name="keyboard-arrow-right" size={30} color="white" />
-                    </View>
-                </TouchableOpacity>
-
+                        </TouchableOpacity>
+                    ))}
 
                 <View style={tw`h-24`} />
             </ScrollView>
 
-            <View style={tw`px-6 pb-6 pt-4 bg-[#000000]`}>
+                <View style={tw` pb-6 pt-4 bg-[#000000]`}>
                 <CustomButton name="Start Workout" route="Exercise" />
+                </View>
             </View>
         </View>
     );

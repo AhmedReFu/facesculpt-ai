@@ -2,13 +2,16 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as React from 'react';
+
 import DailyRoutine from './src/GymWorkout/DailyRoutine';
 import Exercise from './src/GymWorkout/Exercise';
+import Sessions from './src/GymWorkout/Sessions';
 import ChooseGoal from './src/Home/ChooseGoal';
 import FaceMetrics from './src/Home/FaceMetrics';
 import FaceScan from './src/Home/FaceScan';
 import Home from './src/Home/Home';
 import UnlockFacialGym from './src/Home/UnlockFacialGym';
+import DailyTrack from './src/TrackGym/DailyTrack';
 
 
 const Stack = createNativeStackNavigator();
@@ -23,6 +26,8 @@ function RootStack() {
       <Stack.Screen name="UnlockFacialGym" component={UnlockFacialGym} />
       <Stack.Screen name="DailyRoutine" component={DailyRoutine} />
       <Stack.Screen name="Exercise" component={Exercise} />
+      <Stack.Screen name="Sessions" component={Sessions} />
+      <Stack.Screen name="DailyTrack" component={DailyTrack} />
     </Stack.Navigator>
   );
 }

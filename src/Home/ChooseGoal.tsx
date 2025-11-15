@@ -33,7 +33,6 @@ const ChooseGoal = () => {
 
     const [selectedGoals, setSelectedGoals] = useState<string[]>([
         'Sharper Jawline',
-        'Reduce Puffiness',
         'Improve Symmetry'
     ])
 
