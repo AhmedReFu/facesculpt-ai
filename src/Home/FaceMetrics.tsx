@@ -3,13 +3,14 @@ import EvilIcons from '@expo/vector-icons/EvilIcons';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 import tw from "twrnc";
 import CustomButton from '../Components/CustomButton';
 
 
-const FaceMetrics = () => {
+const FaceMetrics = ({ route }: any) => {
     const navigator = useNavigation();
+    const { imageUri } = route.params;
   return (
       <View style={tw`flex-1 bg-[#000000] px-6`}>
           <StatusBar style='light' />
@@ -29,6 +30,10 @@ const FaceMetrics = () => {
                       From your latest scan
                   </Text>
               </View>
+
+              <View style={tw``}>
+                  <Image source={{ uri: imageUri }} style={tw`h-56 rounded-4xl`} resizeMode="contain" />
+              </View>
               <View style={tw`bg-[#262a30] p-4 rounded-2xl`}>
                   <View style={tw`flex-row items-center`}>
                       <View style={tw`bg-[#60A5FB] rounded-md p-1 mr-4`}>
@@ -36,7 +41,7 @@ const FaceMetrics = () => {
                       </View>
                       <Text style={tw`text-white text-2xl`}>Face Metrics</Text>
                   </View>
-                  <View style={tw`flex-row items-center my-2 justify-between`}>
+                  <View style={tw`flex-row items-center my-1 justify-between`}>
                       <View>
                           <Text style={tw`text-[#9CA3AF] text-xl my-2`}>Jawline Angle</Text>
                           <Text style={tw`text-[#9CA3AF] text-md`}>Goal 118°</Text>
@@ -45,7 +50,7 @@ const FaceMetrics = () => {
                           <Text style={tw`text-white text-2xl`}>130°</Text>
                       </View>
                   </View>
-                  <View style={tw`flex-row items-center my-2 justify-between`}>
+                  <View style={tw`flex-row items-center my-1 justify-between`}>
                       <View>
                           <Text style={tw`text-[#9CA3AF] text-xl my-2`}>Symmetry Score</Text>
                           <Text style={tw`text-[#9CA3AF] text-md`}>Goal 97%</Text>
@@ -54,7 +59,7 @@ const FaceMetrics = () => {
                           <Text style={tw`text-white text-2xl`}>89%</Text>
                       </View>
                   </View>
-                  <View style={tw`flex-row items-center my-2 justify-between`}>
+                  <View style={tw`flex-row items-center my-1 justify-between`}>
                       <View>
                           <Text style={tw`text-[#9CA3AF] text-xl my-2`}>Puffiness Index</Text>
                           <Text style={tw`text-[#9CA3AF] text-md`}>Goal 0.30</Text>
