@@ -32,7 +32,7 @@ const FaceMetrics = ({ route }: any) => {
               </View>
 
               <View style={tw``}>
-                  <Image source={{ uri: imageUri }} style={tw`h-56 rounded-4xl`} resizeMode="contain" />
+                  <Image source={{ uri: imageUri }} style={tw`h-56 rounded-3xl`} resizeMode="contain" />
               </View>
               <View style={tw`bg-[#262a30] p-4 rounded-2xl`}>
                   <View style={tw`flex-row items-center`}>
@@ -44,7 +44,7 @@ const FaceMetrics = ({ route }: any) => {
                   <View style={tw`flex-row items-center my-1 justify-between`}>
                       <View>
                           <Text style={tw`text-[#9CA3AF] text-xl my-2`}>Jawline Angle</Text>
-                          <Text style={tw`text-[#9CA3AF] text-md`}>Goal 118°</Text>
+                          <Text style={tw`text-[#9CA3AF] text-lg`}>Goal 118°</Text>
                       </View>
                       <View>
                           <Text style={tw`text-white text-2xl`}>130°</Text>
@@ -53,7 +53,7 @@ const FaceMetrics = ({ route }: any) => {
                   <View style={tw`flex-row items-center my-1 justify-between`}>
                       <View>
                           <Text style={tw`text-[#9CA3AF] text-xl my-2`}>Symmetry Score</Text>
-                          <Text style={tw`text-[#9CA3AF] text-md`}>Goal 97%</Text>
+                          <Text style={tw`text-[#9CA3AF] text-lg`}>Goal 97%</Text>
                       </View>
                       <View>
                           <Text style={tw`text-white text-2xl`}>89%</Text>
@@ -62,7 +62,7 @@ const FaceMetrics = ({ route }: any) => {
                   <View style={tw`flex-row items-center my-1 justify-between`}>
                       <View>
                           <Text style={tw`text-[#9CA3AF] text-xl my-2`}>Puffiness Index</Text>
-                          <Text style={tw`text-[#9CA3AF] text-md`}>Goal 0.30</Text>
+                          <Text style={tw`text-[#9CA3AF] text-lg`}>Goal 0.30</Text>
                       </View>
                       <View>
                           <Text style={tw`text-white text-2xl`}>0.86</Text>

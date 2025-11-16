@@ -161,7 +161,7 @@ const UnlockFacialGym = () => {
         <Text style={tw`text-white text-center text-lg `} >7-day free trial, cancel anytime.</Text>
         <View style={tw`my-6 `}>
           <Text style={tw`text-[#60A5FBE5]  text-lg `}>Restore Purchases</Text>
-          <Text style={tw`text-white text-md `}>Cancel anytime. After trial, plan auto-renews. Terms & Privacy</Text>
+          <Text style={tw`text-white text-lg `}>Cancel anytime. After trial, plan auto-renews. Terms & Privacy</Text>
         </View>
       </View>
 

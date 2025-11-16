@@ -22,15 +22,9 @@ const Exercise = ({ route }: any) => {
     const navigation = useNavigation();
 
     // Get data with fallbacks
-    const name = route?.params?.name || 'Jaw Clench Hold';
-    const duration = route?.params?.duration || '9';
-    const instructions = route?.params?.instructions || [
-        'Sit upright with relaxed shoulders.',
-        'Engage the target muscle gently first.',
-        'Increase tension to a firm, pain-free hold.',
-        'Breathe steadily through your nose.',
-        'Release slowly and reset posture.',
-    ];
+    const name = route?.params?.name;
+    const duration = route?.params?.duration;
+    const instructions = route?.params?.instructions;
 
     const handleStartExercise = () => {
         // Navigate to Session screen with data

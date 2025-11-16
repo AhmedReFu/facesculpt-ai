@@ -28,7 +28,7 @@ const Home = () => {
 
             <View style={tw`flex-row my-4 items-center`}>
                 <EvilIcons name="lock" size={28} color="white" />
-                <Text style={tw`text-white text-md font-bold`}>No sign-up needed. Permissions requested only for...</Text>
+                <Text style={tw`text-white text-sm font-bold`}>No sign-up needed. Permissions requested only for...</Text>
             </View>
         </View>
 
