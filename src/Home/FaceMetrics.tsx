@@ -32,7 +32,7 @@ const FaceMetrics = ({ route }: any) => {
               </View>
 
               <View style={tw``}>
-                  <Image source={{ uri: imageUri }} style={tw`h-56 rounded-4xl`} resizeMode="contain" />
+                  <Image source={{ uri: imageUri }} style={tw`h-56 rounded-3xl`} resizeMode="contain" />
               </View>
               <View style={tw`bg-[#262a30] p-4 rounded-2xl`}>
                   <View style={tw`flex-row items-center`}>

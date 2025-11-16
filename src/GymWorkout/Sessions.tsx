@@ -31,6 +31,7 @@ const Sessions = ({ route }: any) => {
         'Breathe steadily through your nose.',
         'Release slowly and reset posture.',
     ];
+    const timers = route?.params?.duration;
     const initialDuration = parseInt(route?.params?.duration || '9', 10);
     const description = route?.params?.description || 'Clench your jaw muscles tightly and hold for the duration.';
 
@@ -89,9 +90,10 @@ const Sessions = ({ route }: any) => {
     const handleMarkComplete = () => {
         setIsCompleted(true);
         setIsRunning(false);
+        setTimeLeft(0)
         console.log('Exercise marked as complete');
         // Navigate back after marking complete
-        // (navigation as any).navigate('DailyTrack');
+        (navigation as any).navigate('DailyTrack');
         setTimeout(() => {
            
         }, 500);
@@ -161,7 +163,7 @@ const Sessions = ({ route }: any) => {
                         {timeLeft}
                     </Text>
                     <Text style={tw`text-[#9CA3AF] text-sm mb-4`}>
-                        {timeLeft === 0 ? 'Completed!' : isRunning ? 'In Progress...' : 'Diagram coming soon'}
+                        {timeLeft === 0 ? 'Completed!' : isRunning ? 'In Progress...' : ''}
                     </Text>
 
                     {/* Reset Button */}

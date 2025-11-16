@@ -15,7 +15,7 @@ const DailyRoutine = () => {
         {
             id: 1,
             name: 'Jaw Clench Hold',
-            duration: '8s',
+            duration: '10s',
             icon: 'meditation',
             instructions: [
                 'Sit upright with relaxed shoulders.',
@@ -28,7 +28,7 @@ const DailyRoutine = () => {
         {
             id: 2,
             name: 'Eye Circle Massage',
-            duration: '12s',
+            duration: '8 reps',
             icon: 'face-man',
             instructions: [
                 'Close your eyes gently.',
@@ -41,7 +41,7 @@ const DailyRoutine = () => {
         {
             id: 3,
             name: 'Chew Motion',
-            duration: '10s',
+            duration: '20 reps',
             icon: 'food-apple',
             instructions: [
                 'Sit in a comfortable position.',
@@ -54,7 +54,7 @@ const DailyRoutine = () => {
         {
             id: 4,
             name: 'Cheek Lift',
-            duration: '15s',
+            duration: '15 reps',
             icon: 'emoticon-happy',
             instructions: [
                 'Smile widely to engage cheek muscles.',
