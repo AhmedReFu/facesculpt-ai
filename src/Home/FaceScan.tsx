@@ -40,6 +40,7 @@ const FaceScan = () => {
             try {
                 const photo = await cameraRef.current.takePictureAsync({
                     quality: 0.8,
+                    shutterSound: false,
                     base64: true,
                     exif: false,
                 });

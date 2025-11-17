@@ -8,7 +8,11 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ahmedrefu.facesculptai",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {},
@@ -16,6 +20,14 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.ahmedrefu.facesculptai"
     },
-    "web": {}
+    "web": {},
+    "extra": {
+      "eas": {
+        "projectId": "e5a2b487-7f24-4e3f-8c80-e91fe8eb0f83"
+      }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
