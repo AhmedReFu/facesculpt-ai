@@ -127,7 +127,7 @@ const FaceScan = () => {
                 <StatusBar style='light' />
 
                 {/* Preview Header */}
-                <View style={tw`bg-black px-6 pt-14 pb-4`}>
+                <View style={tw`bg-black px-4 pt-14 pb-4`}>
                     <View style={tw`flex-row items-center justify-between`}>
                         <Text style={tw`text-white text-2xl font-bold`}>Preview</Text>
                         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -188,7 +188,7 @@ const FaceScan = () => {
     return (
         <View style={styles.fullScreen}>
             <StatusBar style='light' />
-            
+
             <View style={styles.overlay}>
                 <View style={tw`bg-black`}>
                     <View style={styles.header}>

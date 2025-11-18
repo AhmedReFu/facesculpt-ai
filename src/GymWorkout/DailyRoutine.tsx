@@ -91,7 +91,7 @@ const DailyRoutine = () => {
     };
 
     return (
-        <View style={tw`flex-1 bg-[#000000] px-6`}>
+        <View style={tw`flex-1 bg-[#000000] px-4`}>
             <StatusBar style='light' />
             <View style={tw`flex-1 mt-14`}>
                 <View style={tw`mb-2`}>
@@ -152,7 +152,7 @@ const DailyRoutine = () => {
                         </TouchableOpacity>
                     ))}
 
-                    <View style={tw`h-24`} />
+
                 </ScrollView>
 
                 <View style={tw`pb-6 pt-4 bg-[#000000]`}>

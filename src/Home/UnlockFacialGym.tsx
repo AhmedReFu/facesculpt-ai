@@ -101,7 +101,7 @@ const UnlockFacialGym = () => {
     console.log('Selected plan:', planId)
   }
   return (
-    <View style={tw`flex-1 bg-[#000000] px-6`}>
+    <View style={tw`flex-1 bg-[#000000] px-4`}>
       <StatusBar style='light' />
       <View style={tw`mt-14 flex-1`}>
         <View style={tw`mb-6`}>

@@ -20,14 +20,21 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.ahmedrefu.facesculptai"
     },
-    "web": {},
+    "web": {
+      "bundler": "metro"
+    },
     "extra": {
       "eas": {
         "projectId": "e5a2b487-7f24-4e3f-8c80-e91fe8eb0f83"
       }
     },
     "plugins": [
-      "expo-font"
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "Allow camera access to scan your face"
+        }
+      ]
     ]
   }
 }

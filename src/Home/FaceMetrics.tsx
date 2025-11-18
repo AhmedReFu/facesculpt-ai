@@ -12,7 +12,7 @@ const FaceMetrics = ({ route }: any) => {
     const navigator = useNavigation();
     const { imageUri } = route.params;
   return (
-      <View style={tw`flex-1 bg-[#000000] px-6`}>
+      <View style={tw`flex-1 bg-[#000000] px-4`}>
           <StatusBar style='light' />
           <View style={tw`mt-14 flex-1`}>
               <View style={tw``}>
@@ -33,7 +33,7 @@ const FaceMetrics = ({ route }: any) => {
 
               <View style={tw``}>
                   <Image source={{ uri: imageUri }} style={tw`h-56 rounded-3xl`} resizeMode="contain" />
-              </View>
+              </View> 
               <View style={tw`bg-[#262a30] p-4 rounded-2xl`}>
                   <View style={tw`flex-row items-center`}>
                       <View style={tw`bg-[#60A5FB] rounded-md p-1 mr-4`}>

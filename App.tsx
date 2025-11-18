@@ -2,6 +2,11 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as React from 'react';
+import "./global.css";
+import SignUp from './src/auth/SignUp';
+import CreateNewPassword from './src/ForgotPassword/CreateNewPassword';
+import Otp from './src/ForgotPassword/Otp';
+import ResetPassword from './src/ForgotPassword/ResetPassword';
 import DailyRoutine from './src/GymWorkout/DailyRoutine';
 import Exercise from './src/GymWorkout/Exercise';
 import Sessions from './src/GymWorkout/Sessions';
@@ -19,6 +24,11 @@ const Stack = createNativeStackNavigator();
 function RootStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
+
+      <Stack.Screen name="SignUp" component={SignUp} />
+      <Stack.Screen name="ResetPassword" component={ResetPassword} />
+      <Stack.Screen name="Otp" component={Otp} />
+      <Stack.Screen name="CreateNewPassword" component={CreateNewPassword} />
       <Stack.Screen name="Home" component={Home} />
       <Stack.Screen name="FaceScan" component={FaceScan} />
       <Stack.Screen name="FaceMetrics" component={FaceMetrics} />

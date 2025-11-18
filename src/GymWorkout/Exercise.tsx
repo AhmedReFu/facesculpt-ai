@@ -40,7 +40,7 @@ const Exercise = ({ route }: any) => {
         <View style={tw`flex-1 bg-[#000000]`}>
             <StatusBar style='light' />
 
-            <View style={tw`px-6 mt-14`}>
+            <View style={tw`px-4 mt-14`}>
                 <View style={tw`mb-2`}>
                     <View style={tw`flex-row items-center`}>
                         <TouchableOpacity
@@ -62,7 +62,7 @@ const Exercise = ({ route }: any) => {
             </View>
 
             <ScrollView
-                style={tw`flex-1 px-6`}
+                style={tw`flex-1 px-4`}
                 showsVerticalScrollIndicator={false}
             >
                 <View style={tw`bg-[#1D2229] rounded-2xl p-14 flex-row items-center mb-6`}>

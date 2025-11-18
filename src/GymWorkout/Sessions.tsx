@@ -105,7 +105,7 @@ const Sessions = ({ route }: any) => {
     };
 
     return (
-        <View style={tw`flex-1 bg-[#00000]`}>
+        <View style={tw`flex-1 bg-[#00000] `}>
             <StatusBar style='light' />
 
             {/* Header */}
@@ -113,7 +113,7 @@ const Sessions = ({ route }: any) => {
                 <View style={tw`flex-row items-center py-4`}>
                     <TouchableOpacity
                         onPress={() => navigation.goBack()}
-                        style={tw`absolute left-6 z-10`}
+                        style={tw`absolute left-2 z-10`}
                     >
                         <Ionicons name="arrow-back" size={28} color="white" />
                     </TouchableOpacity>
@@ -125,7 +125,7 @@ const Sessions = ({ route }: any) => {
             </View>
 
             <ScrollView
-                style={tw`flex-1 px-6 bg-[#000000]`}
+                style={tw`flex-1 px-4 bg-[#000000]`}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Exercise Title */}
