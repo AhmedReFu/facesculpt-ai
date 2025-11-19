@@ -12,6 +12,8 @@ import CustomButton from '../Components/CustomButton';
 
 const Home = () => {
     const navigator = useNavigation();
+
+
     return (
 
         <View style={tw`flex-1 bg-[#000000] px-4`}>
