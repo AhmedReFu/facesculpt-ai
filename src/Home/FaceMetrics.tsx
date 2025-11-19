@@ -3,14 +3,17 @@ import EvilIcons from '@expo/vector-icons/EvilIcons';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import tw from "twrnc";
 import CustomButton from '../Components/CustomButton';
 
 
-const FaceMetrics = ({ route }: any) => {
+const FaceMetrics = () => {
     const navigator = useNavigation();
-    const { imageUri } = route.params;
+    //{ route }: any
+    // const { imageUri } = route.params;
+
+
   return (
       <View style={tw`flex-1 bg-[#000000] px-4`}>
           <StatusBar style='light' />
@@ -31,9 +34,9 @@ const FaceMetrics = ({ route }: any) => {
                   </Text>
               </View>
 
-              <View style={tw``}>
+              {/* <View style={tw``}>
                   <Image source={{ uri: imageUri }} style={tw`h-56 rounded-3xl`} resizeMode="contain" />
-              </View> 
+              </View>  */}
               <View style={tw`bg-[#262a30] p-4 rounded-2xl`}>
                   <View style={tw`flex-row items-center`}>
                       <View style={tw`bg-[#60A5FB] rounded-md p-1 mr-4`}>

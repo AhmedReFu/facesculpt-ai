@@ -146,7 +146,7 @@ const FaceScan = () => {
                         style={tw`w-full h-[70%]`}
                         resizeMode="contain"
                     />
-                </View>
+                </View> 
 
                 {/* Action Buttons */}
                 <View style={tw`bg-black px-6 pb-8 pt-4`}>

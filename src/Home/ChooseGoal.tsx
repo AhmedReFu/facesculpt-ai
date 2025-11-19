@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
+import { StackNavigationProp } from '@react-navigation/stack'
 import { StatusBar } from 'expo-status-bar'
 import React, { useState } from 'react'
 import { Text, TouchableOpacity, View } from 'react-native'
@@ -11,6 +12,14 @@ interface GoalItemProps {
     isSelected: boolean
     onPress: () => void
 }
+
+type RootStackParamList = {
+    Home: undefined;
+    FaceMetrics: undefined;
+};
+
+type ChooseGoalScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+
 
 const GoalItem = ({ label, isSelected, onPress }: GoalItemProps) => (
     <TouchableOpacity
@@ -29,7 +38,7 @@ const GoalItem = ({ label, isSelected, onPress }: GoalItemProps) => (
 )
 
 const ChooseGoal = () => {
-    const navigation = useNavigation()
+    const navigation = useNavigation<ChooseGoalScreenNavigationProp>()
 
     const [selectedGoals, setSelectedGoals] = useState<string[]>([
         'Sharper Jawline',
@@ -68,7 +77,7 @@ const ChooseGoal = () => {
                             Choose Your Goal
                         </Text>
                         <TouchableOpacity
-                            onPress={() => navigation.goBack()}
+                            onPress={() => navigation.navigate("FaceMetrics")}
                             style={tw`mt-1`}
                         >
                             <Ionicons name="close" size={32} color="white" />

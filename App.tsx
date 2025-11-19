@@ -1,9 +1,10 @@
 
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import * as React from 'react';
 import "./global.css";
-import SignUp from './src/auth/SignUp';
+import AuthScreen from './src/auth/AuthScreen';
+import OtpAuth from './src/auth/OtpAuth';
 import CreateNewPassword from './src/ForgotPassword/CreateNewPassword';
 import Otp from './src/ForgotPassword/Otp';
 import ResetPassword from './src/ForgotPassword/ResetPassword';
@@ -19,15 +20,23 @@ import FaceCoach from './src/Messages/FaceCoach';
 import DailyTrack from './src/TrackGym/DailyTrack';
 
 
-const Stack = createNativeStackNavigator();
+const Stack = createStackNavigator();
 
 function RootStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        cardStyle: { backgroundColor: '#000' }, // Set background to black
+        ...TransitionPresets.SlideFromRightIOS, // Smooth slide transition
+      }}
+      initialRouteName='Auth'
+    >
 
-      <Stack.Screen name="SignUp" component={SignUp} />
+      <Stack.Screen name="Auth" component={AuthScreen} />
       <Stack.Screen name="ResetPassword" component={ResetPassword} />
       <Stack.Screen name="Otp" component={Otp} />
+      <Stack.Screen name="OtpAuth" component={OtpAuth} />
       <Stack.Screen name="CreateNewPassword" component={CreateNewPassword} />
       <Stack.Screen name="Home" component={Home} />
       <Stack.Screen name="FaceScan" component={FaceScan} />

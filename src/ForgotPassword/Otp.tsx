@@ -1,121 +1,293 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import tw from "twrnc";
+import {
+    Alert,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+type RootStackParamList = {
+    CreateNewPassword: undefined;
+    Auth: undefined;
+};
+
+type OtpScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const Otp = () => {
-    const navigation = useNavigation();
-    const [code, setCode] = useState(['', '', '', '']);
-    const [timer, setTimer] = useState(60);
-    const inputsRef = useRef([]);
+    const navigation = useNavigation<OtpScreenNavigationProp>();
+    const [code, setCode] = useState<string[]>(['', '', '', '']);
+    const [timer, setTimer] = useState<number>(60);
+    const inputsRef = useRef<TextInput[]>([]);
 
+    // Initialize refs array
     useEffect(() => {
-        const countdown = setInterval(() => {
-            setTimer(prev => (prev > 0 ? prev - 1 : 0));
-        }, 1000);
-
-        return () => clearInterval(countdown);
+        inputsRef.current = inputsRef.current.slice(0, 4);
     }, []);
 
-    const handleChange = (text: any, index: any) => {
+
+
+    const handleChange = (text: string, index: number) => {
+        const numericText = text.replace(/[^0-9]/g, '');
         const newCode = [...code];
-        newCode[index] = text;
+        newCode[index] = numericText;
         setCode(newCode);
 
-        if (text && index < 3) {
-            inputsRef.current[index + 1].focus();
+        if (numericText && index < 3) {
+            setTimeout(() => {
+                inputsRef.current[index + 1]?.focus();
+            }, 10);
         }
 
-        if (!text && index > 0) {
-            inputsRef.current[index - 1].focus();
+        if (numericText && index === 3) {
+            const enteredCode = newCode.join('');
+            if (enteredCode.length === 4) {
+
+            }
         }
+    };
+
+    const handleKeyPress = (e: any, index: number) => {
+        if (e.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
+            setTimeout(() => {
+                inputsRef.current[index - 1]?.focus();
+            }, 10);
+        }
+    };
+
+    const handleSubmit = (enteredCode?: string) => {
+        const verificationCode = enteredCode || code.join('');
+
+        if (verificationCode.length < 4) {
+            Alert.alert('Error', 'Please enter a 4-digit code.');
+            return;
+        }
+
+        navigation.replace('CreateNewPassword');
     };
 
     const handleResend = () => {
         if (timer === 0) {
             setTimer(60);
+            setCode(['', '', '', '']);
+            setTimeout(() => {
+                inputsRef.current[0]?.focus();
+            }, 100);
             Alert.alert('Code Resent', 'A new verification code has been sent.');
         }
     };
 
-    const handleContinue = () => {
-        const enteredCode = code.join('');
-        if (enteredCode.length < 4) {
-            Alert.alert('Error', 'Please enter a 4-digit code.');
-            return;
-        }
-        // Here you can add verification logic
-        Alert.alert('Success', `Code entered: ${enteredCode}`);
+    const handleBack = () => {
+        navigation.goBack();
     };
 
+    const isContinueDisabled = code.join('').length < 4;
+
+
+
     return (
-        <View style={styles.container}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={tw`absolute top-16 left-2`}>
-                <Text style={tw`text-white text-2xl`}>
-                    <Ionicons name="arrow-back" size={24} color="#fff" />
+        <SafeAreaView style={styles.container}>
+            <View style={styles.content}>
+                {/* Back Button */}
+                <TouchableOpacity
+                    onPress={handleBack}
+                    style={[styles.backButton]}
+                >
+                    <Ionicons name="arrow-back" size={28} color="#fff" />
+                </TouchableOpacity>
+
+                {/* Logo */}
+                <Text style={styles.logo}>Logo</Text>
+
+                {/* Heading */}
+                <Text style={styles.heading}>Verification Code</Text>
+
+                {/* Subtext */}
+                <Text style={styles.subText}>
+                    Enter the verification code that we have sent to your email.
                 </Text>
-            </TouchableOpacity>
-            <Text style={styles.logo}>Logo</Text>
-            <Text style={styles.heading}>Verification Code</Text>
-            <Text style={styles.subText}>
-                Enter the verification code that we have sent to your email.
-            </Text>
 
-            <View style={styles.codeContainer}>
-                {code.map((digit, index) => (
-                    <TextInput
-                        key={index}
-                        placeholder="0"
-                        placeholderTextColor="#6B7280"
-                        ref={ref => (inputsRef.current[index] = ref)}
-                        style={styles.codeInput}
-                        keyboardType="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChangeText={text => handleChange(text, index)}
-                    />
-                ))}
-            </View>
+                {/* OTP Inputs */}
+                <View style={styles.codeContainer}>
+                    {code.map((digit, index) => (
+                        <TextInput
+                            key={index}
+                            placeholder="0"
+                            placeholderTextColor="#6B7280"
+                            ref={(ref) => {
+                                if (ref) {
+                                    inputsRef.current[index] = ref;
+                                }
+                            }}
+                            style={[
+                                styles.codeInput,
+                                digit && styles.codeInputFilled
+                            ]}
+                            keyboardType="number-pad"
+                            maxLength={1}
+                            value={digit}
+                            onChangeText={text => handleChange(text, index)}
+                            onKeyPress={(e) => handleKeyPress(e, index)}
+                            selectTextOnFocus
+                            autoFocus={index === 0}
+                        />
+                    ))}
+                </View>
 
-            <View style={tw`mb-10 items-center`}>
-                <Text style={styles.resendText}>
-                    Didn't receive the code?{' '}
-                    <Text
-                        style={[styles.resendLink, timer !== 0 && { color: 'red' }]}
-                        onPress={handleResend}
-                    >
-                        Resend code
+                {/* Resend Code Section */}
+                <View style={styles.resendContainer}>
+                    <Text style={styles.resendText}>
+                        Didn't receive the code?{' '}
+                        <Text
+                            style={[
+                                styles.resendLink,
+                                timer !== 0 && styles.resendLinkDisabled
+                            ]}
+                            onPress={handleResend}
+                        >
+                            Resend code
+                        </Text>
                     </Text>
-                </Text>
 
-                {timer !== 0 && (
-                    <Text style={styles.timerText}>
-                        <Text style={tw`text-white`}>Resend code at </Text>
-                        00:{timer < 10 ? `0${timer}` : timer}</Text>
-                )}
+                    {timer !== 0 && (
+                        <Text style={styles.timerText}>
+                            Resend code in 00:{timer < 10 ? `0${timer}` : timer}
+                        </Text>
+                    )}
+                </View>
+
+                {/* Continue Button */}
+                <TouchableOpacity
+                    style={[
+                        styles.continueBtn,
+                        isContinueDisabled && styles.continueBtnDisabled
+                    ]}
+                    onPress={() => handleSubmit()}
+                    disabled={isContinueDisabled}
+                >
+                    <Text style={styles.continueText}>
+                        Continue
+                    </Text>
+                </TouchableOpacity>
             </View>
 
+            {/* Success Modal with Blur */}
 
-            <TouchableOpacity style={styles.continueBtn} onPress={() => (navigation as any).navigate("CreateNewPassword")}>
-                <Text style={styles.continueText}>Continue</Text>
-            </TouchableOpacity>
-        </View>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#000', alignItems: 'center', paddingHorizontal: 10, justifyContent: 'center' },
-    logo: { fontSize: 60, fontFamily: "bold", color: '#fff', marginBottom: 50 },
-    heading: { fontSize: 30, fontWeight: 'bold', color: '#fff', marginBottom: 10 },
-    subText: { fontSize: 20, color: '#aaa', textAlign: 'center', marginBottom: 30 },
-    codeContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '70%', marginBottom: 20 },
-    codeInput: { width: 60, height: 60, backgroundColor: '#1a1a1a', color: '#fff', textAlign: 'center', borderRadius: 8, fontSize: 25, borderWidth: 1, borderColor: '#60A5FB' },
-    resendText: { color: '#fff', fontSize: 16, marginBottom: 10 },
-    resendLink: { color: 'red' },
-    timerText: { color: '#60A5FB', fontSize: 16, marginBottom: 20 },
-    continueBtn: { width: '80%', padding: 15, backgroundColor: '#60A5FB', borderRadius: 8, alignItems: 'center' },
-    continueText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+    container: {
+        flex: 1,
+        backgroundColor: '#000',
+    },
+    content: {
+        flex: 1,
+        paddingHorizontal: 16,
+        justifyContent: 'center',
+    },
+    backButton: {
+        position: 'absolute',
+        top: 64,
+        left: 24,
+        zIndex: 10,
+    },
+    hidden: {
+        opacity: 0,
+    },
+    logo: {
+        fontSize: 60,
+        fontWeight: 'bold',
+        color: '#fff',
+        textAlign: 'center',
+        marginBottom: 48,
+    },
+    heading: {
+        fontSize: 30,
+        fontWeight: 'bold',
+        color: '#fff',
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    subText: {
+        fontSize: 16,
+        color: '#9CA3AF',
+        textAlign: 'center',
+        marginBottom: 48,
+        lineHeight: 24,
+        paddingHorizontal: 8,
+    },
+    codeContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 40,
+        paddingHorizontal: 20,
+    },
+    codeInput: {
+        width: 64,
+        height: 64,
+        backgroundColor: '#1F2937',
+        color: '#fff',
+        textAlign: 'center',
+        borderRadius: 12,
+        fontSize: 24,
+        borderWidth: 2,
+        borderColor: '#374151',
+        fontWeight: 'bold',
+    },
+    codeInputFilled: {
+        borderColor: '#60A5FA',
+        backgroundColor: '#1e3a5f',
+    },
+    resendContainer: {
+        alignItems: 'center',
+        marginBottom: 40,
+    },
+    resendText: {
+        color: '#9CA3AF',
+        fontSize: 16,
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    resendLink: {
+        color: '#60A5FA',
+        fontWeight: '600',
+    },
+    resendLinkDisabled: {
+        color: '#6B7280',
+        textDecorationLine: 'line-through',
+    },
+    timerText: {
+        color: '#60A5FA',
+        fontSize: 16,
+        fontWeight: '500',
+        textAlign: 'center',
+    },
+    continueBtn: {
+        width: '100%',
+        paddingVertical: 16,
+        backgroundColor: '#60A5FA',
+        borderRadius: 12,
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    continueBtnDisabled: {
+        backgroundColor: '#374151',
+        opacity: 0.6,
+    },
+    continueText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 18,
+    },
+    // Modal Styles
+
 });
 
-export default Otp;
+export default Otp

@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { BlurView } from 'expo-blur';
 import React, { useEffect, useState } from 'react';
 import {
-    Animated,
-    Modal,
-    ScrollView,
     StatusBar,
     StyleSheet,
     Text,
@@ -14,21 +13,33 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+type RootStackParamList = {
+    Auth: undefined;
+    // Add other screens as needed
+};
+
+type CreateNewPasswordScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+
+interface PasswordValidation {
+    length: boolean;
+    uppercase: boolean;
+    lowercase: boolean;
+    number: boolean;
+    special: boolean;
+}
+
 export default function CreateNewPassword() {
-    const navigation = useNavigation();
+    const navigation = useNavigation<CreateNewPasswordScreenNavigationProp>();
 
+    const [newPassword, setNewPassword] = useState<string>('');
+    const [confirmPassword, setConfirmPassword] = useState<string>('');
+    const [showNewPassword, setShowNewPassword] = useState<boolean>(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+    const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
+    const [timer, setTimer] = useState<number>(60);
+    const [spinnerRotation, setSpinnerRotation] = useState<number>(0);
 
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [showNewPassword, setShowNewPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [errors, setErrors] = useState({});
-    const [touched, setTouched] = useState({});
-    const [showSuccessModal, setShowSuccessModal] = useState(false);
-    const [fadeAnim] = useState(new Animated.Value(0));
-    const [scaleAnim] = useState(new Animated.Value(0.8));
-
-    const validatePassword = (password:any) => {
+    const validatePassword = (password: string): PasswordValidation => {
         return {
             length: password.length >= 8,
             uppercase: /[A-Z]/.test(password),
@@ -42,74 +53,83 @@ export default function CreateNewPassword() {
     const allChecksPassed = Object.values(passwordChecks).every(check => check);
     const passwordsMatch = newPassword === confirmPassword && confirmPassword !== '';
 
+    // Timer effect
     useEffect(() => {
+        let interval: NodeJS.Timeout;
+
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer(prev => prev - 1);
+            }, 1000);
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [timer]);
+
+    // Success modal auto redirect effect with spinner animation
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+        let spinnerInterval: NodeJS.Timeout;
+
         if (showSuccessModal) {
-            Animated.parallel([
-                Animated.timing(fadeAnim, {
-                    toValue: 1,
-                    duration: 300,
-                    useNativeDriver: true,
-                }),
-                Animated.spring(scaleAnim, {
-                    toValue: 1,
-                    friction: 8,
-                    tension: 40,
-                    useNativeDriver: true,
-                }),
-            ]).start();
+            // Spinner rotation animation
+            spinnerInterval = setInterval(() => {
+                setSpinnerRotation(prev => (prev + 45) % 360);
+            }, 150);
 
             // Auto redirect after 3 seconds
-            const timer = setTimeout(() => {
-                handleSuccessContinue();
+            timer = setTimeout(() => {
+                setShowSuccessModal(false);
+                navigation.replace('Auth');
             }, 3000);
-
-            return () => clearTimeout(timer);
-        }
-    }, [showSuccessModal]);
-
-    const handleContinue = () => {
-        const newErrors = {};
-
-        if (!newPassword) {
-            newErrors.newPassword = 'Password is required';
-        } else if (!allChecksPassed) {
-            newErrors.newPassword = 'Password does not meet requirements';
+        } else {
+            setSpinnerRotation(0);
         }
 
-        if (!confirmPassword) {
-            newErrors.confirmPassword = 'Please confirm your password';
-        } else if (newPassword !== confirmPassword) {
-            newErrors.confirmPassword = 'Passwords do not match';
+        return () => {
+            if (timer) clearTimeout(timer);
+            if (spinnerInterval) clearInterval(spinnerInterval);
+        };
+    }, [showSuccessModal, navigation]);
+
+    const handleContinue = (): void => {
+        if (!allChecksPassed) {
+            return;
         }
 
-        setErrors(newErrors);
-        setTouched({ newPassword: true, confirmPassword: true });
-
-        if (Object.keys(newErrors).length === 0) {
-            setShowSuccessModal(true);
+        if (!passwordsMatch) {
+            return;
         }
+
+        // Show success modal
+        setShowSuccessModal(true);
     };
 
-    const handleSuccessContinue = () => {
-        setShowSuccessModal(false);
-        // Navigate to login or home screen
-        (navigation as any).navigate('SignUp');
-    };
 
-    const handleBack = () => {
+    const handleBack = (): void => {
         navigation.goBack();
     };
 
+    const isContinueEnabled = allChecksPassed && passwordsMatch;
+
+    // Spinner dot positions (8 dots in a circle)
+    const spinnerDots = [
+        { angle: 0, size: 12, opacity: 1 },
+        { angle: 45, size: 11, opacity: 0.9 },
+        { angle: 90, size: 10, opacity: 0.8 },
+        { angle: 135, size: 9, opacity: 0.6 },
+        { angle: 180, size: 8, opacity: 0.4 },
+        { angle: 225, size: 7, opacity: 0.3 },
+        { angle: 270, size: 6, opacity: 0.2 },
+        { angle: 315, size: 6, opacity: 0.1 },
+    ];
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
-            <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-            >
+            <View style={styles.content}>
                 {/* Back Button */}
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="arrow-back" size={28} color="#fff" />
@@ -133,19 +153,18 @@ export default function CreateNewPassword() {
                     <Text style={styles.label}>New Password</Text>
                     <View style={styles.inputWrapper}>
                         <TextInput
-                            style={styles.input}
+                            style={[
+                                styles.input,
+                                newPassword && !allChecksPassed && styles.inputError,
+                                newPassword && allChecksPassed && styles.inputSuccess
+                            ]}
                             value={newPassword}
-                            onChangeText={(text) => {
-                                setNewPassword(text);
-                                if (touched.newPassword) {
-                                    setErrors({ ...errors, newPassword: null });
-                                }
-                            }}
-                            onBlur={() => setTouched({ ...touched, newPassword: true })}
+                            onChangeText={setNewPassword}
                             secureTextEntry={!showNewPassword}
                             placeholder="Enter new password"
-                            placeholderTextColor="#666"
+                            placeholderTextColor="#6B7280"
                             autoCapitalize="none"
+                            autoCorrect={false}
                         />
                         <TouchableOpacity
                             style={styles.eyeButton}
@@ -158,9 +177,6 @@ export default function CreateNewPassword() {
                             />
                         </TouchableOpacity>
                     </View>
-                    {touched.newPassword && errors.newPassword && (
-                        <Text style={styles.errorText}>{errors.newPassword}</Text>
-                    )}
                 </View>
 
                 {/* Password Requirements */}
@@ -179,19 +195,18 @@ export default function CreateNewPassword() {
                     <Text style={styles.label}>Confirm Password</Text>
                     <View style={styles.inputWrapper}>
                         <TextInput
-                            style={styles.input}
+                            style={[
+                                styles.input,
+                                confirmPassword && !passwordsMatch && styles.inputError,
+                                confirmPassword && passwordsMatch && styles.inputSuccess
+                            ]}
                             value={confirmPassword}
-                            onChangeText={(text) => {
-                                setConfirmPassword(text);
-                                if (touched.confirmPassword) {
-                                    setErrors({ ...errors, confirmPassword: null });
-                                }
-                            }}
-                            onBlur={() => setTouched({ ...touched, confirmPassword: true })}
+                            onChangeText={setConfirmPassword}
                             secureTextEntry={!showConfirmPassword}
                             placeholder="Re-enter password"
-                            placeholderTextColor="#666"
+                            placeholderTextColor="#6B7280"
                             autoCapitalize="none"
+                            autoCorrect={false}
                         />
                         <TouchableOpacity
                             style={styles.eyeButton}
@@ -204,9 +219,6 @@ export default function CreateNewPassword() {
                             />
                         </TouchableOpacity>
                     </View>
-                    {touched.confirmPassword && errors.confirmPassword && (
-                        <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-                    )}
                     {confirmPassword && passwordsMatch && (
                         <View style={styles.successContainer}>
                             <Ionicons name="checkmark-circle" size={16} color="#10B981" />
@@ -219,76 +231,84 @@ export default function CreateNewPassword() {
                 <TouchableOpacity
                     style={[
                         styles.continueButton,
-                        (!allChecksPassed || !passwordsMatch) && styles.continueButtonDisabled
+                        !isContinueEnabled && styles.continueButtonDisabled
                     ]}
                     onPress={handleContinue}
+                    disabled={!isContinueEnabled}
                     activeOpacity={0.8}
                 >
                     <Text style={styles.continueButtonText}>Continue</Text>
                 </TouchableOpacity>
-            </ScrollView>
-
-            {/* Bottom Indicator */}
-            <View style={styles.bottomIndicator}>
-                <View style={styles.indicator} />
             </View>
 
             {/* Success Modal */}
-            <Modal
-                visible={showSuccessModal}
-                transparent={true}
-                animationType="none"
-                statusBarTranslucent
-            >
-                <Animated.View
-                    style={[
-                        styles.modalOverlay,
-                        { opacity: fadeAnim }
-                    ]}
+            {showSuccessModal && (
+                <BlurView
+                    intensity={70}
+                    tint="dark"
+                    style={styles.blurContainer}
                 >
-                    <Animated.View
-                        style={[
-                            styles.modalContent,
-                            {
-                                transform: [{ scale: scaleAnim }],
-                                opacity: fadeAnim,
-                            }
-                        ]}
-                    >
-                        <View style={styles.logoContainerModal}>
-                            <Text style={styles.logoSmall}>Logo</Text>
-                        </View>
-
-                        <View style={styles.successCard}>
-                            <View style={styles.successIconContainer}>
-                                <View style={styles.successIcon}>
+                    <View style={styles.modalWrapper}>
+                        <View style={styles.modalContent}>
+                            {/* Success Icon with gradient border effect */}
+                            <View style={styles.iconWrapper}>
+                                <View style={styles.iconContainer}>
                                     <Ionicons name="checkmark" size={50} color="#60A5FA" />
                                 </View>
                             </View>
 
-                            <Text style={styles.successTitle}>Successful!</Text>
-                            <Text style={styles.successSubtitle}>
-                                Your password has been changed successfully.
+                            {/* Success Title */}
+                            <Text style={styles.modalTitle}>
+                                Successful!
                             </Text>
 
-                            <LoadingSpinner />
-                        </View>
+                            {/* Success Subtitle */}
+                            <Text style={styles.modalSubtitle}>
+                                Your registration was completed{'\n'}successfully
+                            </Text>
 
-                        <TouchableOpacity
-                            style={styles.modalButton}
-                            onPress={handleSuccessContinue}
-                            activeOpacity={0.8}
-                        >
-                            <Text style={styles.modalButtonText}>Continue</Text>
-                        </TouchableOpacity>
-                    </Animated.View>
-                </Animated.View>
-            </Modal>
+                            {/* Circular Spinner Animation */}
+                            <View style={styles.spinnerContainer}>
+                                {spinnerDots.map((dot, index) => {
+                                    const angle = (dot.angle + spinnerRotation) * (Math.PI / 180);
+                                    const radius = 20;
+                                    const x = Math.cos(angle) * radius;
+                                    const y = Math.sin(angle) * radius;
+
+                                    return (
+                                        <View
+                                            key={index}
+                                            style={[
+                                                styles.spinnerDot,
+                                                {
+                                                    width: dot.size,
+                                                    height: dot.size,
+                                                    borderRadius: dot.size / 2,
+                                                    opacity: dot.opacity,
+                                                    transform: [
+                                                        { translateX: x },
+                                                        { translateY: y }
+                                                    ]
+                                                }
+                                            ]}
+                                        />
+                                    );
+                                })}
+                            </View>
+                        </View>
+                    </View>
+                </BlurView>
+            )}
         </SafeAreaView>
     );
 }
 
-function PasswordCheck({ met, text }:any) {
+interface PasswordCheckProps {
+    met: boolean;
+    text: string;
+}
+
+const PasswordCheck = ({ met, text }: PasswordCheckProps) => {
     return (
         <View style={styles.checkContainer}>
             <Ionicons
@@ -301,67 +321,26 @@ function PasswordCheck({ met, text }:any) {
     );
 }
 
-function LoadingSpinner() {
-    const [rotation] = useState(new Animated.Value(0));
-
-    useEffect(() => {
-        Animated.loop(
-            Animated.timing(rotation, {
-                toValue: 1,
-                duration: 1000,
-                useNativeDriver: true,
-            })
-        ).start();
-    }, []);
-
-    const rotate = rotation.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '360deg'],
-    });
-
-    return (
-        <Animated.View style={[styles.spinner, { transform: [{ rotate }] }]}>
-            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <View
-                    key={i}
-                    style={[
-                        styles.spinnerDot,
-                        {
-                            transform: [
-                                { rotate: `${i * 45}deg` },
-                                { translateY: -20 },
-                            ],
-                            opacity: 1 - (i * 0.12),
-                        },
-                    ]}
-                />
-            ))}
-        </Animated.View>
-    );
-}
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#000000',
     },
-    scrollView: {
+    content: {
         flex: 1,
-    },
-    scrollContent: {
         paddingHorizontal: 24,
-        paddingBottom: 20,
     },
     backButton: {
         marginTop: 10,
         marginBottom: 20,
+        alignSelf: 'flex-start',
     },
     logoContainer: {
         alignItems: 'center',
-        marginBottom: 60,
+        marginBottom: 40,
     },
     logoText: {
-        fontSize: 60,
+        fontSize: 56,
         fontWeight: 'bold',
         color: '#FFFFFF',
     },
@@ -369,15 +348,17 @@ const styles = StyleSheet.create({
         marginBottom: 32,
     },
     title: {
-        fontSize: 32,
+        fontSize: 28,
         fontWeight: 'bold',
         color: '#FFFFFF',
-        marginBottom: 12,
+        marginBottom: 8,
+        textAlign: 'center',
     },
     description: {
         fontSize: 14,
-        color: '#999999',
+        color: '#9CA3AF',
         lineHeight: 20,
+        textAlign: 'center',
     },
     inputContainer: {
         marginBottom: 24,
@@ -394,7 +375,7 @@ const styles = StyleSheet.create({
     input: {
         backgroundColor: 'transparent',
         borderWidth: 2,
-        borderColor: '#fff',
+        borderColor: '#4B5563',
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 16,
@@ -402,20 +383,25 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         paddingRight: 50,
     },
+    inputError: {
+        borderColor: '#EF4444',
+    },
+    inputSuccess: {
+        borderColor: '#10B981',
+    },
     eyeButton: {
         position: 'absolute',
         right: 16,
         top: '50%',
         transform: [{ translateY: -11 }],
-    },
-    errorText: {
-        color: '#EF4444',
-        fontSize: 12,
-        marginTop: 4,
+        padding: 4,
     },
     requirementsContainer: {
         marginBottom: 24,
         gap: 8,
+        backgroundColor: '#111111',
+        padding: 16,
+        borderRadius: 12,
     },
     checkContainer: {
         flexDirection: 'row',
@@ -428,16 +414,18 @@ const styles = StyleSheet.create({
     },
     checkTextMet: {
         color: '#10B981',
+        fontWeight: '500',
     },
     successContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 4,
-        gap: 4,
+        marginTop: 8,
+        gap: 6,
     },
     successText: {
-        fontSize: 12,
+        fontSize: 14,
         color: '#10B981',
+        fontWeight: '500',
     },
     continueButton: {
         backgroundColor: '#60A5FA',
@@ -447,51 +435,31 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     continueButtonDisabled: {
-        opacity: 0.5,
+        backgroundColor: '#374151',
+        opacity: 0.6,
     },
     continueButtonText: {
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
     },
-    bottomIndicator: {
-        alignItems: 'center',
-        paddingVertical: 16,
-    },
-    indicator: {
-        width: 120,
-        height: 4,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 2,
-    },
     // Modal Styles
     modalOverlay: {
-        flex: 1,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.95)',
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 24,
-    },
-    modalContent: {
-        width: '100%',
-        maxWidth: 400,
-    },
-    logoContainerModal: {
-        alignItems: 'center',
-        marginBottom: 40,
-    },
-    logoSmall: {
-        fontSize: 48,
-        fontWeight: 'bold',
-        color: '#fff',
-        opacity: 0.3,
     },
     successCard: {
         backgroundColor: '#1F2937',
         borderRadius: 24,
         padding: 40,
         alignItems: 'center',
-        marginBottom: 24,
     },
     successIconContainer: {
         marginBottom: 24,
@@ -504,45 +472,93 @@ const styles = StyleSheet.create({
         borderColor: '#60A5FA',
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: 'rgba(96, 165, 250, 0.1)',
     },
     successTitle: {
         fontSize: 28,
         fontWeight: 'bold',
         color: '#fff',
         marginBottom: 12,
+        textAlign: 'center',
     },
     successSubtitle: {
-        fontSize: 14,
+        fontSize: 16,
         color: '#9CA3AF',
         textAlign: 'center',
         marginBottom: 32,
-        lineHeight: 20,
+        lineHeight: 22,
     },
-    spinner: {
-        width: 50,
-        height: 50,
-        position: 'relative',
+    loadingDots: {
+        flexDirection: 'row',
+        gap: 6,
+        alignItems: 'center',
     },
-    spinnerDot: {
-        position: 'absolute',
+    dot: {
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: '#60A5FA',
-        top: '50%',
-        left: '50%',
-        marginLeft: -4,
-        marginTop: -4,
+        backgroundColor: '#374151',
     },
-    modalButton: {
+    dotActive: {
         backgroundColor: '#60A5FA',
-        paddingVertical: 16,
-        borderRadius: 12,
+    },
+    blurContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
         alignItems: 'center',
+        paddingHorizontal: 16,
     },
-    modalButtonText: {
+    modalWrapper: {
+        width: '100%',
+        maxWidth: 400,
+    },
+    modalContent: {
+        backgroundColor: '#1A2028',
+        borderRadius: 24,
+        padding: 40,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(55, 65, 81, 0.5)',
+    },
+    iconWrapper: {
+        marginBottom: 24,
+    },
+    iconContainer: {
+        width: 96,
+        height: 96,
+        borderRadius: 48,
+        borderWidth: 4,
+        borderColor: '#60A5FA',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+    },
+    modalTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
         color: '#fff',
+        textAlign: 'center',
+        marginBottom: 12,
+    },
+    modalSubtitle: {
         fontSize: 16,
-        fontWeight: '600',
+        color: '#9CA3AF',
+        textAlign: 'center',
+        marginBottom: 32,
+        lineHeight: 24,
+    },
+    spinnerContainer: {
+        width: 64,
+        height: 64,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    spinnerDot: {
+        position: 'absolute',
+        backgroundColor: '#60A5FA',
     },
 });

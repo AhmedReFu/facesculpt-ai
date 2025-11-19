@@ -6,35 +6,30 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ahmedrefu.facesculptai",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Allow camera access to scan your face"
       }
     },
     "android": {
       "adaptiveIcon": {},
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.ahmedrefu.facesculptai"
+      "package": "com.ahmedrefu.facesculptai",
+      "permissions": ["android.permission.CAMERA"]
     },
     "web": {
       "bundler": "metro"
     },
     "extra": {
       "eas": {
-        "projectId": "e5a2b487-7f24-4e3f-8c80-e91fe8eb0f83"
+        "projectId": "a2952987-6777-4540-9d29-a38aedacee70"
       }
     },
-    "plugins": [
-      [
-        "react-native-vision-camera",
-        {
-          "cameraPermissionText": "Allow camera access to scan your face"
-        }
-      ]
-    ]
+    "plugins": ["expo-camera"]
   }
 }
