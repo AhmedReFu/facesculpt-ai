@@ -1,94 +1,48 @@
+// screens/DailyRoutine.tsx
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import tw from "twrnc";
+import { useWorkout } from '../lib/WorkoutProvider';
+import { RootStackParamList } from '../types/navigation';
+
+type DailyRoutineNavigationProp = StackNavigationProp<RootStackParamList, 'DailyRoutine'>;
 
 const DailyRoutine = () => {
-    const navigator = useNavigation();
-    const [selectedExercise, setSelectedExercise] = useState<any>(null);
-
-    // Exercise data with instructions
-    const exercises = [
-        {
-            id: 1,
-            name: 'Jaw Clench Hold',
-            duration: '10s',
-            icon: 'meditation',
-            instructions: [
-                'Sit upright with relaxed shoulders.',
-                'Engage the target muscle gently first.',
-                'Increase tension to a firm, pain-free hold.',
-                'Breathe steadily through your nose.',
-                'Release slowly and reset posture.',
-            ]
-        },
-        {
-            id: 2,
-            name: 'Eye Circle Massage',
-            duration: '8 reps',
-            icon: 'face-man',
-            instructions: [
-                'Close your eyes gently.',
-                'Use your fingertips to massage in circular motions.',
-                'Apply light pressure around the eye area.',
-                'Continue for the specified duration.',
-                'Relax and breathe deeply.',
-            ]
-        },
-        {
-            id: 3,
-            name: 'Chew Motion',
-            duration: '20 reps',
-            icon: 'food-apple',
-            instructions: [
-                'Sit in a comfortable position.',
-                'Perform slow chewing motions.',
-                'Keep your jaw relaxed.',
-                'Maintain steady breathing.',
-                'Focus on the jaw muscles.',
-            ]
-        },
-        {
-            id: 4,
-            name: 'Cheek Lift',
-            duration: '15 reps',
-            icon: 'emoticon-happy',
-            instructions: [
-                'Smile widely to engage cheek muscles.',
-                'Hold the position steadily.',
-                'Keep breathing normally.',
-                'Feel the muscle tension.',
-                'Release gently.',
-            ]
-        },
-    ];
+    const navigation = useNavigation<DailyRoutineNavigationProp>();
+    const { exercises, currentExerciseIndex, getCurrentExercise, isWorkoutCompleted } = useWorkout();
 
     const handleExercisePress = (exercise: any) => {
-        setSelectedExercise(exercise);
-        // Pass exercise data when navigating
-        (navigator as any).navigate('Exercise', {
-            name: exercise.name,
-            duration: exercise.duration,
-            instructions: exercise.instructions,
+        navigation.navigate('Exercise', {
+            exerciseId: exercise.id,
         });
     };
 
     const handleStartWorkout = () => {
-        if (selectedExercise) {
-            // Navigate with the selected exercise
-            (navigator as any).navigate('Exercise', {
-                name: selectedExercise.name,
-                duration: selectedExercise.duration,
-                instructions: selectedExercise.instructions,
-            });
+        if (isWorkoutCompleted) {
+            // All workouts completed - go to TrackGym
+            navigation.navigate('DailyTrack');
         } else {
-            // If no exercise selected, start with the first one
-            handleExercisePress(exercises[0]);
+            // Start workout with current exercise
+            const currentExercise = getCurrentExercise();
+            if (currentExercise) {
+                navigation.navigate('Exercise', {
+                    exerciseId: currentExercise.id,
+                });
+            }
         }
     };
+
+    const getNextIncompleteExercise = () => {
+        return exercises.find(exercise => !exercise.completed) || exercises[0];
+    };
+
+    const nextExercise = getNextIncompleteExercise();
+    const allCompleted = isWorkoutCompleted;
 
     return (
         <View style={tw`flex-1 bg-[#000000] px-4`}>
@@ -97,7 +51,7 @@ const DailyRoutine = () => {
                 <View style={tw`mb-2`}>
                     <View style={tw`flex-row items-center`}>
                         <TouchableOpacity
-                            onPress={() => navigator.goBack()}
+                            onPress={() => navigation.navigate("DailyTrack")}
                             style={tw`absolute left-0 z-10`}
                         >
                             <Ionicons name="arrow-back" size={28} color="white" />
@@ -113,6 +67,26 @@ const DailyRoutine = () => {
                     Personalized from your latest scan.
                 </Text>
 
+                {/* Progress Bar */}
+                <View style={tw`bg-[#1D2229] rounded-full h-2 mt-4 mb-6`}>
+                    <View
+                        style={[
+                            tw`bg-[#60A5FB] h-2 rounded-full`,
+                            { width: `${(exercises.filter(ex => ex.completed).length / exercises.length) * 100}%` }
+                        ]}
+                    />
+                </View>
+
+                {/* Completion Badge */}
+                {allCompleted && (
+                    <View style={tw`bg-[#1a3a2d] border border-[#4ade80] rounded-xl p-4 mb-4 flex-row items-center`}>
+                        <Ionicons name="checkmark-circle" size={24} color="#4ade80" />
+                        <Text style={tw`text-[#4ade80] ml-2 font-semibold`}>
+                            All exercises completed! 🎉
+                        </Text>
+                    </View>
+                )}
+
                 <ScrollView
                     style={tw`flex-1`}
                     showsVerticalScrollIndicator={false}
@@ -126,43 +100,66 @@ const DailyRoutine = () => {
                         </View>
                     </View>
 
-                    {exercises.map((exercise) => (
+                    {exercises.map((exercise, index) => (
                         <TouchableOpacity
                             key={exercise.id}
                             onPress={() => handleExercisePress(exercise)}
                             activeOpacity={0.8}
+                            disabled={exercise.completed}
                         >
                             <View style={[
                                 tw`flex-row justify-between items-center rounded-xl p-4 my-2`,
-                                selectedExercise?.id === exercise.id
-                                    ? tw`bg-[#2A3A4F] border border-[#60A5FB]`
-                                    : tw`bg-[#1D2229]`
+                                exercise.completed
+                                    ? tw`bg-[#1a3a2d] border border-[#4ade80]`
+                                    : index === currentExerciseIndex
+                                        ? tw`bg-[#2A3A4F] border border-[#60A5FB]`
+                                        : tw`bg-[#1D2229]`,
+                                exercise.completed && tw`opacity-70`
                             ]}>
                                 <View style={tw`flex-row items-center`}>
-                                    <View style={tw`bg-[#202F41] p-3 rounded-xl mr-4`}>
-                                        <MaterialCommunityIcons name={exercise.icon as any} size={28} color="#60A5FB" />
+                                    <View style={[
+                                        tw`p-3 rounded-xl mr-4`,
+                                        exercise.completed ? tw`bg-[#2a5c46]` : tw`bg-[#202F41]`
+                                    ]}>
+                                        <MaterialCommunityIcons
+                                            name={exercise.icon as any}
+                                            size={28}
+                                            color={exercise.completed ? "#4ade80" : "#60A5FB"}
+                                        />
                                     </View>
                                     <View>
-                                        <Text style={tw`text-white text-lg font-medium`}>{exercise.name}</Text>
-                                        <Text style={tw`text-[#9CA3AF] text-sm mt-1`}>{exercise.duration}</Text>
+                                        <Text style={[
+                                            tw`text-lg font-medium`,
+                                            exercise.completed ? tw`text-[#4ade80]` : tw`text-white`
+                                        ]}>
+                                            {exercise.name}
+                                        </Text>
+                                        <Text style={tw`text-[#9CA3AF] text-sm mt-1`}>
+                                            {exercise.duration} {exercise.completed ? '✓' : ''}
+                                        </Text>
                                     </View>
                                 </View>
-                                <MaterialIcons name="keyboard-arrow-right" size={30} color="white" />
+                                <MaterialIcons
+                                    name="keyboard-arrow-right"
+                                    size={30}
+                                    color={exercise.completed ? "#4ade80" : "white"}
+                                />
                             </View>
                         </TouchableOpacity>
                     ))}
-
-
                 </ScrollView>
 
                 <View style={tw`pb-6 pt-4 bg-[#000000]`}>
                     <TouchableOpacity
                         onPress={handleStartWorkout}
                         activeOpacity={0.8}
-                        style={tw`bg-[#60A5FB] p-5 rounded-xl flex-row gap-2 items-center justify-center`}
+                        style={[
+                            tw`p-5 rounded-xl flex-row gap-2 items-center justify-center`,
+                            allCompleted ? tw`bg-[#4ade80]` : tw`bg-[#60A5FB]`
+                        ]}
                     >
                         <Text style={tw`text-white text-center text-xl font-semibold`}>
-                            {selectedExercise ? `Start ${selectedExercise.name}` : 'Start Workout'}
+                            {allCompleted ? 'View Progress in TrackGym' : `Start ${nextExercise?.name}`}
                         </Text>
                     </TouchableOpacity>
                 </View>

@@ -1,9 +1,15 @@
+// screens/Exercise.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import tw from "twrnc";
+import { useWorkout } from '../lib/WorkoutProvider';
+import { RootStackParamList } from '../types/navigation';
+
+// Define the route prop type for this screen
+type ExerciseScreenRouteProp = RouteProp<RootStackParamList, 'Exercise'>;
 
 interface InstructionItemProps {
     text: string;
@@ -18,21 +24,19 @@ const InstructionItem = ({ text }: InstructionItemProps) => (
     </View>
 );
 
-const Exercise = ({ route }: any) => {
+const Exercise = () => {
     const navigation = useNavigation();
+    const route = useRoute<ExerciseScreenRouteProp>(); // Properly typed route
+    const { exercises } = useWorkout();
 
-    // Get data with fallbacks
-    const name = route?.params?.name;
-    const duration = route?.params?.duration;
-    const instructions = route?.params?.instructions;
+    // Now TypeScript knows exerciseId exists
+    const exerciseId = route.params.exerciseId;
+    const exercise = exercises.find(ex => ex.id === exerciseId) || exercises[0];
 
     const handleStartExercise = () => {
-        // Navigate to Session screen with data
-        (navigation as any).navigate('Sessions', {
-            title: name,
-            info: instructions,
-            duration: duration.replace('s', ''), // Remove 's' from '9s'
-            description: `Clench your jaw muscles tightly and hold for the duration.`,
+        // Properly typed navigation
+        navigation.navigate('Sessions', {
+            exerciseId: exercise.id,
         });
     };
 
@@ -56,9 +60,8 @@ const Exercise = ({ route }: any) => {
                     </View>
                 </View>
                 <Text style={tw`text-white text-2xl font-bold my-8`}>
-                    {name}
+                    {exercise.name}
                 </Text>
-
             </View>
 
             <ScrollView
@@ -79,7 +82,7 @@ const Exercise = ({ route }: any) => {
                 </Text>
 
                 <View style={tw`mb-6`}>
-                    {instructions.map((instruction: string, index: number) => (
+                    {exercise.instructions.map((instruction: string, index: number) => (
                         <InstructionItem key={index} text={instruction} />
                     ))}
                 </View>

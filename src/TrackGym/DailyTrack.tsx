@@ -3,7 +3,8 @@ import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
+  ActivityIndicator, Alert,
+  BackHandler,
   Dimensions,
   LayoutChangeEvent,
   ScrollView,
@@ -391,6 +392,8 @@ const DailyTrack = () => {
     loadAllData();
   }, []);
 
+
+
   const loadAllData = async () => {
     setLoading(true);
     setError(null);
@@ -411,6 +414,23 @@ const DailyTrack = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBackPress = () => {
+    Alert.alert(
+      'Exit App',
+      'Are you sure you want to exit?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Exit',
+          onPress: () => BackHandler.exitApp()
+        },
+      ]
+    );
   };
 
   // Loading State
@@ -442,7 +462,8 @@ const DailyTrack = () => {
       <StatusBar style="light" />
       <View style={tw`mb-2`}>
         <View style={tw`flex-row items-center`}>
-          <TouchableOpacity onPress={() => (navigation as any).goBack()} style={tw`absolute left-0 z-10`}>
+          <TouchableOpacity onPress={handleBackPress}
+            style={tw`absolute left-0 z-10`}>
             <Ionicons name="arrow-back" size={28} color="white" />
           </TouchableOpacity>
 
@@ -550,13 +571,40 @@ const DailyTrack = () => {
       <View>
         <TouchableOpacity
           onPress={() => (navigation as any).navigate('FaceCoach')}
-          style={tw`bg-[#181C22] absolute bottom-17  w-[45] self-end border border-white/20 p-4 my-3 rounded-2xl flex-row items-center justify-center`}
+          style={[
+            tw`absolute bottom-19 right-0 z-50 px-5 py-4 rounded-2xl flex-row items-center justify-center`,
+            {
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              borderColor: 'rgba(255, 255, 255, 0.3)',
+              borderWidth: 1,
+              // Remove backdropFilter - it's not supported in React Native
+              shadowColor: '#000',
+              shadowOffset: {
+                width: 0,
+                height: 8,
+              },
+              shadowOpacity: 0.25,
+              shadowRadius: 16,
+              elevation: 12,
+            }
+          ]}
           activeOpacity={0.8}
         >
-          <MaterialCommunityIcons name="message-text-outline" size={20} color="white" />
-
-          <Text style={tw`text-white text-sm font-medium mx-2`}>Ask FaceCoach</Text>
-          <Ionicons name="chatbubble-ellipses" size={20} color="white" />
+          <MaterialCommunityIcons
+            name="message-text-outline"
+            size={20}
+            color="white"
+            style={tw`mr-2`}
+          />
+          <Text style={tw`text-white text-sm font-semibold mx-1`}>
+            Ask FaceCoach
+          </Text>
+          <Ionicons
+            name="chatbubble-ellipses"
+            size={18}
+            color="white"
+            style={tw`ml-1`}
+          />
         </TouchableOpacity>
       </View>
     </SafeAreaView>

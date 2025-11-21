@@ -26,7 +26,7 @@ const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanP
     style={tw`bg-[#1D2229] ${isSelected
       ? ' border-2 border-[#60A5FA]'
       : ' border-2 border-transparent'
-      } rounded-2xl p-3 my-2`}
+      } rounded-2xl p-3 my-4`}
     activeOpacity={0.8}
   >
     <View style={tw`flex-row items-center justify-between`}>
@@ -43,13 +43,7 @@ const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanP
             <Text style={tw`text-white text-xl font-bold`}>
               {title}
             </Text>
-            {badge && (
-              <View style={tw`bg-[#60A5FB1A] px-3 py-1 rounded-2xl ml-3`}>
-                <Text style={tw`text-[#60A5FB]  font-medium`}>
-                  {badge}
-                </Text>
-              </View>
-            )}
+
           </View>
           <View style={tw`flex-row items-center mt-1`}>
             <Text style={tw`text-[#9CA3AF] text-base`}>
@@ -61,7 +55,15 @@ const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanP
               </Text>
             )}
           </View>
+
         </View>
+        {badge && (
+          <View style={tw`bg-[#60A5FB66] px-3 py-2 rounded-2xl ml-3`}>
+            <Text style={tw`text-[white]  font-medium`}>
+              {badge}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   </TouchableOpacity>
@@ -82,7 +84,7 @@ const UnlockFacialGym = () => {
     },
     {
       id: '6-monthly',
-      title: '6 Monthly',
+      title: '6 Month Plan',
       price: '$69.99/mo',
       discount: 'save 22%',
       badge: 'Most Popular'
@@ -156,7 +158,7 @@ const UnlockFacialGym = () => {
         </View>
 
         <View style={tw`my-4`}>
-          <CustomButton name="Start Free 7-Day Trial" route="DailyRoutine" />
+          <CustomButton name="Start Free 7-Day Trial" route="DailyTrack" />
         </View>
         <Text style={tw`text-white text-center text-lg `} >7-day free trial, cancel anytime.</Text>
         <View style={tw`my-6 `}>
