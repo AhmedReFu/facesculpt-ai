@@ -1,6 +1,5 @@
-import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
+import { createStackNavigator } from '@react-navigation/stack';
 import * as React from 'react';
-import { Alert, BackHandler } from 'react-native';
 import "./global.css";
 import AuthScreen from './src/auth/AuthScreen';
 import OtpAuth from './src/auth/OtpAuth';
@@ -23,18 +22,18 @@ import DailyTrack from './src/TrackGym/DailyTrack';
 const Stack = createStackNavigator();
 
 function RootStack() {
-  React.useEffect(() => {
-    const backAction = () => {
-      Alert.alert('Exit App', 'Are you sure you want to exit?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Exit', onPress: () => BackHandler.exitApp() },
-      ]);
-      return true;
-    };
+  // React.useEffect(() => {
+  //   const backAction = () => {
+  //     Alert.alert('Exit App', 'Are you sure you want to exit?', [
+  //       { text: 'Cancel', style: 'cancel' },
+  //       { text: 'Exit', onPress: () => BackHandler.exitApp() },
+  //     ]);
+  //     return true;
+  //   };
 
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
-    return () => backHandler.remove();
-  }, []);
+  //   const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+  //   return () => backHandler.remove();
+  // }, []);
 
   return (
     <WorkoutProvider>
@@ -42,8 +41,9 @@ function RootStack() {
         <Stack.Navigator
           screenOptions={{
             headerShown: false,
-            cardStyle: { backgroundColor: '#000' },
-            ...TransitionPresets.SlideFromRightIOS,
+            animation: 'slide_from_right',
+            gestureEnabled: true, // Add this line
+            gestureDirection: 'horizontal', // And this line
           }}
           initialRouteName='Auth'
         >

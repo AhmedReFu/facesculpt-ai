@@ -47,6 +47,7 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
                 'Release slowly and reset posture.',
             ]
         },
+
         {
             id: 2,
             name: 'Eye Circle Massage',

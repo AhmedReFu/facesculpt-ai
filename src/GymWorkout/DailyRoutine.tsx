@@ -18,7 +18,7 @@ const DailyRoutine = () => {
 
     const handleExercisePress = (exercise: any) => {
         navigation.navigate('Exercise', {
-            exerciseId: exercise.id,
+            exerciseId: exercise.id, // Keep as number since your context uses number
         });
     };
 
@@ -37,12 +37,20 @@ const DailyRoutine = () => {
         }
     };
 
+    const handleBackPress = () => {
+        navigation.goBack();
+    };
+
     const getNextIncompleteExercise = () => {
         return exercises.find(exercise => !exercise.completed) || exercises[0];
     };
 
     const nextExercise = getNextIncompleteExercise();
     const allCompleted = isWorkoutCompleted;
+
+    // Calculate progress percentage safely
+    const completedExercises = exercises.filter(ex => ex.completed).length;
+    const progressPercentage = exercises.length > 0 ? (completedExercises / exercises.length) * 100 : 0;
 
     return (
         <View style={tw`flex-1 bg-[#000000] px-4`}>
@@ -51,7 +59,7 @@ const DailyRoutine = () => {
                 <View style={tw`mb-2`}>
                     <View style={tw`flex-row items-center`}>
                         <TouchableOpacity
-                            onPress={() => navigation.navigate("DailyTrack")}
+                            onPress={handleBackPress}
                             style={tw`absolute left-0 z-10`}
                         >
                             <Ionicons name="arrow-back" size={28} color="white" />
@@ -72,7 +80,7 @@ const DailyRoutine = () => {
                     <View
                         style={[
                             tw`bg-[#60A5FB] h-2 rounded-full`,
-                            { width: `${(exercises.filter(ex => ex.completed).length / exercises.length) * 100}%` }
+                            { width: `${progressPercentage}%` }
                         ]}
                     />
                 </View>
@@ -91,6 +99,7 @@ const DailyRoutine = () => {
                     style={tw`flex-1`}
                     showsVerticalScrollIndicator={false}
                 >
+                    {/* Info Card */}
                     <View style={tw`flex-row bg-[#1D2229] rounded-xl p-4 my-3`}>
                         <MaterialIcons name="auto-awesome" size={28} color="#60A5FB" style={tw`mt-1`} />
                         <View style={tw`flex-1 ml-3`}>
@@ -100,6 +109,7 @@ const DailyRoutine = () => {
                         </View>
                     </View>
 
+                    {/* Exercise List */}
                     {exercises.map((exercise, index) => (
                         <TouchableOpacity
                             key={exercise.id}
@@ -159,7 +169,7 @@ const DailyRoutine = () => {
                         ]}
                     >
                         <Text style={tw`text-white text-center text-xl font-semibold`}>
-                            {allCompleted ? 'View Progress in TrackGym' : `Start ${nextExercise?.name}`}
+                            {allCompleted ? 'View Progress in TrackGym' : `Start ${nextExercise?.name || 'Workout'}`}
                         </Text>
                     </TouchableOpacity>
                 </View>

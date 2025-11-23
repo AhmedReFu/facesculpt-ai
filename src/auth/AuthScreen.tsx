@@ -12,6 +12,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useBackHandler } from '../lib/useBackHandler';
 
 type RootStackParamList = {
     Home: undefined;
@@ -35,6 +36,8 @@ const AuthScreen = () => {
 
     const [isReady, setIsReady] = useState(false);
 
+    useBackHandler();
+
     useEffect(() => {
         const timer = setTimeout(() => {
             setIsReady(true);
@@ -53,11 +56,16 @@ const AuthScreen = () => {
     const handleSignIn = () => {
         console.log('Sign In:', { email, password, rememberMe });
         if (email && password) {
+            setEmail("");
+            setPassword("")
             navigation.navigate('Home');
         }
     };
 
     const handleSignUp = () => {
+        setEmail("");
+        setPassword("")
+        setName("")
         console.log('Sign Up:', { name, email, password, agreeTerms });
         navigation.navigate('OtpAuth');
     };

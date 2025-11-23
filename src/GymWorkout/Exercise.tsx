@@ -26,11 +26,13 @@ const InstructionItem = ({ text }: InstructionItemProps) => (
 
 const Exercise = () => {
     const navigation = useNavigation();
-    const route = useRoute<ExerciseScreenRouteProp>(); // Properly typed route
+    // Properly typed route
     const { exercises } = useWorkout();
 
-    // Now TypeScript knows exerciseId exists
+    const route = useRoute<ExerciseScreenRouteProp>();
     const exerciseId = route.params.exerciseId;
+    // Now TypeScript knows exerciseId exists
+
     const exercise = exercises.find(ex => ex.id === exerciseId) || exercises[0];
 
     const handleStartExercise = () => {

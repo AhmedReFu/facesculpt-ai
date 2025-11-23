@@ -1,7 +1,7 @@
 // screens/Sessions.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { CommonActions, RouteProp, useNavigation, useRoute } from '@react-navigation/native'; // ADD CommonActions
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -86,7 +86,7 @@ const Sessions = () => {
             // For reps-based exercises, just navigate to next
             handleNextExercise();
         } else {
-        // For duration-based exercises, start/pause timer
+            // For duration-based exercises, start/pause timer
             if (timeLeft === 0) {
                 setTimeLeft(exercise?.durationInSeconds || 10);
                 setIsCompleted(false);
@@ -116,16 +116,32 @@ const Sessions = () => {
                 const nextExercise = getCurrentExercise();
 
                 if (isWorkoutCompleted) {
-                    // All exercises completed - go to DailyRoutine
-                    navigation.navigate('DailyRoutine');
+                    // All exercises completed - RESET navigation to remove workout history
+                    navigation.dispatch(
+                        CommonActions.reset({
+                            index: 1, // This makes DailyRoutine current, with DailyTrack in history
+                            routes: [
+                                { name: 'DailyTrack' },
+                                { name: 'DailyRoutine' },
+                            ],
+                        })
+                    );
                 } else if (nextExercise && !nextExercise.completed) {
-                    // Go to next exercise
+                    // Go to next exercise (normal navigation)
                     navigation.navigate('Sessions', {
                         exerciseId: nextExercise.id,
                     });
                 } else {
-                    // No next exercise or all completed - go to DailyRoutine
-                    navigation.navigate('DailyRoutine');
+                    // No next exercise or all completed - RESET navigation
+                    navigation.dispatch(
+                        CommonActions.reset({
+                            index: 1,
+                            routes: [
+                                { name: 'DailyTrack' },
+                                { name: 'DailyRoutine' },
+                            ],
+                        })
+                    );
                 }
             }, 1000);
         }
@@ -143,13 +159,30 @@ const Sessions = () => {
                 exerciseId: nextExercise.id,
             });
         } else {
-            // If no next exercise, go to DailyRoutine
-            navigation.navigate('DailyRoutine');
+            // If no next exercise, RESET navigation to DailyRoutine
+            navigation.dispatch(
+                CommonActions.reset({
+                    index: 1,
+                    routes: [
+                        { name: 'DailyTrack' },
+                        { name: 'DailyRoutine' },
+                    ],
+                })
+            );
         }
     };
 
     const handleBackToRoutine = () => {
-        navigation.navigate('DailyRoutine');
+        // Use reset instead of navigate to clear workout history
+        navigation.dispatch(
+            CommonActions.reset({
+                index: 1,
+                routes: [
+                    { name: 'DailyTrack' },
+                    { name: 'DailyRoutine' },
+                ],
+            })
+        );
     };
 
     if (!exercise) {
@@ -268,16 +301,6 @@ const Sessions = () => {
                         </Text>
                     </View>
                 )}
-
-                {/* Diagram Placeholder */}
-                {/* <View style={tw`bg-[#1D2229] rounded-2xl p-14 flex-row items-center mb-6`}>
-                    <View style={tw`bg-[#202F41] p-4 rounded-xl mr-4`}>
-                        <Ionicons name="image" size={32} color="#60A5FB" />
-                    </View>
-                    <Text style={tw`text-white text-base`}>
-                        Diagram coming soon
-                    </Text>
-                </View> */}
 
                 <View style={tw`h-32`} />
             </ScrollView>

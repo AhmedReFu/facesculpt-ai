@@ -1,9 +1,24 @@
 // types/navigation.ts
 export type RootStackParamList = {
-  DailyRoutine: undefined;
+  Auth: undefined;
+  ResetPassword: undefined;
+  Otp: undefined;
+  OtpAuth: undefined;
+  CreateNewPassword: undefined;
   DailyTrack: undefined;
-  Exercise: { exerciseId: number };
-  Sessions: { exerciseId: number };
+  Home: undefined;
+  FaceScan: undefined;
+  FaceMetrics: undefined;
+  ChooseGoal: undefined;
+  UnlockFacialGym: undefined;
+  DailyRoutine: undefined;
+  Exercise: {
+    exerciseId: number; // Should match your context (number)
+  };
+  Sessions: {
+    exerciseId: number; // Should match your context (number)
+  };
+  FaceCoach: undefined;
 };
 
 // Declare global types for useNavigation

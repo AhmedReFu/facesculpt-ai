@@ -20,7 +20,7 @@ const Home = () => {
             <StatusBar style='light' />
             <View style={tw`mt-14 flex-1`}>
                 <View style={tw`h-16 w-16 bg-[#202F41] rounded-lg items-center justify-center my-4`}>
-                    <MaterialIcons name="face" size={24} color="#548ED7" />
+                    <MaterialIcons name="face" size={30} color="#548ED7" />
                 </View>
                 <Text style={tw`text-5xl my-4 text-white`}>Welcome to FaceSculpt AI</Text>
                 <Text style={tw`text-xl text-white`}>Scan your face to get started</Text>
