@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { StatusBar } from 'expo-status-bar';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Button, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle, Ellipse } from 'react-native-svg';
 import tw from "twrnc";
 
@@ -121,68 +121,68 @@ const FaceScan = () => {
     };
 
     // If photo captured, show preview
-    if (capturedImage) {
-        return (
-            <View style={styles.fullScreen}>
-                <StatusBar style='light' />
+    // if (capturedImage) {
+    //     return (
+    //         <View style={styles.fullScreen}>
+    //             <StatusBar style='light' />
 
-                {/* Preview Header */}
-                <View style={tw`bg-black px-4 pt-14 pb-4`}>
-                    <View style={tw`flex-row items-center justify-between`}>
-                        <Text style={tw`text-white text-2xl font-bold`}>Preview</Text>
-                        <TouchableOpacity onPress={() => navigation.goBack()}>
-                            <Ionicons name="close" size={28} color="white" />
-                        </TouchableOpacity>
-                    </View>
-                    <Text style={tw`text-gray-400 text-base mt-2`}>
-                        Review your photo before continuing
-                    </Text>
-                </View>
+    //             {/* Preview Header */}
+    //             <View style={tw`bg-black px-4 pt-14 pb-4`}>
+    //                 <View style={tw`flex-row items-center justify-between`}>
+    //                     <Text style={tw`text-white text-2xl font-bold`}>Preview</Text>
+    //                     <TouchableOpacity onPress={() => navigation.goBack()}>
+    //                         <Ionicons name="close" size={28} color="white" />
+    //                     </TouchableOpacity>
+    //                 </View>
+    //                 <Text style={tw`text-gray-400 text-base mt-2`}>
+    //                     Review your photo before continuing
+    //                 </Text>
+    //             </View>
 
-                {/* Image Preview */}
-                <View style={tw`flex-1 bg-black items-center justify-center`}>
-                    <Image
-                        source={{ uri: capturedImage }}
-                        style={tw`w-full h-[70%]`}
-                        resizeMode="contain"
-                    />
-                </View> 
+    //             {/* Image Preview */}
+    //             <View style={tw`flex-1 bg-black items-center justify-center`}>
+    //                 <Image
+    //                     source={{ uri: capturedImage }}
+    //                     style={tw`w-full h-[70%]`}
+    //                     resizeMode="contain"
+    //                 />
+    //             </View> 
 
-                {/* Action Buttons */}
-                <View style={tw`bg-black px-6 pb-8 pt-4`}>
-                    <View style={tw`flex-row gap-3 mb-3`}>
-                        <TouchableOpacity
-                            onPress={retakePhoto}
-                            style={tw`flex-1 bg-gray-700 py-4 rounded-2xl`}
-                            activeOpacity={0.7}
-                        >
-                            <Text style={tw`text-white text-center font-semibold text-base`}>
-                                Retake
-                            </Text>
-                        </TouchableOpacity>
+    //             {/* Action Buttons */}
+    //             <View style={tw`bg-black px-6 pb-8 pt-4`}>
+    //                 <View style={tw`flex-row gap-3 mb-3`}>
+    //                     <TouchableOpacity
+    //                         onPress={retakePhoto}
+    //                         style={tw`flex-1 bg-gray-700 py-4 rounded-2xl`}
+    //                         activeOpacity={0.7}
+    //                     >
+    //                         <Text style={tw`text-white text-center font-semibold text-base`}>
+    //                             Retake
+    //                         </Text>
+    //                     </TouchableOpacity>
 
-                        <TouchableOpacity
-                            onPress={uploadImage}
-                            style={tw`flex-1 bg-blue-500 py-4 rounded-2xl flex-row items-center justify-center`}
-                            activeOpacity={0.7}
-                            disabled={uploading}
-                        >
-                            {uploading ? (
-                                <ActivityIndicator color="white" />
-                            ) : (
-                                <>
-                                    <MaterialIcons name="check" size={20} color="white" style={tw`mr-2`} />
-                                    <Text style={tw`text-white font-semibold text-base`}>
-                                        Analyze
-                                    </Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </View>
-        );
-    }
+    //                     <TouchableOpacity
+    //                         onPress={uploadImage}
+    //                         style={tw`flex-1 bg-blue-500 py-4 rounded-2xl flex-row items-center justify-center`}
+    //                         activeOpacity={0.7}
+    //                         disabled={uploading}
+    //                     >
+    //                         {uploading ? (
+    //                             <ActivityIndicator color="white" />
+    //                         ) : (
+    //                             <>
+    //                                 <MaterialIcons name="check" size={20} color="white" style={tw`mr-2`} />
+    //                                 <Text style={tw`text-white font-semibold text-base`}>
+    //                                     Analyze
+    //                                 </Text>
+    //                             </>
+    //                         )}
+    //                     </TouchableOpacity>
+    //                 </View>
+    //             </View>
+    //         </View>
+    //     );
+    // }
 
     // Camera View
     return (

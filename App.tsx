@@ -1,6 +1,4 @@
-
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
+import { createStackNavigator } from '@react-navigation/stack';
 import * as React from 'react';
 import "./global.css";
 import AuthScreen from './src/auth/AuthScreen';
@@ -16,46 +14,60 @@ import FaceMetrics from './src/Home/FaceMetrics';
 import FaceScan from './src/Home/FaceScan';
 import Home from './src/Home/Home';
 import UnlockFacialGym from './src/Home/UnlockFacialGym';
+import AppNavigationContainer from './src/lib/useNavigationCleaner';
+import { WorkoutProvider } from './src/lib/WorkoutProvider';
 import FaceCoach from './src/Messages/FaceCoach';
 import DailyTrack from './src/TrackGym/DailyTrack';
-
 
 const Stack = createStackNavigator();
 
 function RootStack() {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-        cardStyle: { backgroundColor: '#000' }, // Set background to black
-        ...TransitionPresets.SlideFromRightIOS, // Smooth slide transition
-      }}
-      initialRouteName='Auth'
-    >
+  // React.useEffect(() => {
+  //   const backAction = () => {
+  //     Alert.alert('Exit App', 'Are you sure you want to exit?', [
+  //       { text: 'Cancel', style: 'cancel' },
+  //       { text: 'Exit', onPress: () => BackHandler.exitApp() },
+  //     ]);
+  //     return true;
+  //   };
 
-      <Stack.Screen name="Auth" component={AuthScreen} />
-      <Stack.Screen name="ResetPassword" component={ResetPassword} />
-      <Stack.Screen name="Otp" component={Otp} />
-      <Stack.Screen name="OtpAuth" component={OtpAuth} />
-      <Stack.Screen name="CreateNewPassword" component={CreateNewPassword} />
-      <Stack.Screen name="Home" component={Home} />
-      <Stack.Screen name="FaceScan" component={FaceScan} />
-      <Stack.Screen name="FaceMetrics" component={FaceMetrics} />
-      <Stack.Screen name="ChooseGoal" component={ChooseGoal} />
-      <Stack.Screen name="UnlockFacialGym" component={UnlockFacialGym} />
-      <Stack.Screen name="DailyRoutine" component={DailyRoutine} />
-      <Stack.Screen name="Exercise" component={Exercise} />
-      <Stack.Screen name="Sessions" component={Sessions} />
-      <Stack.Screen name="DailyTrack" component={DailyTrack} />
-      <Stack.Screen name="FaceCoach" component={FaceCoach} />
-    </Stack.Navigator>
+  //   const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+  //   return () => backHandler.remove();
+  // }, []);
+
+  return (
+    <WorkoutProvider>
+      <AppNavigationContainer>
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            gestureEnabled: true, // Add this line
+            gestureDirection: 'horizontal', // And this line
+          }}
+          initialRouteName='Auth'
+        >
+          <Stack.Screen name="Auth" component={AuthScreen} />
+          <Stack.Screen name="ResetPassword" component={ResetPassword} />
+          <Stack.Screen name="Otp" component={Otp} />
+          <Stack.Screen name="OtpAuth" component={OtpAuth} />
+          <Stack.Screen name="CreateNewPassword" component={CreateNewPassword} />
+          <Stack.Screen name="DailyTrack" component={DailyTrack} />
+          <Stack.Screen name="Home" component={Home} />
+          <Stack.Screen name="FaceScan" component={FaceScan} />
+          <Stack.Screen name="FaceMetrics" component={FaceMetrics} />
+          <Stack.Screen name="ChooseGoal" component={ChooseGoal} />
+          <Stack.Screen name="UnlockFacialGym" component={UnlockFacialGym} />
+          <Stack.Screen name="DailyRoutine" component={DailyRoutine} />
+          <Stack.Screen name="Exercise" component={Exercise} />
+          <Stack.Screen name="Sessions" component={Sessions} />
+          <Stack.Screen name="FaceCoach" component={FaceCoach} />
+        </Stack.Navigator>
+      </AppNavigationContainer>
+    </WorkoutProvider>
   );
 }
 
 export default function App() {
-  return (
-    <NavigationContainer>
-      <RootStack />
-    </NavigationContainer>
-  );
+  return <RootStack />; // Removed the extra NavigationContainer
 }

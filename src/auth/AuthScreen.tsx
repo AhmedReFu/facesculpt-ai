@@ -12,7 +12,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useBackHandler } from '../lib/useBackHandler';
 
 type RootStackParamList = {
     Home: undefined;
@@ -36,6 +36,8 @@ const AuthScreen = () => {
 
     const [isReady, setIsReady] = useState(false);
 
+    useBackHandler();
+
     useEffect(() => {
         const timer = setTimeout(() => {
             setIsReady(true);
@@ -54,11 +56,16 @@ const AuthScreen = () => {
     const handleSignIn = () => {
         console.log('Sign In:', { email, password, rememberMe });
         if (email && password) {
+            setEmail("");
+            setPassword("")
             navigation.navigate('Home');
         }
     };
 
     const handleSignUp = () => {
+        setEmail("");
+        setPassword("")
+        setName("")
         console.log('Sign Up:', { name, email, password, agreeTerms });
         navigation.navigate('OtpAuth');
     };
@@ -80,8 +87,9 @@ const AuthScreen = () => {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-black">
+        <ScrollView className="flex-1 bg-[#000000]">
             <StatusBar barStyle="light-content" />
+
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 className="flex-1"
@@ -137,6 +145,7 @@ const AuthScreen = () => {
                     
 
                     {/* Form Container */}
+
                     <View className="space-y-6">
                         {/* Name Input - Only for Sign Up */}
                         {activeTab === 'signup' && (
@@ -156,15 +165,15 @@ const AuthScreen = () => {
                         {/* Email Input */}
                         <View className="my-4">
                             <Text className="text-lg font-semibold text-white">
-                                Email Address
+                                Phone Number
                             </Text>
                             <TextInput
                                 className="bg-transparent border-2 border-gray-600 rounded-xl px-4 py-4 text-lg text-white"
-                                placeholder="Enter your email address"
+                                placeholder="Enter your phone number"
                                 placeholderTextColor="#6B7280"
                                 value={email}
                                 onChangeText={setEmail}
-                                keyboardType="email-address"
+                                keyboardType="number-pad"
                                 autoCapitalize="none"
                                 autoComplete="email"
                             />
@@ -251,11 +260,13 @@ const AuthScreen = () => {
                         </TouchableOpacity>
                     </View>
 
+
                     {/* Bottom Spacer */}
                     <View className="h-8" />
+
                 </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </ScrollView>
     );
 };
 

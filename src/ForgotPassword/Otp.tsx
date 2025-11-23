@@ -109,7 +109,7 @@ const Otp = () => {
 
                 {/* Subtext */}
                 <Text style={styles.subText}>
-                    Enter the verification code that we have sent to your email.
+                    A code has been sent to your mobile number. Please enter it to continue.
                 </Text>
 
                 {/* OTP Inputs */}

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { BlurView } from 'expo-blur';
@@ -153,7 +153,7 @@ const OtpAuth = () => {
                 </TouchableOpacity>
 
                 {/* Logo */}
-                <Text className="text-6xl font-bold text-white text-center mb-12">
+                <Text className="text-6xl font-bold text-white text-center mb-20">
                     Logo
                 </Text>
 
@@ -163,8 +163,8 @@ const OtpAuth = () => {
                 </Text>
 
                 {/* Subtext */}
-                <Text className="text-base text-gray-400 text-center mb-12 leading-6 px-2">
-                    Enter the verification code that we have sent to your email.
+                <Text className="text-xl text-gray-400 text-center mb-12 leading-6 px-2">
+                    A code has been sent to your mobile number. Please enter it to continue.
                 </Text>
 
                 {/* OTP Inputs */}
@@ -234,10 +234,11 @@ const OtpAuth = () => {
                 >
                     <View className="w-full max-w-[400px]">
                         <View className="bg-[#1A2028] rounded-3xl p-10 items-center border border-gray-700/50">
-                            {/* Success Icon with gradient border effect */}
+                            {/* Success Icon with gradient border effect bg-blue-400/10   w-24 h-24  border-4 border-blue-400 */}
                             <View className="mb-6">
-                                <View className="w-24 h-24 rounded-full border-4 border-blue-400 justify-center items-center bg-blue-400/10">
-                                    <Ionicons name="checkmark" size={50} color="#60A5FA" />
+                                <View className=" rounded-full  justify-center items-center ">
+                                    {/* <Ionicons name="checkmark" size={50} color="#60A5FA" /> */}
+                                    <MaterialCommunityIcons name="check-decagram-outline" size={80} color="#60A5FA" />
                                 </View>
                             </View>
 

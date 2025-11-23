@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type RootStackParamList = {
-    Otp: { email: string };
+    Otp: { phoneNumber: string };
     Auth: undefined;
 };
 
@@ -24,22 +24,18 @@ type ResetPasswordScreenNavigationProp = StackNavigationProp<RootStackParamList>
 
 const ResetPassword = () => {
     const navigator = useNavigation<ResetPasswordScreenNavigationProp>();
-    const [email, setEmail] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const validateEmail = (email: string): boolean => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    };
-
     const handleContinue = async () => {
-        if (!email.trim()) {
-            Alert.alert('Error', 'Please enter your email address');
+        if (!phoneNumber.trim()) {
+            Alert.alert('Error', 'Please enter your phone number');
             return;
         }
 
-        if (!validateEmail(email)) {
-            Alert.alert('Error', 'Please enter a valid email address');
+        // Simple check - just make sure there's some input
+        if (phoneNumber.trim().length < 5) {
+            Alert.alert('Error', 'Please enter a valid phone number');
             return;
         }
 
@@ -49,16 +45,16 @@ const ResetPassword = () => {
             // Simulate API call to send verification code
             await new Promise(resolve => setTimeout(resolve, 1500));
 
-            // Here you would call your actual API to send the verification code
-            console.log('Sending verification code to:', email);
+            // Here you would call your actual SMS service
+            console.log('Sending verification code to:', phoneNumber);
 
             Alert.alert(
                 'Verification Code Sent',
-                `We've sent a verification code to ${email}`,
+                `We've sent a verification code to ${phoneNumber}`,
                 [
                     {
                         text: 'OK',
-                        onPress: () => navigator.replace('Otp', { email })
+                        onPress: () => navigator.replace('Otp', { phoneNumber })
                     }
                 ]
             );
@@ -69,11 +65,7 @@ const ResetPassword = () => {
         }
     };
 
-    const handleBack = () => {
-        navigator.goBack();
-    };
-
-    const isFormValid = validateEmail(email);
+    const isFormValid = phoneNumber.trim().length > 0;
 
     return (
         <SafeAreaView style={styles.container} className='px-4'>
@@ -100,40 +92,27 @@ const ResetPassword = () => {
                 <View style={styles.headerContainer}>
                     <Text style={styles.title}>Reset Password</Text>
                     <Text style={styles.subtitle}>
-                        Enter your email, we will send a verification code to your email.
+                        Enter your phone number, we will send a verification code to your phone number.
                     </Text>
                 </View>
 
                 {/* Form Section */}
                 <View style={styles.formContainer}>
-                    {/* Email Input */}
+                    {/* Phone Number Input */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Email Address</Text>
+                        <Text style={styles.label}>Phone Number</Text>
                         <TextInput
-                            style={[
-                                styles.input,
-                                email && !validateEmail(email) && styles.inputError,
-                                email && validateEmail(email) && styles.inputSuccess
-                            ]}
-                            placeholder="Enter your email address"
+                            style={styles.input}
+                            placeholder="Enter your phone number"
                             placeholderTextColor="#6B7280"
-                            keyboardType="email-address"
+                            keyboardType="number-pad"
                             autoCapitalize="none"
-                            autoComplete="email"
+                            autoComplete="tel"
                             autoCorrect={false}
-                            value={email}
-                            onChangeText={setEmail}
+                            value={phoneNumber}
+                            onChangeText={setPhoneNumber}
                             editable={!isLoading}
                         />
-                        {email && !validateEmail(email) && (
-                            <Text style={styles.errorText}>Please enter a valid email address</Text>
-                        )}
-                        {email && validateEmail(email) && (
-                            <View style={styles.successContainer}>
-                                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                                <Text style={styles.successText}>Valid email address</Text>
-                            </View>
-                        )}
                     </View>
 
                     {/* Continue Button */}
@@ -155,7 +134,7 @@ const ResetPassword = () => {
                 {/* Additional Help Text */}
                 <View style={styles.helpContainer}>
                     <Text style={styles.helpText}>
-                        Can't access your email?{' '}
+                        Can't access your phone?{' '}
                         <Text style={styles.helpLink}>Contact support</Text>
                     </Text>
                 </View>
@@ -171,7 +150,6 @@ const styles = StyleSheet.create({
     },
     keyboardAvoidingView: {
         flex: 1,
-
     },
     backButton: {
         marginTop: 10,
@@ -204,7 +182,6 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
     formContainer: {
-
         justifyContent: 'center',
     },
     inputGroup: {
@@ -225,29 +202,6 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         fontSize: 16,
         color: '#fff',
-    },
-    inputError: {
-        borderColor: '#EF4444',
-    },
-    inputSuccess: {
-        borderColor: '#10B981',
-    },
-    errorText: {
-        color: '#EF4444',
-        fontSize: 12,
-        marginTop: 4,
-        marginLeft: 4,
-    },
-    successContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 4,
-        gap: 4,
-    },
-    successText: {
-        fontSize: 12,
-        color: '#10B981',
-        fontWeight: '500',
     },
     continueButton: {
         backgroundColor: '#60A5FA',

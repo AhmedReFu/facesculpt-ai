@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { BlurView } from 'expo-blur';
@@ -109,7 +109,7 @@ export default function CreateNewPassword() {
 
 
     const handleBack = (): void => {
-        navigation.goBack();
+        navigation.navigate('Auth');
     };
 
     const isContinueEnabled = allChecksPassed && passwordsMatch;
@@ -253,7 +253,8 @@ export default function CreateNewPassword() {
                             {/* Success Icon with gradient border effect */}
                             <View style={styles.iconWrapper}>
                                 <View style={styles.iconContainer}>
-                                    <Ionicons name="checkmark" size={50} color="#60A5FA" />
+                                    {/* <Ionicons name="checkmark" size={50} color="#60A5FA" /> */}
+                                    <MaterialCommunityIcons name="check-decagram-outline" size={80} color="#60A5FA" />
                                 </View>
                             </View>
 
@@ -528,14 +529,14 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     iconContainer: {
-        width: 96,
-        height: 96,
-        borderRadius: 48,
-        borderWidth: 4,
-        borderColor: '#60A5FA',
+        // width: 96,
+        // height: 96,
+        // borderRadius: 48,
+        // borderWidth: 4,
+        // borderColor: '#60A5FA',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+        // backgroundColor: 'rgba(96, 165, 250, 0.1)',
     },
     modalTitle: {
         fontSize: 24,

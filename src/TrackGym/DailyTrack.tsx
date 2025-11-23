@@ -16,91 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from 'twrnc';
 
 const { width: WINDOW_WIDTH } = Dimensions.get('window');
-const CHART_MARGIN_HORIZONTAL = -20; // match your screen padding
+const CHART_MARGIN_HORIZONTAL = -20;
 const CHART_WIDTH = WINDOW_WIDTH - CHART_MARGIN_HORIZONTAL * 2;
-
-// ============================================
-// API CONFIGURATION - CHANGE THESE VALUES
-// ============================================
-const API_CONFIG = {
-  BASE_URL: 'https://your-backend.com/api',
-  ENDPOINTS: {
-    DAILY_PROGRESS: '/user/daily-progress',
-    LEADERBOARD: '/user/leaderboard',
-    ACHIEVEMENTS: '/user/achievements',
-  },
-  API_KEY: 'your-api-key-here',
-  TIMEOUT: 10000,
-};
-
-// ============================================
-// API SERVICE WITH ERROR HANDLING
-// ============================================
-const apiService = {
-  async makeRequest(endpoint: string, options = {}) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
-
-    try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
-        ...options,
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${API_CONFIG.API_KEY}`,
-        },
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      console.error('API Request Error:', error);
-      throw error;
-    }
-  },
-
-  async fetchDailyProgress(userId: string) {
-    try {
-      const data = await this.makeRequest(
-        `${API_CONFIG.ENDPOINTS.DAILY_PROGRESS}?userId=${userId}`
-      );
-      return data;
-    } catch (error) {
-      console.warn('Using mock data due to API error');
-      return getMockData();
-    }
-  },
-
-  async fetchLeaderboard(userId: string) {
-    try {
-      const data = await this.makeRequest(
-        `${API_CONFIG.ENDPOINTS.LEADERBOARD}?userId=${userId}`
-      );
-      return data;
-    } catch (error) {
-      console.warn('Using mock leaderboard data');
-      return getMockLeaderboard();
-    }
-  },
-
-  async fetchAchievements(userId: string) {
-    try {
-      const data = await this.makeRequest(
-        `${API_CONFIG.ENDPOINTS.ACHIEVEMENTS}?userId=${userId}`
-      );
-      return data;
-    } catch (error) {
-      console.warn('Using mock achievements data');
-      return getMockAchievements();
-    }
-  },
-};
 
 // ============================================
 // MOCK DATA (Use while developing/testing)
@@ -166,14 +83,13 @@ const getMockAchievements = () => ([
 ]);
 
 // ============================
-// Utility: generate last N day labels (e.g. Mon, Tue or MM/DD)
+// Utility: generate last N day labels
 // ============================
 const generateLastNDates = (n: number) => {
   const arr: string[] = [];
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    // Format as "MM/DD" — change if you want weekdays
     const label = `${d.getMonth() + 1}/${d.getDate()}`;
     arr.push(label);
   }
@@ -190,7 +106,6 @@ const GoalChart = ({ goal }: any) => {
   const hideTimeoutRef = useRef<any>(null);
   const [containerHeight, setContainerHeight] = useState(150);
 
-  // assume chart has same number of points as goal.chartData
   const pointsCount = Array.isArray(goal.chartData) ? goal.chartData.length : 0;
   const xLabels = generateLastNDates(pointsCount || 30);
 
@@ -220,18 +135,15 @@ const GoalChart = ({ goal }: any) => {
     },
   };
 
-  // map touch x -> index
   const getIndexByTouch = (touchX: number, totalWidth: number) => {
-    const available = totalWidth; // already content width
+    const available = totalWidth;
     if (pointsCount <= 1) return 0;
     const step = available / pointsCount;
     let idx = Math.floor(touchX / step);
-    // clamp
     idx = Math.max(0, Math.min(pointsCount - 1, idx));
     return idx;
   };
 
-  // handlers using responder system so touches work across platforms over chart
   const onContainerLayout = (e: LayoutChangeEvent) => {
     const { height } = e.nativeEvent.layout;
     setContainerHeight(height || 150);
@@ -242,7 +154,6 @@ const GoalChart = ({ goal }: any) => {
     const index = getIndexByTouch(x, CHART_WIDTH);
     setSelectedIndex(index);
     setTooltipPos({ x, y: evt.nativeEvent.locationY });
-    // auto-hide after 2s
     if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
     hideTimeoutRef.current = setTimeout(() => setSelectedIndex(null), 2000);
     return true;
@@ -276,18 +187,16 @@ const GoalChart = ({ goal }: any) => {
         </Text>
       </View>
 
-      {/* Chart container with responder handlers */}
+      {/* Chart container */}
       <View
         ref={chartContainerRef}
         onLayout={onContainerLayout}
         style={[tw`overflow-hidden`, { width: CHART_WIDTH, alignSelf: 'center' }]}
-        // responder props
         onStartShouldSetResponder={() => true}
         onResponderGrant={handleStartResponder}
         onResponderMove={handleMoveResponder}
         onResponderRelease={handleReleaseResponder}
       >
-
         <LineChart
           data={{
             labels: xLabels,
@@ -312,7 +221,6 @@ const GoalChart = ({ goal }: any) => {
           <View
             style={{
               position: 'absolute',
-              // clamp tooltip X so it doesn't overflow edges
               left: Math.max(6, Math.min(CHART_WIDTH - 110, tooltipPos.x - 50)),
               top: 8,
               backgroundColor: '#0F1724',
@@ -357,12 +265,12 @@ const LeaderboardEntry = ({ entry }: any) => {
   return (
     <View style={tw`flex-row items-center justify-between py-3`}>
       <View style={tw`flex-row items-center flex-1`}>
-        <Text style={tw`text-gray-400 text-[4] w-12`}>#{entry.rank}</Text>
-        <Text style={tw`text-gray-400 text-[4]`}>{entry.name}</Text>
+        <Text style={tw`text-gray-400 text-base w-12`}>#{entry.rank}</Text>
+        <Text style={tw`text-gray-400 text-base`}>{entry.name}</Text>
       </View>
       <View style={tw`flex-row items-center`}>
         {entry && (
-          <Text style={tw`${getTrendColor()} text-xs font-bold  bg-[#56975E1A] rounded-2xl px-3 py-2`}>
+          <Text style={tw`${getTrendColor()} text-xs font-bold bg-[#56975E1A] rounded-2xl px-3 py-2`}>
             {getTrendSymbol()} {Math.abs(entry.change)}
           </Text>
         )}
@@ -384,9 +292,6 @@ const DailyTrack = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Replace with actual user ID from your auth system
-  const userId = 'user123';
-
   useEffect(() => {
     loadAllData();
   }, []);
@@ -396,11 +301,10 @@ const DailyTrack = () => {
     setError(null);
 
     try {
-      const [progressData, leaderboardData, achievementsData] = await Promise.all([
-        apiService?.fetchDailyProgress(userId),
-        apiService?.fetchLeaderboard(userId),
-        apiService?.fetchAchievements(userId),
-      ]);
+      // Using mock data directly since API is not configured
+      const progressData = getMockData();
+      const leaderboardData = getMockLeaderboard();
+      const achievementsData = getMockAchievements();
 
       setData(progressData);
       setLeaderboard(leaderboardData);
@@ -411,6 +315,10 @@ const DailyTrack = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBackPress = () => {
+    navigation.goBack(); // Fixed: Use navigation.goBack() instead of exit app
   };
 
   // Loading State
@@ -442,20 +350,21 @@ const DailyTrack = () => {
       <StatusBar style="light" />
       <View style={tw`mb-2`}>
         <View style={tw`flex-row items-center`}>
-          <TouchableOpacity onPress={() => (navigation as any).goBack()} style={tw`absolute left-0 z-10`}>
+          <TouchableOpacity onPress={handleBackPress} style={tw`absolute left-0 z-10`}>
             <Ionicons name="arrow-back" size={28} color="white" />
           </TouchableOpacity>
 
           <Text style={tw`text-white text-xl font-semibold flex-1 text-center`}>Daily Progress</Text>
         </View>
       </View>
+
       <ScrollView style={tw`flex-1`} contentContainerStyle={tw`pb-1`} showsVerticalScrollIndicator={false}>
-        <View style={tw` pt-4`}>
+        <View style={tw`pt-4`}>
           {/* Header */}
           <Text style={tw`text-white text-3xl font-bold mb-4`}>Day {data.dayCompleted} complete!</Text>
 
           {/* Streak Badge */}
-          <View style={tw`bg-[#1E2532]  p-3 rounded-full flex-row items-center self-start`}>
+          <View style={tw`bg-[#1E2532] p-3 rounded-full flex-row items-center self-start`}>
             <Text style={tw`text-lg mr-2`}>
               <MaterialIcons name="local-fire-department" size={24} color="#60A5FB" />
             </Text>
@@ -516,12 +425,12 @@ const DailyTrack = () => {
               </View>
 
               <View style={tw`flex-row justify-between py-2`}>
-                <Text style={tw`text-gray-400 text-[4]`}>Your Rank</Text>
+                <Text style={tw`text-gray-400 text-base`}>Your Rank</Text>
                 <Text style={tw`text-white font-bold text-xl`}>#{leaderboard.userRank}</Text>
               </View>
 
               <View style={tw`flex-row justify-between py-2 mb-4`}>
-                <Text style={tw`text-gray-400 text-[4]`}>Your Score</Text>
+                <Text style={tw`text-gray-400 text-base`}>Your Score</Text>
                 <Text style={tw`text-white font-bold text-xl`}>{leaderboard.userScore}</Text>
               </View>
 
@@ -529,34 +438,63 @@ const DailyTrack = () => {
                 <LeaderboardEntry key={entry.rank} entry={entry} />
               ))}
             </View>
-          )})
-        </View>
+          )}
 
-        <View style={tw`  bg-[#0D0F14] pt-20`}>
-          <View style={tw`flex-row gap-3`}>
-            <TouchableOpacity
-              onPress={() => (navigation as any).navigate("DailyRoutine")}
-              style={tw`flex-1 bg-[#60A5FB] py-4 rounded-2xl`}>
-              <Text style={tw`text-white font-bold text-center text-lg`}>Start Today's Session</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => (navigation as any).navigate("FaceScan")}
-              style={tw`bg-[#1C1E26] border border-white/20 px-6 py-4 rounded-2xl`}>
-              <Text style={tw`text-white font-bold text-lg`}>Check-in Scan</Text>
-            </TouchableOpacity>
+          {/* Bottom Buttons */}
+          <View style={tw`bg-[#0D0F14] pt-20`}>
+            <View style={tw`flex-row gap-3`}>
+              <TouchableOpacity
+                onPress={() => (navigation as any).navigate("DailyRoutine")}
+                style={tw`flex-1 bg-[#60A5FB] py-4 rounded-2xl`}>
+                <Text style={tw`text-white font-bold text-center text-lg`}>Start Today's Session</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => (navigation as any).navigate("FaceScan")}
+                style={tw`bg-[#1C1E26] border border-white/20 px-6 py-4 rounded-2xl`}>
+                <Text style={tw`text-white font-bold text-lg`}>Check-in Scan</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </ScrollView>
+
+      {/* FaceCoach Button */}
       <View>
         <TouchableOpacity
           onPress={() => (navigation as any).navigate('FaceCoach')}
-          style={tw`bg-[#181C22] absolute bottom-17  w-[45] self-end border border-white/20 p-4 my-3 rounded-2xl flex-row items-center justify-center`}
+          style={[
+            tw`absolute bottom-19 right-0 z-50 px-5 py-4 rounded-2xl flex-row items-center justify-center`,
+            {
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              borderColor: 'rgba(255, 255, 255, 0.3)',
+              borderWidth: 1,
+              shadowColor: '#000',
+              shadowOffset: {
+                width: 0,
+                height: 8,
+              },
+              shadowOpacity: 0.25,
+              shadowRadius: 16,
+              elevation: 12,
+            }
+          ]}
           activeOpacity={0.8}
         >
-          <MaterialCommunityIcons name="message-text-outline" size={20} color="white" />
-
-          <Text style={tw`text-white text-sm font-medium mx-2`}>Ask FaceCoach</Text>
-          <Ionicons name="chatbubble-ellipses" size={20} color="white" />
+          <MaterialCommunityIcons
+            name="message-text-outline"
+            size={20}
+            color="white"
+            style={tw`mr-2`}
+          />
+          <Text style={tw`text-white text-sm font-semibold mx-1`}>
+            Ask FaceCoach
+          </Text>
+          <Ionicons
+            name="chatbubble-ellipses"
+            size={18}
+            color="white"
+            style={tw`ml-1`}
+          />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
