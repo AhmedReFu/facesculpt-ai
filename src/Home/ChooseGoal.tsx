@@ -4,6 +4,7 @@ import { StackNavigationProp } from '@react-navigation/stack'
 import { StatusBar } from 'expo-status-bar'
 import React, { useState } from 'react'
 import { Text, TouchableOpacity, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import tw from 'twrnc'
 import CustomButton from '../Components/CustomButton'
 
@@ -68,9 +69,9 @@ const ChooseGoal = () => {
     }
 
     return (
-        <View style={tw`flex-1 bg-[#000000] px-4`}>
+        <SafeAreaView style={tw`flex-1 bg-[#000000] px-4`}>
             <StatusBar style='light' />
-            <View style={tw`mt-14 flex-1`}>
+            <View style={tw`mt-2 flex-1`}>
                 <View style={tw`mb-6`}>
                     <View style={tw`flex-row justify-between items-start`}>
                         <Text style={tw`text-white text-3xl font-bold flex-1 mr-4`}>
@@ -113,7 +114,7 @@ const ChooseGoal = () => {
                     onPress={handleSetGoals}
                 />
             </View>
-        </View>
+        </SafeAreaView>
     )
 }
 

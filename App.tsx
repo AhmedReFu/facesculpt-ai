@@ -1,8 +1,8 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import * as React from 'react';
 import "./global.css";
-import AuthScreen from './src/auth/AuthScreen';
-import OtpAuth from './src/auth/OtpAuth';
+import AuthScreen from './src/Auth/AuthScreen';
+import OtpAuth from './src/Auth/OtpAuth';
 import CreateNewPassword from './src/ForgotPassword/CreateNewPassword';
 import Otp from './src/ForgotPassword/Otp';
 import ResetPassword from './src/ForgotPassword/ResetPassword';
@@ -14,8 +14,8 @@ import FaceMetrics from './src/Home/FaceMetrics';
 import FaceScan from './src/Home/FaceScan';
 import Home from './src/Home/Home';
 import UnlockFacialGym from './src/Home/UnlockFacialGym';
-import AppNavigationContainer from './src/lib/useNavigationCleaner';
-import { WorkoutProvider } from './src/lib/WorkoutProvider';
+import AppNavigationContainer from './src/hook/useNavigationCleaner';
+import { WorkoutProvider } from './src/hook/WorkoutProvider';
 import FaceCoach from './src/Messages/FaceCoach';
 import DailyTrack from './src/TrackGym/DailyTrack';
 
@@ -41,11 +41,11 @@ function RootStack() {
         <Stack.Navigator
           screenOptions={{
             headerShown: false,
-            animation: 'slide_from_right',
-            gestureEnabled: true, // Add this line
+            animation: 'none',
+            gestureEnabled: false, // Add this line
             gestureDirection: 'horizontal', // And this line
           }}
-          initialRouteName='Auth'
+          initialRouteName='Home'
         >
           <Stack.Screen name="Auth" component={AuthScreen} />
           <Stack.Screen name="ResetPassword" component={ResetPassword} />

@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  BackHandler,
   Dimensions,
   LayoutChangeEvent,
   ScrollView,
@@ -57,8 +59,8 @@ const getMockData = () => ({
       chartData: [0.6, 0.9, 0.8, -0.9, 0.8, 0.9, 0.6],
     },
   ],
-  overallProgress: 95,
-  nextBadgeDays: 3,
+  overallProgress: 60,
+  nextBadgeDays: 6,
   motivationMessage: 'Consistency shapes results keep going!',
   improvementMessage: 'Your face is 50% more defined than last week - keep it up!',
 });
@@ -284,6 +286,8 @@ const LeaderboardEntry = ({ entry }: any) => {
 // MAIN COMPONENT
 // ============================================
 const DailyTrack = () => {
+
+
   const navigation = useNavigation();
 
   const [data, setData] = useState<any>(null);
@@ -291,6 +295,8 @@ const DailyTrack = () => {
   const [achievements, setAchievements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+
 
   useEffect(() => {
     loadAllData();
@@ -317,9 +323,27 @@ const DailyTrack = () => {
     }
   };
 
+  React.useEffect(() => {
+    const backAction = () => {
+      Alert.alert('Exit App', 'Are you sure you want to exit?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Exit', onPress: () => BackHandler.exitApp() },
+      ]);
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+    return () => backHandler.remove();
+  }, []);
+
   const handleBackPress = () => {
-    navigation.goBack(); // Fixed: Use navigation.goBack() instead of exit app
+    Alert.alert('Exit App', 'Are you sure you want to exit?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Exit', onPress: () => BackHandler.exitApp() },
+    ]);
   };
+
 
   // Loading State
   if (loading) {
@@ -420,7 +444,7 @@ const DailyTrack = () => {
                   <Text style={tw`text-white text-xl font-bold ml-2`}>Leaderboard (private)</Text>
                 </View>
                 <TouchableOpacity>
-                  <Text style={tw`text-[#60A5FB] text-lg font-medium`}>View All</Text>
+
                 </TouchableOpacity>
               </View>
 
@@ -446,12 +470,12 @@ const DailyTrack = () => {
               <TouchableOpacity
                 onPress={() => (navigation as any).navigate("DailyRoutine")}
                 style={tw`flex-1 bg-[#60A5FB] py-4 rounded-2xl`}>
-                <Text style={tw`text-white font-bold text-center text-lg`}>Start Today's Session</Text>
+                <Text style={tw`text-white font-bold text-center text-sm`}>Start Today's Session</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => (navigation as any).navigate("FaceScan")}
-                style={tw`bg-[#1C1E26] border border-white/20 px-6 py-4 rounded-2xl`}>
-                <Text style={tw`text-white font-bold text-lg`}>Check-in Scan</Text>
+                style={tw` bg-[#1C1E26] border border-white/20 px-6 py-4 rounded-2xl`}>
+                <Text style={tw`text-white font-bold text-center text-sm`}>Check-in Scan</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -465,7 +489,7 @@ const DailyTrack = () => {
           style={[
             tw`absolute bottom-19 right-0 z-50 px-5 py-4 rounded-2xl flex-row items-center justify-center`,
             {
-              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
               borderColor: 'rgba(255, 255, 255, 0.3)',
               borderWidth: 1,
               shadowColor: '#000',
@@ -473,7 +497,7 @@ const DailyTrack = () => {
                 width: 0,
                 height: 8,
               },
-              shadowOpacity: 0.25,
+              shadowOpacity: 0.5,
               shadowRadius: 16,
               elevation: 12,
             }

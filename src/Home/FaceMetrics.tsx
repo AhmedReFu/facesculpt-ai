@@ -5,11 +5,12 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from "twrnc";
 import CustomButton from '../Components/CustomButton';
 
 type RootStackParamList = {
-    Home: undefined;
+    DailyTrack: undefined;
 };
 
 type FaceMetricsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -21,14 +22,14 @@ const FaceMetrics = () => {
 
 
   return (
-      <View style={tw`flex-1 bg-[#000000] px-4`}>
+      <SafeAreaView style={tw`flex-1 bg-[#000000] px-4`}>
           <StatusBar style='light' />
-          <View style={tw`mt-14 flex-1`}>
+          <View style={tw`mt-2 flex-1`}>
               <View style={tw``}>
                   <View style={tw` flex-row justify-between`}>
                       <Text style={tw`text-white text-3xl font-bold`}>Face Metrics</Text>
                       <TouchableOpacity
-                          onPress={() => navigator.navigate("Home")}
+                          onPress={() => navigator.navigate("DailyTrack")}
                           
                       >
                           <Ionicons name="close" size={34} color="white" />
@@ -85,7 +86,7 @@ const FaceMetrics = () => {
           <View style={tw`my-6`}>
               <CustomButton name="Set Goals" route="ChooseGoal" />
           </View>
-      </View>
+      </SafeAreaView>
     
   )
 }
