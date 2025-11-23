@@ -7,7 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import tw from "twrnc";
-import { useWorkout } from '../lib/WorkoutProvider';
+import { useWorkout } from '../hook/WorkoutProvider';
 import { RootStackParamList } from '../types/navigation';
 
 type DailyRoutineNavigationProp = StackNavigationProp<RootStackParamList, 'DailyRoutine'>;

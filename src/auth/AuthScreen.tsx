@@ -12,10 +12,10 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { useBackHandler } from '../lib/useBackHandler';
+import { useBackHandler } from '../hook/useBackHandler';
 
 type RootStackParamList = {
-    Home: undefined;
+    DailyTrack: undefined;
     ResetPassword: undefined;
     OtpAuth: undefined;
 };
@@ -58,7 +58,9 @@ const AuthScreen = () => {
         if (email && password) {
             setEmail("");
             setPassword("")
-            navigation.navigate('Home');
+            navigation.navigate('DailyTrack');
+
+
         }
     };
 
@@ -67,6 +69,7 @@ const AuthScreen = () => {
         setPassword("")
         setName("")
         console.log('Sign Up:', { name, email, password, agreeTerms });
+
         navigation.navigate('OtpAuth');
     };
 
@@ -77,6 +80,9 @@ const AuthScreen = () => {
     // Clear form when switching tabs
     const switchTab = (tab: 'signin' | 'signup') => {
         setActiveTab(tab);
+        setEmail("");
+        setPassword("")
+        setName("")
         // Clear form fields when switching
         if (tab === 'signin') {
             setName('');
@@ -87,13 +93,14 @@ const AuthScreen = () => {
     };
 
     return (
-        <ScrollView className="flex-1 bg-[#000000]">
+        <View className="flex-1 bg-[#000000]">
             <StatusBar barStyle="light-content" />
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 className="flex-1"
             >
+
                 <ScrollView
                     className="flex-1 px-4"
                     showsVerticalScrollIndicator={false}
@@ -266,7 +273,7 @@ const AuthScreen = () => {
 
                 </ScrollView>
             </KeyboardAvoidingView>
-        </ScrollView>
+        </View>
     );
 };
 

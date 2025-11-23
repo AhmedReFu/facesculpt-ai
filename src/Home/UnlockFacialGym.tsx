@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 
+import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from "twrnc";
 import CustomButton from '../Components/CustomButton';
 
@@ -26,7 +27,7 @@ const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanP
     style={tw`bg-[#1D2229] ${isSelected
       ? ' border-2 border-[#60A5FA]'
       : ' border-2 border-transparent'
-      } rounded-2xl p-3 my-4`}
+      } rounded-2xl p-3 my-3`}
     activeOpacity={0.8}
   >
     <View style={tw`flex-row items-center justify-between`}>
@@ -103,9 +104,9 @@ const UnlockFacialGym = () => {
     console.log('Selected plan:', planId)
   }
   return (
-    <View style={tw`flex-1 bg-[#000000] px-4`}>
+    <SafeAreaView style={tw`flex-1 bg-[#000000] px-4`}>
       <StatusBar style='light' />
-      <View style={tw`mt-14 flex-1`}>
+      <View style={tw`mt-2 flex-1`}>
         <View style={tw`mb-6`}>
           <View style={tw`flex-row justify-between items-start`}>
             <Text style={tw`text-white text-2xl font-bold flex-1 mr-4`}>
@@ -167,7 +168,7 @@ const UnlockFacialGym = () => {
         </View>
       </View>
 
-    </View>
+    </SafeAreaView>
   )
 }
 

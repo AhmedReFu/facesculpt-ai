@@ -248,7 +248,7 @@ const FaceScan = () => {
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.homeIndicator} />
+                {/* <View style={styles.homeIndicator} /> */}
             </View>
         </View>
     );

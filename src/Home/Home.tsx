@@ -4,7 +4,7 @@ import {
     useNavigation
 } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import tw from "twrnc";
 import CustomButton from '../Components/CustomButton';
@@ -13,7 +13,12 @@ import CustomButton from '../Components/CustomButton';
 const Home = () => {
     const navigator = useNavigation();
 
-
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            navigator.navigate("Auth")
+        }, 4000);
+        return () => clearTimeout(timer);
+    }, []);
     return (
 
         <View style={tw`flex-1 bg-[#000000] px-4`}>
@@ -26,7 +31,7 @@ const Home = () => {
                 <Text style={tw`text-xl text-white`}>Scan your face to get started</Text>
             </View>
 
-            <CustomButton name="Start Face Scan" route="FaceScan" />
+            <CustomButton name="Start Face Scan" route="Auth" />
 
             <View style={tw`flex-row my-4 items-center`}>
                 <EvilIcons name="lock" size={28} color="white" />

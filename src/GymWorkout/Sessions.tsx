@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import tw from "twrnc";
-import { useWorkout } from '../lib/WorkoutProvider';
+import { useWorkout } from '../hook/WorkoutProvider';
 import { RootStackParamList } from '../types/navigation';
 
 type SessionsScreenRouteProp = RouteProp<RootStackParamList, 'Sessions'>;
@@ -255,7 +255,7 @@ const Sessions = () => {
                         </View>
 
                         <Text style={[
-                            tw`text-white text-6xl font-bold mb-2`,
+                            tw`text-white text-2xl font-bold mb-2`,
                             timeLeft <= 3 && timeLeft > 0 && tw`text-red-400`,
                             (timeLeft === 0 || showCompletedState) && tw`text-green-400`
                         ]}>
@@ -290,7 +290,7 @@ const Sessions = () => {
                         </View>
 
                         <Text style={[
-                            tw`text-white text-4xl font-bold mb-2`,
+                            tw`text-white text-sm font-bold mb-2`,
                             showCompletedState && tw`text-green-400`
                         ]}>
                             {exercise.duration}
