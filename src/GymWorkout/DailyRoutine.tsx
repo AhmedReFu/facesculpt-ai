@@ -1,14 +1,15 @@
 // screens/DailyRoutine.tsx
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import tw from "twrnc";
-import { useWorkout } from '../hook/WorkoutProvider';
 import { RootStackParamList } from '../types/navigation';
+import { useWorkout } from '../utils/WorkoutProvider';
 
 type DailyRoutineNavigationProp = StackNavigationProp<RootStackParamList, 'DailyRoutine'>;
 
@@ -37,7 +38,8 @@ const DailyRoutine = () => {
         }
     };
 
-    const handleBackPress = () => {
+    const handleBackPress = async () => {
+        await AsyncStorage.removeItem("subscribe")
         navigation.goBack();
     };
 

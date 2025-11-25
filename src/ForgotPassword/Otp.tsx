@@ -4,6 +4,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
+    Image,
     StyleSheet,
     Text,
     TextInput,
@@ -11,6 +12,7 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Images } from '../constants';
 
 type RootStackParamList = {
     CreateNewPassword: undefined;
@@ -30,8 +32,6 @@ const Otp = () => {
         inputsRef.current = inputsRef.current.slice(0, 4);
     }, []);
 
-
-
     const handleChange = (text: string, index: number) => {
         const numericText = text.replace(/[^0-9]/g, '');
         const newCode = [...code];
@@ -47,7 +47,7 @@ const Otp = () => {
         if (numericText && index === 3) {
             const enteredCode = newCode.join('');
             if (enteredCode.length === 4) {
-
+                // Handle auto-submit if needed
             }
         }
     };
@@ -68,7 +68,7 @@ const Otp = () => {
             return;
         }
 
-        navigation.replace('CreateNewPassword');
+        navigation.navigate('CreateNewPassword');
     };
 
     const handleResend = () => {
@@ -88,21 +88,25 @@ const Otp = () => {
 
     const isContinueDisabled = code.join('').length < 4;
 
-
-
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.content}>
-                {/* Back Button */}
+            {/* Back Button - Top Left */}
+            <View style={styles.header}>
                 <TouchableOpacity
                     onPress={handleBack}
-                    style={[styles.backButton]}
+                    style={styles.backButton}
                 >
                     <Ionicons name="arrow-back" size={28} color="#fff" />
                 </TouchableOpacity>
+            </View>
 
-                {/* Logo */}
-                <Text style={styles.logo}>Logo</Text>
+            <View style={styles.content}>
+                {/* Logo - Centered */}
+                <Image
+                    source={Images.Icon}
+                    className='self-center mb-20'
+                    resizeMode="contain"
+                />
 
                 {/* Heading */}
                 <Text style={styles.heading}>Verification Code</Text>
@@ -175,9 +179,6 @@ const Otp = () => {
                     </Text>
                 </TouchableOpacity>
             </View>
-
-            {/* Success Modal with Blur */}
-
         </SafeAreaView>
     );
 };
@@ -185,28 +186,29 @@ const Otp = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000',
+        backgroundColor: '#000000',
+    },
+    header: {
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 10,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     content: {
         flex: 1,
-        paddingHorizontal: 16,
-        justifyContent: 'center',
-    },
-    backButton: {
-        position: 'absolute',
-        top: 64,
-        left: 24,
-        zIndex: 10,
-    },
-    hidden: {
-        opacity: 0,
+        paddingHorizontal: 20,
+    // justifyContent: 'center',
     },
     logo: {
-        fontSize: 60,
-        fontWeight: 'bold',
-        color: '#fff',
-        textAlign: 'center',
-        marginBottom: 48,
+        width: 80, // Adjust based on your logo size
+        height: 80, // Adjust based on your logo size
+        alignSelf: 'center',
+        marginBottom: 60, // Increased margin to push content down
     },
     heading: {
         fontSize: 30,
@@ -286,8 +288,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 18,
     },
-    // Modal Styles
-
 });
 
-export default Otp
+export default Otp;

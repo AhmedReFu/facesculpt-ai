@@ -194,7 +194,7 @@ const FaceScan = () => {
                     <View style={styles.header}>
                         <Text style={tw`text-white text-2xl font-bold`}>Face Scan</Text>
                         <TouchableOpacity
-                            onPress={() => navigation.goBack()}
+                            onPress={() => navigation.navigate("DailyTrack")}
                             style={styles.closeButton}
                         >
                             <Ionicons name="close" size={28} color="white" />

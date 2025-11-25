@@ -5,9 +5,10 @@ import { CommonActions, RouteProp, useNavigation, useRoute } from '@react-naviga
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import ToastManager, { Toast } from 'toastify-react-native';
 import tw from "twrnc";
-import { useWorkout } from '../hook/WorkoutProvider';
 import { RootStackParamList } from '../types/navigation';
+import { useWorkout } from '../utils/WorkoutProvider';
 
 type SessionsScreenRouteProp = RouteProp<RootStackParamList, 'Sessions'>;
 
@@ -108,6 +109,7 @@ const Sessions = () => {
         if (exercise && !exercise.completed) {
             completeExercise(exercise.id);
             setIsCompleted(true);
+            Toast.success(`Successfully Complete ${exercise.name}.`)
             setIsRunning(false);
 
             // Show completed state for 1 second before navigating
@@ -143,7 +145,7 @@ const Sessions = () => {
                         })
                     );
                 }
-            }, 1000);
+            }, 3000);
         }
     };
 
@@ -438,6 +440,7 @@ const Sessions = () => {
                     </>
                 )}
             </View>
+            <ToastManager />
         </View>
     );
 };

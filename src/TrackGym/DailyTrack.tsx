@@ -1,4 +1,5 @@
 import { FontAwesome6, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
@@ -15,7 +16,9 @@ import {
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Toast } from 'toastify-react-native';
 import tw from 'twrnc';
+import { useBackHandler } from '../hook/useBackHandler';
 
 const { width: WINDOW_WIDTH } = Dimensions.get('window');
 const CHART_MARGIN_HORIZONTAL = -20;
@@ -294,6 +297,7 @@ const DailyTrack = () => {
   const [leaderboard, setLeaderboard] = useState<any>(null);
   const [achievements, setAchievements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState('');
   const [error, setError] = useState<string | null>(null);
 
 
@@ -306,11 +310,16 @@ const DailyTrack = () => {
     setLoading(true);
     setError(null);
 
+    // // console.log(user.name)
+
     try {
       // Using mock data directly since API is not configured
       const progressData = getMockData();
       const leaderboardData = getMockLeaderboard();
       const achievementsData = getMockAchievements();
+      const data: any = await AsyncStorage.getItem("user");
+      const user = JSON.parse(data);
+      setUsers(user?.name)
 
       setData(progressData);
       setLeaderboard(leaderboardData);
@@ -323,19 +332,15 @@ const DailyTrack = () => {
     }
   };
 
-  React.useEffect(() => {
-    const backAction = () => {
-      Alert.alert('Exit App', 'Are you sure you want to exit?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Exit', onPress: () => BackHandler.exitApp() },
-      ]);
-      return true;
-    };
+  const handleUser = async () => {
+    // await AsyncStorage.removeItem("user");
+    await AsyncStorage.removeItem("subscribe");
+    await AsyncStorage.removeItem("isLoggedIn");
+    Toast.warn("Logout Successfully")
+    navigation.navigate("Auth")
+  }
 
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
-
-    return () => backHandler.remove();
-  }, []);
+  useBackHandler();
 
   const handleBackPress = () => {
     Alert.alert('Exit App', 'Are you sure you want to exit?', [
@@ -375,10 +380,16 @@ const DailyTrack = () => {
       <View style={tw`mb-2`}>
         <View style={tw`flex-row items-center`}>
           <TouchableOpacity onPress={handleBackPress} style={tw`absolute left-0 z-10`}>
-            <Ionicons name="arrow-back" size={28} color="white" />
+            {/* <Ionicons name="arrow-back" size={28} color="white" /> */}
+            <MaterialIcons name="exit-to-app" size={28} color="white" />
           </TouchableOpacity>
 
           <Text style={tw`text-white text-xl font-semibold flex-1 text-center`}>Daily Progress</Text>
+          <TouchableOpacity onPress={handleUser}>
+            <Text className='text-white'>
+              {users}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -473,7 +484,7 @@ const DailyTrack = () => {
                 <Text style={tw`text-white font-bold text-center text-sm`}>Start Today's Session</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => (navigation as any).navigate("FaceScan")}
+                onPress={() => (navigation as any).replace("FaceScan")}
                 style={tw` bg-[#1C1E26] border border-white/20 px-6 py-4 rounded-2xl`}>
                 <Text style={tw`text-white font-bold text-center text-sm`}>Check-in Scan</Text>
               </TouchableOpacity>

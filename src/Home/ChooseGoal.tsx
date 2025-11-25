@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigation } from '@react-navigation/native'
 import { StackNavigationProp } from '@react-navigation/stack'
 import { StatusBar } from 'expo-status-bar'
@@ -6,7 +7,6 @@ import React, { useState } from 'react'
 import { Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import tw from 'twrnc'
-import CustomButton from '../Components/CustomButton'
 
 interface GoalItemProps {
     label: string
@@ -17,6 +17,8 @@ interface GoalItemProps {
 type RootStackParamList = {
     Home: undefined;
     FaceMetrics: undefined;
+    DailyTrack: undefined;
+    UnlockFacialGym: undefined;
 };
 
 type ChooseGoalScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -39,7 +41,7 @@ const GoalItem = ({ label, isSelected, onPress }: GoalItemProps) => (
 )
 
 const ChooseGoal = () => {
-    const navigation = useNavigation<ChooseGoalScreenNavigationProp>()
+    const navigator = useNavigation<ChooseGoalScreenNavigationProp>()
 
     const [selectedGoals, setSelectedGoals] = useState<string[]>([
         'Sharper Jawline',
@@ -64,7 +66,14 @@ const ChooseGoal = () => {
         return selectedGoals.includes(goalLabel)
     }
 
-    const handleSetGoals = () => {
+    const handleSetGoals = async () => {
+        const subscribe = await AsyncStorage.getItem("subscribe");
+
+        if (subscribe === "true") {
+            navigator.navigate("DailyTrack")
+        } else {
+            navigator.navigate("UnlockFacialGym")
+        }
         console.log('Selected Goals:', selectedGoals)
     }
 
@@ -78,7 +87,7 @@ const ChooseGoal = () => {
                             Choose Your Goal
                         </Text>
                         <TouchableOpacity
-                            onPress={() => navigation.navigate("FaceMetrics")}
+                            onPress={() => navigator.navigate("FaceMetrics")}
                             style={tw`mt-1`}
                         >
                             <Ionicons name="close" size={32} color="white" />
@@ -108,11 +117,13 @@ const ChooseGoal = () => {
                 */}
             </View>
             <View style={tw`my-6`}>
-                <CustomButton
-                    name="Set My Goals"
-                    route="UnlockFacialGym"
+
+                <TouchableOpacity
                     onPress={handleSetGoals}
-                />
+                    activeOpacity={0.8}
+                    style={tw`bg-[#60A5FB] p-5 rounded-xl flex-row gap-2 items-center justify-center`}>
+                    <Text style={tw`text-center text-white text-xl font-semibold`}>Set My Goals</Text>
+                </TouchableOpacity>
             </View>
         </SafeAreaView>
     )

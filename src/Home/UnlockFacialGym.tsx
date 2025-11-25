@@ -7,9 +7,9 @@ import React, { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from "twrnc";
-import CustomButton from '../Components/CustomButton';
 
 interface PlanProps {
   id: string
@@ -99,9 +99,14 @@ const UnlockFacialGym = () => {
     }
   ]
 
-  const handleSelectPlan = (planId: string) => {
+  const handleSelectPlan = async (planId: string) => {
     setSelectedPlan(planId)
     console.log('Selected plan:', planId)
+  }
+
+  const handleSubscribe = async () => {
+    await AsyncStorage.setItem("subscribe", "true");
+    navigator.navigate("DailyTrack")
   }
   return (
     <SafeAreaView style={tw`flex-1 bg-[#000000] px-4`}>
@@ -159,7 +164,13 @@ const UnlockFacialGym = () => {
         </View>
 
         <View style={tw`my-4`}>
-          <CustomButton name="Start Free 7-Day Trial" route="DailyTrack" />
+          {/* <CustomButton name="Start Free 7-Day Trial" route="DailyTrack" /> */}
+          <TouchableOpacity
+            onPress={handleSubscribe}
+            activeOpacity={0.8}
+            style={tw`bg-[#60A5FB] p-5 rounded-xl flex-row gap-2 items-center justify-center`}>
+            <Text style={tw`text-center text-white text-xl font-semibold`}>Start Free 7-Day Trial</Text>
+          </TouchableOpacity>
         </View>
         <Text style={tw`text-white text-center text-lg `} >7-day free trial, cancel anytime.</Text>
         <View style={tw`my-6 `}>

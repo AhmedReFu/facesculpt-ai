@@ -4,6 +4,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState } from 'react';
 import {
     Alert,
+    Image,
     KeyboardAvoidingView,
     Platform,
     StatusBar,
@@ -11,9 +12,10 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Images } from '../constants';
 
 type RootStackParamList = {
     Otp: { phoneNumber: string };
@@ -54,7 +56,7 @@ const ResetPassword = () => {
                 [
                     {
                         text: 'OK',
-                        onPress: () => navigator.replace('Otp', { phoneNumber })
+                        onPress: () => navigator.navigate('Otp', { phoneNumber })
                     }
                 ]
             );
@@ -66,6 +68,8 @@ const ResetPassword = () => {
     };
 
     const isFormValid = phoneNumber.trim().length > 0;
+
+
 
     return (
         <SafeAreaView style={styles.container} className='px-4'>
@@ -85,7 +89,8 @@ const ResetPassword = () => {
 
                 {/* Logo */}
                 <View style={styles.logoContainer}>
-                    <Text style={styles.logo}>Logo</Text>
+                    {/* <Text style={styles.logo}>Logo</Text> */}
+                    <Image source={Images.Icon} resizeMode="contain" />
                 </View>
 
                 {/* Header Section */}

@@ -5,8 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import tw from "twrnc";
-import { useWorkout } from '../hook/WorkoutProvider';
 import { RootStackParamList } from '../types/navigation';
+import { useWorkout } from '../utils/WorkoutProvider';
 
 // Define the route prop type for this screen
 type ExerciseScreenRouteProp = RouteProp<RootStackParamList, 'Exercise'>;
