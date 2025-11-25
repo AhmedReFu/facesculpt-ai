@@ -6,7 +6,6 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import ToastManager, { Toast } from 'toastify-react-native';
-import tw from "twrnc";
 import { RootStackParamList } from '../types/navigation';
 import { useWorkout } from '../utils/WorkoutProvider';
 
@@ -17,9 +16,9 @@ interface InstructionItemProps {
 }
 
 const InstructionItem = ({ text }: InstructionItemProps) => (
-    <View style={tw`flex-row items-start mb-2`}>
-        <Ionicons name="checkmark" size={18} color="#60A5FB" style={tw`mr-2 mt-0.5`} />
-        <Text style={tw`text-[#9CA3AF] text-[16px] flex-1 leading-5`}>
+    <View className="flex-row items-start mb-2">
+        <Ionicons name="checkmark" size={18} color="#60A5FB" className="mr-2 mt-0.5" />
+        <Text className="text-[#9CA3AF] text-[16px] flex-1 leading-5">
             {text}
         </Text>
     </View>
@@ -189,8 +188,8 @@ const Sessions = () => {
 
     if (!exercise) {
         return (
-            <View style={tw`flex-1 bg-[#000000] justify-center items-center`}>
-                <Text style={tw`text-white text-lg`}>Exercise not found</Text>
+            <View className="flex-1 bg-[#000000] justify-center items-center">
+                <Text className="text-white text-lg">Exercise not found</Text>
             </View>
         );
     }
@@ -199,45 +198,45 @@ const Sessions = () => {
     const showCompletedState = isCompleted || exercise.completed;
 
     return (
-        <View style={tw`flex-1 bg-[#000000]`}>
+        <View className="flex-1 bg-[#000000]">
             <StatusBar style='light' />
 
             {/* Header */}
-            <View style={tw`pt-12 pb-4 bg-[#000000]`}>
-                <View style={tw`flex-row items-center py-4`}>
+            <View className="pt-12 pb-4 bg-[#000000]">
+                <View className="flex-row items-center py-4">
                     <TouchableOpacity
                         onPress={() => navigation.goBack()}
-                        style={tw`absolute left-2 z-10`}
+                        className="absolute left-2 z-10"
                     >
                         <Ionicons name="arrow-back" size={28} color="white" />
                     </TouchableOpacity>
 
-                    <Text style={tw`text-white text-xl font-semibold flex-1 text-center`}>
+                    <Text className="text-white text-xl font-semibold flex-1 text-center">
                         Session
                     </Text>
                 </View>
             </View>
 
             <ScrollView
-                style={tw`flex-1 px-4 bg-[#000000]`}
+                className="flex-1 px-4 bg-[#000000]"
                 showsVerticalScrollIndicator={false}
             >
                 {/* Exercise Title */}
-                <Text style={tw`text-white text-2xl font-bold mb-3`}>
+                <Text className="text-white text-2xl font-bold mb-3">
                     {exercise.name}
                 </Text>
 
                 {/* Description */}
-                <Text style={tw`text-[#9CA3AF] text-base mb-6 leading-6`}>
+                <Text className="text-[#9CA3AF] text-base mb-6 leading-6">
                     {exercise.description}
                 </Text>
 
                 {/* How to do it */}
-                <Text style={tw`text-white text-base font-semibold mb-3`}>
+                <Text className="text-white text-base font-semibold mb-3">
                     How to do it
                 </Text>
 
-                <View style={tw`mb-6`}>
+                <View className="mb-6">
                     {exercise.instructions.map((instruction: string, index: number) => (
                         <InstructionItem key={index} text={instruction} />
                     ))}
@@ -247,8 +246,8 @@ const Sessions = () => {
 
                 {/* Duration-based Exercise Display (with Timer) */}
                 {isDurationBased && (
-                    <View style={tw`bg-[#252b33] rounded-3xl p-8 items-center mb-6`}>
-                        <View style={tw`rounded-full mb-4`}>
+                    <View className="bg-[#252b33] rounded-3xl p-8 items-center mb-6">
+                        <View className="rounded-full mb-4">
                             <MaterialCommunityIcons
                                 name={showCompletedState ? "check-circle" : isRunning ? "pause" : "timer-outline"}
                                 size={40}
@@ -256,15 +255,15 @@ const Sessions = () => {
                             />
                         </View>
 
-                        <Text style={[
-                            tw`text-white text-2xl font-bold mb-2`,
-                            timeLeft <= 3 && timeLeft > 0 && tw`text-red-400`,
-                            (timeLeft === 0 || showCompletedState) && tw`text-green-400`
-                        ]}>
+                        <Text className={`
+                            text-white text-2xl font-bold mb-2
+                            ${timeLeft <= 3 && timeLeft > 0 ? 'text-red-400' : ''}
+                            ${(timeLeft === 0 || showCompletedState) ? 'text-green-400' : ''}
+                        `}>
                             {showCompletedState ? 'Done!' : `${timeLeft}s`}
                         </Text>
 
-                        <Text style={tw`text-[#9CA3AF] text-sm mb-4`}>
+                        <Text className="text-[#9CA3AF] text-sm mb-4">
                             {showCompletedState ? 'Completed!' : timeLeft === 0 ? 'Completed!' : isRunning ? 'Running...' : 'Ready to start'}
                         </Text>
 
@@ -272,9 +271,9 @@ const Sessions = () => {
                         {!showCompletedState && (isRunning || timeLeft !== exercise.durationInSeconds) && (
                             <TouchableOpacity
                                 onPress={handleReset}
-                                style={tw`mt-2`}
+                                className="mt-2"
                             >
-                                <Text style={tw`text-[#60A5FB] text-sm`}>Reset</Text>
+                                <Text className="text-[#60A5FB] text-sm">Reset</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -282,8 +281,8 @@ const Sessions = () => {
 
                 {/* Reps-based Exercise Display (Simple) */}
                 {!isDurationBased && (
-                    <View style={tw`bg-[#252b33] rounded-3xl p-8 items-center mb-6`}>
-                        <View style={tw`rounded-full mb-4`}>
+                    <View className="bg-[#252b33] rounded-3xl p-8 items-center mb-6">
+                        <View className="rounded-full mb-4">
                             <MaterialCommunityIcons
                                 name={showCompletedState ? "check-circle" : "repeat"}
                                 size={40}
@@ -291,60 +290,60 @@ const Sessions = () => {
                             />
                         </View>
 
-                        <Text style={[
-                            tw`text-white text-sm font-bold mb-2`,
-                            showCompletedState && tw`text-green-400`
-                        ]}>
+                        <Text className={`
+                            text-white text-sm font-bold mb-2
+                            ${showCompletedState ? 'text-green-400' : ''}
+                        `}>
                             {exercise.duration}
                         </Text>
 
-                        <Text style={tw`text-[#9CA3AF] text-sm mb-4`}>
+                        <Text className="text-[#9CA3AF] text-sm mb-4">
                             {showCompletedState ? 'Completed!' : 'Complete all reps'}
                         </Text>
                     </View>
                 )}
 
-                <View style={tw`h-32`} />
+                <View className="h-32" />
             </ScrollView>
 
             {/* BOTTOM NAVIGATION - DIFFERENT FOR EACH TYPE */}
-            <View style={tw`px-6 pb-8 pt-4 bg-[#000000]`}>
+            <View className="px-6 pb-8 pt-4 bg-[#000000]">
 
                 {/* Duration-based Exercise Buttons */}
                 {isDurationBased && (
                     <>
                         {/* Prev and Running Buttons */}
-                        <View style={tw`flex-row gap-3 mb-3`}>
+                        <View className="flex-row gap-3 mb-3">
                             <TouchableOpacity
                                 onPress={handlePrevious}
-                                style={tw`flex-1 bg-[#252b33] py-4 rounded-2xl flex-row items-center justify-center`}
+                                className="flex-1 bg-[#252b33] py-4 rounded-2xl flex-row items-center justify-center"
                                 activeOpacity={0.7}
                             >
-                                <Ionicons name="chevron-back" size={20} color="white" style={tw`mr-1`} />
-                                <Text style={tw`text-white font-semibold text-base`}>Prev</Text>
+                                <Ionicons name="chevron-back" size={20} color="white" className="mr-1" />
+                                <Text className="text-white font-semibold text-base">Prev</Text>
                             </TouchableOpacity>
 
                             {!showCompletedState ? (
                                 <TouchableOpacity
                                     onPress={handleStartPause}
-                                    style={[
-                                        tw`flex-1 py-4 rounded-2xl flex-row items-center justify-center`,
-                                        isRunning ? tw`bg-[#f59e0b]` : tw`bg-[#60A5FB]`
-                                    ]}
+                                    className={`
+                                        flex-1 py-4 rounded-2xl flex-row items-center justify-center
+                                        ${isRunning ? 'bg-[#f59e0b]' : 'bg-[#60A5FB]'}
+                                    `}
                                     activeOpacity={0.7}
                                 >
-                                    <Text style={tw`text-white font-semibold text-base`}>
+                                    <Text className="text-white font-semibold text-base">
                                         {timeLeft === 0 ? 'Restart' : isRunning ? 'Running...' : 'Start'}
                                     </Text>
                                 </TouchableOpacity>
                             ) : (
                                 <TouchableOpacity
                                     onPress={handleNextExercise}
-                                    style={tw`flex-1 bg-[#60A5FB] py-4 rounded-2xl flex-row items-center justify-center`}
+                                        className="flex-1 bg-[#60A5FB] py-4 rounded-2xl flex-row items-center justify-center"
                                     activeOpacity={0.7}
                                 >
-                                    <Text style={tw`text-white font-semibold text-base`}>Next</Text>
-                                    <Ionicons name="chevron-forward" size={20} color="white" style={tw`ml-1`} />
+                                        <Text className="text-white font-semibold text-base">Next</Text>
+                                        <Ionicons name="chevron-forward" size={20} color="white" className="ml-1" />
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -352,23 +351,23 @@ const Sessions = () => {
                         {/* Mark Complete Button */}
                         <TouchableOpacity
                             onPress={showCompletedState ? handleBackToRoutine : handleMarkComplete}
-                            style={[
-                                tw`py-6 rounded-2xl flex-row items-center justify-center`,
-                                showCompletedState ? tw`bg-[#4ade80]` : tw`bg-[#d4dce5]`
-                            ]}
+                            className={`
+                                py-6 rounded-2xl flex-row items-center justify-center
+                                ${showCompletedState ? 'bg-[#4ade80]' : 'bg-[#d4dce5]'}
+                            `}
                             activeOpacity={0.7}
                         >
                             {showCompletedState ? (
                                 <>
-                                    <MaterialIcons name="check-circle" size={24} color="white" style={tw`mr-2`} />
-                                    <Text style={tw`text-white font-semibold text-base`}>
+                                    <MaterialIcons name="check-circle" size={24} color="white" className="mr-2" />
+                                    <Text className="text-white font-semibold text-base">
                                         Completed! Tap to return
                                     </Text>
                                 </>
                             ) : (
                                 <>
-                                    <MaterialIcons name="check-circle-outline" size={24} color="#1a1f24" style={tw`mr-2`} />
-                                    <Text style={tw`text-[#1a1f24] font-semibold text-base`}>
+                                        <MaterialIcons name="check-circle-outline" size={24} color="#1a1f24" className="mr-2" />
+                                        <Text className="text-[#1a1f24] font-semibold text-base">
                                         Mark Complete
                                     </Text>
                                 </>
@@ -381,33 +380,33 @@ const Sessions = () => {
                 {!isDurationBased && (
                     <>
                         {/* Prev and Next Buttons */}
-                        <View style={tw`flex-row gap-3 mb-3`}>
+                        <View className="flex-row gap-3 mb-3">
                             <TouchableOpacity
                                 onPress={handlePrevious}
-                                style={tw`flex-1 bg-[#252b33] py-4 rounded-2xl flex-row items-center justify-center`}
+                                className="flex-1 bg-[#252b33] py-4 rounded-2xl flex-row items-center justify-center"
                                 activeOpacity={0.7}
                             >
-                                <Ionicons name="chevron-back" size={20} color="white" style={tw`mr-1`} />
-                                <Text style={tw`text-white font-semibold text-base`}>Prev</Text>
+                                <Ionicons name="chevron-back" size={20} color="white" className="mr-1" />
+                                <Text className="text-white font-semibold text-base">Prev</Text>
                             </TouchableOpacity>
 
                             {!showCompletedState ? (
                                 <TouchableOpacity
                                     onPress={handleNextExercise}
-                                    style={tw`flex-1 bg-[#60A5FB] py-4 rounded-2xl flex-row items-center justify-center`}
+                                    className="flex-1 bg-[#60A5FB] py-4 rounded-2xl flex-row items-center justify-center"
                                     activeOpacity={0.7}
                                 >
-                                    <Text style={tw`text-white font-semibold text-base`}>Next</Text>
-                                    <Ionicons name="chevron-forward" size={20} color="white" style={tw`ml-1`} />
+                                    <Text className="text-white font-semibold text-base">Next</Text>
+                                    <Ionicons name="chevron-forward" size={20} color="white" className="ml-1" />
                                 </TouchableOpacity>
                             ) : (
                                 <TouchableOpacity
                                     onPress={handleNextExercise}
-                                    style={tw`flex-1 bg-[#60A5FB] py-4 rounded-2xl flex-row items-center justify-center`}
+                                        className="flex-1 bg-[#60A5FB] py-4 rounded-2xl flex-row items-center justify-center"
                                     activeOpacity={0.7}
                                 >
-                                    <Text style={tw`text-white font-semibold text-base`}>Next Exercise</Text>
-                                    <Ionicons name="chevron-forward" size={20} color="white" style={tw`ml-1`} />
+                                        <Text className="text-white font-semibold text-base">Next Exercise</Text>
+                                        <Ionicons name="chevron-forward" size={20} color="white" className="ml-1" />
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -415,23 +414,23 @@ const Sessions = () => {
                         {/* Mark Complete Button */}
                         <TouchableOpacity
                             onPress={showCompletedState ? handleBackToRoutine : handleMarkComplete}
-                            style={[
-                                tw`py-6 rounded-2xl flex-row items-center justify-center`,
-                                showCompletedState ? tw`bg-[#4ade80]` : tw`bg-[#d4dce5]`
-                            ]}
+                            className={`
+                                py-6 rounded-2xl flex-row items-center justify-center
+                                ${showCompletedState ? 'bg-[#4ade80]' : 'bg-[#d4dce5]'}
+                            `}
                             activeOpacity={0.7}
                         >
                             {showCompletedState ? (
                                 <>
-                                    <MaterialIcons name="check-circle" size={24} color="white" style={tw`mr-2`} />
-                                    <Text style={tw`text-white font-semibold text-base`}>
+                                    <MaterialIcons name="check-circle" size={24} color="white" className="mr-2" />
+                                    <Text className="text-white font-semibold text-base">
                                         Completed! Tap to return
                                     </Text>
                                 </>
                             ) : (
                                 <>
-                                    <MaterialIcons name="check-circle-outline" size={24} color="#1a1f24" style={tw`mr-2`} />
-                                    <Text style={tw`text-[#1a1f24] font-semibold text-base`}>
+                                        <MaterialIcons name="check-circle-outline" size={24} color="#1a1f24" className="mr-2" />
+                                        <Text className="text-[#1a1f24] font-semibold text-base">
                                         Mark Complete
                                     </Text>
                                 </>

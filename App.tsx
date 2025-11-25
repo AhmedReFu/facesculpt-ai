@@ -101,23 +101,23 @@ function RootStack() {
 
 
 
-  React.useEffect(() => {
+  // React.useEffect(() => {
 
-    const backAction = () => {
+  //   const backAction = () => {
 
-      Alert.alert('Exit App', 'Are you sure you want to exit?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Exit', onPress: () => BackHandler.exitApp() },
-      ]);
-      return true;
-    };
-
-
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+  //     Alert.alert('Exit App', 'Are you sure you want to exit?', [
+  //       { text: 'Cancel', style: 'cancel' },
+  //       { text: 'Exit', onPress: () => BackHandler.exitApp() },
+  //     ]);
+  //     return true;
+  //   };
 
 
-    return () => backHandler.remove();
-  }, []);
+  //   const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+
+  //   return () => backHandler.remove();
+  // }, []);
 
 
   return (
@@ -136,34 +136,21 @@ function RootStack() {
           }}
           initialRouteName='Home' 
         >
-
-
           <Stack.Screen name="Home" component={Home} />
-
-
           <Stack.Screen name="Auth" component={AuthScreen} />
           <Stack.Screen name="OtpAuth" component={OtpAuth} />
-
-
           <Stack.Screen name="ResetPassword" component={ResetPassword} />
           <Stack.Screen name="Otp" component={Otp} />
           <Stack.Screen name="CreateNewPassword" component={CreateNewPassword} />
-
-
+          <Stack.Screen name="DailyTrack" component={DailyTrack} />
+          <Stack.Screen name="FaceCoach" component={FaceCoach} />
           <Stack.Screen name="DailyRoutine" component={DailyRoutine} />
           <Stack.Screen name="Exercise" component={Exercise} />
           <Stack.Screen name="Sessions" component={Sessions} />
-
-
-          <Stack.Screen name="ChooseGoal" component={ChooseGoal} />
-          <Stack.Screen name="FaceMetrics" component={FaceMetrics} />
           <Stack.Screen name="FaceScan" component={FaceScan} />
+          <Stack.Screen name="FaceMetrics" component={FaceMetrics} />
+          <Stack.Screen name="ChooseGoal" component={ChooseGoal} />
           <Stack.Screen name="UnlockFacialGym" component={UnlockFacialGym} />
-
-
-          <Stack.Screen name="DailyTrack" component={DailyTrack} />
-          <Stack.Screen name="FaceCoach" component={FaceCoach} />
-
         </Stack.Navigator>
       </AppNavigationContainer>
     </WorkoutProvider >

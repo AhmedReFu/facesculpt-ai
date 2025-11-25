@@ -29,7 +29,7 @@ const FaceMetrics = () => {
                     <View style={tw` flex-row justify-between`}>
                         <Text style={tw`text-white text-3xl font-bold`}>Face Metrics</Text>
                         <TouchableOpacity
-                            onPress={() => navigator.navigate("DailyTrack")}
+                            onPress={() => navigator.replace("DailyTrack")}
 
                         >
                             <Ionicons name="close" size={34} color="white" />

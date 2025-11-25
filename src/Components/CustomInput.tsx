@@ -1,7 +1,6 @@
-import { CustomInputProps } from "../../type";
 import { useState } from "react";
 import { Text, TextInput, View } from 'react-native';
-import tw from "twrnc";
+import { CustomInputProps } from "../../type";
 
 
 
@@ -10,8 +9,8 @@ const CustomInput = ({ placeholder, value, onChangeText, label, secureTextEntry 
 
 
     return (
-        <View style={tw`w-full`}>
-            <Text style={tw`label`}>{label}</Text>
+        <View className="w-full">
+            <Text className="label">{label}</Text>
             <TextInput
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -23,7 +22,7 @@ const CustomInput = ({ placeholder, value, onChangeText, label, secureTextEntry 
                 onBlur={() => setIsFocused(false)}
                 placeholder={placeholder}
                 placeholderTextColor="#888"
-                style={tw`'input', isFocused ? 'border-primary' : 'border-gray-300'`}
+                className={`'input'${isFocused ? 'border-primary' : 'border-gray-300'}`}
             />
         </View>
     )

@@ -1,7 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import { Text, TouchableOpacity } from 'react-native';
-import tw from "twrnc";
 
 const CustomButton = ({ name, route }: any) => {
     const navigator = useNavigation();
@@ -11,8 +10,8 @@ const CustomButton = ({ name, route }: any) => {
               (navigator as any).navigate(route)
           }
           activeOpacity={0.8}
-          style={tw`bg-[#60A5FB] p-5 rounded-xl flex-row gap-2 items-center justify-center`}>
-          <Text style={tw`text-center text-white text-xl font-semibold`}>{name}</Text>
+          className='bg-[#60A5FB] p-5 rounded-xl flex-row gap-2 items-center justify-center'>
+          <Text className='text-center text-white text-xl font-semibold'>{name}</Text>
       </TouchableOpacity>
   )
 }

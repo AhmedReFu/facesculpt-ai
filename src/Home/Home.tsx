@@ -5,7 +5,6 @@ import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { Image, Text, View } from 'react-native';
-import tw from "twrnc";
 import CustomButton from '../Components/CustomButton';
 import { Images } from '../constants';
 import { useNavigationReset } from '../hook/useNavigationReset';
@@ -43,22 +42,22 @@ const Home = () => {
     }, []);
 
     return (
-        <View style={tw`flex-1 bg-[#000000] px-4`}>
+        <View className="flex-1 bg-[#000000] px-4">
             <StatusBar style='light' />
-            <View style={tw`mt-14 flex-1`}>
-                <View style={tw`h-16 w-16 bg-[#202F41] rounded-lg items-center justify-center my-4`}>
+            <View className="mt-14 flex-1">
+                <View className="h-16 w-16 bg-[#202F41] rounded-lg items-center justify-center my-4">
                     <MaterialIcons name="face" size={30} color="#548ED7" />
                 </View>
-                <Text style={tw`text-5xl my-4 text-white`}>Welcome to FaceSculpt AI</Text>
-                <Text style={tw`text-xl text-white`}>Scan your face to get started</Text>
+                <Text className="text-5xl my-4 text-white">Welcome to FaceSculpt AI</Text>
+                <Text className="text-xl text-white">Scan your face to get started</Text>
                 <Image source={Images.Icon} className='mt-20 w-48 h-96 self-center' resizeMode='contain' />
             </View>
 
             <CustomButton name="Start Face Scan" route="Auth" />
 
-            <View style={tw`flex-row my-4 items-center`}>
+            <View className="flex-row my-4 items-center">
                 <EvilIcons name="lock" size={28} color="white" />
-                <Text style={tw`text-white text-sm font-bold`}>Our App Protected by High Quality Security</Text>
+                <Text className="text-white text-sm font-bold">Our App Protected by High Quality Security</Text>
             </View>
         </View>
     );

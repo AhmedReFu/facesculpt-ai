@@ -16,7 +16,7 @@ const FaceScan = () => {
     const [permission, requestPermission] = useCameraPermissions();
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
-
+   
     if (!permission) {
         return <View />;
     }
@@ -100,7 +100,7 @@ const FaceScan = () => {
                 Alert.alert('Success', 'Image uploaded successfully!');
 
                 // Navigate to results with data
-                (navigation as any).navigate('FaceMetrics', {
+                (navigation as any).replace('FaceMetrics', {
                     imageUri: capturedImage,
                     analysisData: result,
                 });
@@ -185,6 +185,7 @@ const FaceScan = () => {
     // }
 
     // Camera View
+
     return (
         <View style={styles.fullScreen}>
             <StatusBar style='light' />
@@ -194,7 +195,7 @@ const FaceScan = () => {
                     <View style={styles.header}>
                         <Text style={tw`text-white text-2xl font-bold`}>Face Scan</Text>
                         <TouchableOpacity
-                            onPress={() => navigation.navigate("DailyTrack")}
+                            onPress={() => (navigation as any).navigate("DailyTrack")}
                             style={styles.closeButton}
                         >
                             <Ionicons name="close" size={28} color="white" />

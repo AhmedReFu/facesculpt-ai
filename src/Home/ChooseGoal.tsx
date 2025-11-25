@@ -72,7 +72,7 @@ const ChooseGoal = () => {
         if (subscribe === "true") {
             navigator.navigate("DailyTrack")
         } else {
-            navigator.navigate("UnlockFacialGym")
+            navigator.replace("UnlockFacialGym")
         }
         console.log('Selected Goals:', selectedGoals)
     }
@@ -87,7 +87,7 @@ const ChooseGoal = () => {
                             Choose Your Goal
                         </Text>
                         <TouchableOpacity
-                            onPress={() => navigator.navigate("FaceMetrics")}
+                            onPress={() => navigator.replace("FaceMetrics")}
                             style={tw`mt-1`}
                         >
                             <Ionicons name="close" size={32} color="white" />

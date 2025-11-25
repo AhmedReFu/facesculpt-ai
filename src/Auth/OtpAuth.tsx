@@ -158,7 +158,7 @@ const OtpAuth = () => {
                 {/* <Text className="text-6xl font-bold text-white text-center mb-20">
                     Logo
                 </Text> */}
-                <Image source={Images.Icon} resizeMode="contain" />
+                <Image source={Images.Icon} resizeMode="contain" className='self-center mb-20' />
                 {/* Heading */}
                 <Text className="text-3xl font-bold text-white text-center mb-3">
                     Verification Code

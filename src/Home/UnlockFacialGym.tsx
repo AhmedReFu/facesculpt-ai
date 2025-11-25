@@ -1,15 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-
-
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import tw from "twrnc";
 
 interface PlanProps {
   id: string
@@ -24,43 +21,43 @@ interface PlanProps {
 const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanProps) => (
   <TouchableOpacity
     onPress={onSelect}
-    style={tw`bg-[#1D2229] ${isSelected
-      ? ' border-2 border-[#60A5FA]'
-      : ' border-2 border-transparent'
-      } rounded-2xl p-3 my-3`}
+    className={`
+      bg-[#1D2229] rounded-2xl p-3 my-3
+      ${isSelected ? 'border-2 border-[#60A5FA]' : 'border-2 border-transparent'}
+    `}
     activeOpacity={0.8}
   >
-    <View style={tw`flex-row items-center justify-between`}>
-      <View style={tw`flex-row items-center flex-1`}>
-        <View style={tw`w-6 h-6 rounded-full border-2 ${isSelected ? 'border-[#60A5FA]' : 'border-gray-500'
-          } items-center justify-center mr-3`}>
+    <View className="flex-row items-center justify-between">
+      <View className="flex-row items-center flex-1">
+        <View className={`
+          w-6 h-6 rounded-full border-2 items-center justify-center mr-3
+          ${isSelected ? 'border-[#60A5FA]' : 'border-gray-500'}
+        `}>
           {isSelected && (
-            <View style={tw`w-3 h-3 rounded-full bg-[#60A5FA]`} />
+            <View className="w-3 h-3 rounded-full bg-[#60A5FA]" />
           )}
         </View>
 
-        <View style={tw`flex-1`}>
-          <View style={tw`flex-row items-center`}>
-            <Text style={tw`text-white text-xl font-bold`}>
+        <View className="flex-1">
+          <View className="flex-row items-center">
+            <Text className="text-white text-xl font-bold">
               {title}
             </Text>
-
           </View>
-          <View style={tw`flex-row items-center mt-1`}>
-            <Text style={tw`text-[#9CA3AF] text-base`}>
+          <View className="flex-row items-center mt-1">
+            <Text className="text-[#9CA3AF] text-base">
               {price}
             </Text>
             {discount && (
-              <Text style={tw`text-[#9CA3AF] text-sm ml-2`}>
+              <Text className="text-[#9CA3AF] text-sm ml-2">
                 ({discount})
               </Text>
             )}
           </View>
-
         </View>
         {badge && (
-          <View style={tw`bg-[#60A5FB66] px-3 py-2 rounded-2xl ml-3`}>
-            <Text style={tw`text-[white]  font-medium`}>
+          <View className="bg-[#60A5FB66] px-3 py-2 rounded-2xl ml-3">
+            <Text className="text-white font-medium">
               {badge}
             </Text>
           </View>
@@ -108,44 +105,44 @@ const UnlockFacialGym = () => {
     await AsyncStorage.setItem("subscribe", "true");
     navigator.navigate("DailyTrack")
   }
+
   return (
-    <SafeAreaView style={tw`flex-1 bg-[#000000] px-4`}>
+    <SafeAreaView className="flex-1 bg-[#000000] px-4">
       <StatusBar style='light' />
-      <View style={tw`mt-2 flex-1`}>
-        <View style={tw`mb-6`}>
-          <View style={tw`flex-row justify-between items-start`}>
-            <Text style={tw`text-white text-2xl font-bold flex-1 mr-4`}>
+      <View className="mt-2 flex-1">
+        <View className="mb-6">
+          <View className="flex-row justify-between items-start">
+            <Text className="text-white text-2xl font-bold flex-1 mr-4">
               Unlock Your Facial Gym
             </Text>
             <TouchableOpacity
               onPress={() => navigator.goBack()}
-              style={tw`mt-1`}
+              className="mt-1"
             >
               <Ionicons name="close" size={32} color="white" />
             </TouchableOpacity>
           </View>
-          <Text style={tw`text-[#9CA3AF] text-lg mt-4 leading-6`}>
+          <Text className="text-[#9CA3AF] text-lg mt-4 leading-6">
             Train your face with personalized workouts, Al coaching, and measurable progress.
           </Text>
         </View>
         <View>
-          <View style={tw`flex-row items-center gap-4 my-1`}>
+          <View className="flex-row items-center gap-4 my-1">
             <MaterialIcons name="auto-awesome" size={28} color="#60A5FB" />
-            <Text style={tw`text-[#9CA3AF] text-lg  `}>Adaptive plans</Text>
+            <Text className="text-[#9CA3AF] text-lg">Adaptive plans</Text>
           </View>
-          <View style={tw`flex-row items-center gap-4 my-1`}>
+          <View className="flex-row items-center gap-4 my-1">
             <MaterialCommunityIcons name="head-cog" size={28} color="#60A5FB" />
-            <Text style={tw`text-[#9CA3AF] text-lg  `}>Al FaceCoach</Text>
+            <Text className="text-[#9CA3AF] text-lg">Al FaceCoach</Text>
           </View>
-          <View style={tw`flex-row items-center gap-4 my-1`}>
+          <View className="flex-row items-center gap-4 my-1">
             <MaterialCommunityIcons name="chart-timeline-variant-shimmer" size={28} color="#60A5FB" />
-            <Text style={tw`text-[#9CA3AF] text-lg `}>Private leaderboard</Text>
+            <Text className="text-[#9CA3AF] text-lg">Private leaderboard</Text>
           </View>
-          <View style={tw`flex-row items-center gap-4 my-1`}>
+          <View className="flex-row items-center gap-4 my-1">
             <MaterialIcons name="bar-chart" size={28} color="#60A5FB" />
-            <Text style={tw`text-[#9CA3AF] text-lg `}>Progress graph</Text>
+            <Text className="text-[#9CA3AF] text-lg">Progress graph</Text>
           </View>
-
         </View>
 
         <View>
@@ -163,22 +160,21 @@ const UnlockFacialGym = () => {
           ))}
         </View>
 
-        <View style={tw`my-4`}>
-          {/* <CustomButton name="Start Free 7-Day Trial" route="DailyTrack" /> */}
+        <View className="my-4">
           <TouchableOpacity
             onPress={handleSubscribe}
             activeOpacity={0.8}
-            style={tw`bg-[#60A5FB] p-5 rounded-xl flex-row gap-2 items-center justify-center`}>
-            <Text style={tw`text-center text-white text-xl font-semibold`}>Start Free 7-Day Trial</Text>
+            className="bg-[#60A5FB] p-5 rounded-xl flex-row gap-2 items-center justify-center"
+          >
+            <Text className="text-center text-white text-xl font-semibold">Start Free 7-Day Trial</Text>
           </TouchableOpacity>
         </View>
-        <Text style={tw`text-white text-center text-lg `} >7-day free trial, cancel anytime.</Text>
-        <View style={tw`my-6 `}>
-          <Text style={tw`text-[#60A5FBE5]  text-lg `}>Restore Purchases</Text>
-          <Text style={tw`text-white text-lg `}>Cancel anytime. After trial, plan auto-renews. Terms & Privacy</Text>
+        <Text className="text-white text-center text-lg">7-day free trial, cancel anytime.</Text>
+        <View className="my-6">
+          <Text className="text-[#60A5FBE5] text-lg">Restore Purchases</Text>
+          <Text className="text-white text-lg">Cancel anytime. After trial, plan auto-renews. Terms & Privacy</Text>
         </View>
       </View>
-
     </SafeAreaView>
   )
 }

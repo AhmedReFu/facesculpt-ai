@@ -334,7 +334,7 @@ const DailyTrack = () => {
 
   const handleUser = async () => {
     // await AsyncStorage.removeItem("user");
-    await AsyncStorage.removeItem("subscribe");
+    // await AsyncStorage.removeItem("subscribe");
     await AsyncStorage.removeItem("isLoggedIn");
     Toast.warn("Logout Successfully")
     navigation.navigate("Auth")
@@ -479,12 +479,12 @@ const DailyTrack = () => {
           <View style={tw`bg-[#0D0F14] pt-20`}>
             <View style={tw`flex-row gap-3`}>
               <TouchableOpacity
-                onPress={() => (navigation as any).navigate("DailyRoutine")}
+                onPress={() => navigation.navigate("DailyRoutine")}
                 style={tw`flex-1 bg-[#60A5FB] py-4 rounded-2xl`}>
                 <Text style={tw`text-white font-bold text-center text-sm`}>Start Today's Session</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => (navigation as any).replace("FaceScan")}
+                onPress={() => navigation.navigate("FaceScan")}
                 style={tw` bg-[#1C1E26] border border-white/20 px-6 py-4 rounded-2xl`}>
                 <Text style={tw`text-white font-bold text-center text-sm`}>Check-in Scan</Text>
               </TouchableOpacity>

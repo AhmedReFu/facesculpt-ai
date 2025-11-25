@@ -7,7 +7,6 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import tw from "twrnc";
 import { RootStackParamList } from '../types/navigation';
 import { useWorkout } from '../utils/WorkoutProvider';
 
@@ -55,57 +54,55 @@ const DailyRoutine = () => {
     const progressPercentage = exercises.length > 0 ? (completedExercises / exercises.length) * 100 : 0;
 
     return (
-        <View style={tw`flex-1 bg-[#000000] px-4`}>
+        <View className="flex-1 bg-[#000000] px-4">
             <StatusBar style='light' />
-            <View style={tw`flex-1 mt-14`}>
-                <View style={tw`mb-2`}>
-                    <View style={tw`flex-row items-center`}>
+            <View className="flex-1 mt-14">
+                <View className="mb-2">
+                    <View className="flex-row items-center">
                         <TouchableOpacity
                             onPress={handleBackPress}
-                            style={tw`absolute left-0 z-10`}
+                            className="absolute left-0 z-10"
                         >
                             <Ionicons name="arrow-back" size={28} color="white" />
                         </TouchableOpacity>
 
-                        <Text style={tw`text-white text-xl font-semibold flex-1 text-center`}>
+                        <Text className="text-white text-xl font-semibold flex-1 text-center">
                             Today's Routine
                         </Text>
                     </View>
                 </View>
 
-                <Text style={tw`text-[#9CA3AF] text-lg mt-4 leading-6`}>
+                <Text className="text-[#9CA3AF] text-lg mt-4 leading-6">
                     Personalized from your latest scan.
                 </Text>
 
                 {/* Progress Bar */}
-                <View style={tw`bg-[#1D2229] rounded-full h-2 mt-4 mb-6`}>
+                <View className="bg-[#1D2229] rounded-full h-2 mt-4 mb-6">
                     <View
-                        style={[
-                            tw`bg-[#60A5FB] h-2 rounded-full`,
-                            { width: `${progressPercentage}%` }
-                        ]}
+                        className="bg-[#60A5FB] h-2 rounded-full"
+                        style={{ width: `${progressPercentage}%` }}
                     />
                 </View>
 
                 {/* Completion Badge */}
                 {allCompleted && (
-                    <View style={tw`bg-[#1a3a2d] border border-[#4ade80] rounded-xl p-4 mb-4 flex-row items-center`}>
+                    <View className="bg-[#1a3a2d] border border-[#4ade80] rounded-xl p-4 mb-4 flex-row items-center">
                         <Ionicons name="checkmark-circle" size={24} color="#4ade80" />
-                        <Text style={tw`text-[#4ade80] ml-2 font-semibold`}>
+                        <Text className="text-[#4ade80] ml-2 font-semibold">
                             All exercises completed! 🎉
                         </Text>
                     </View>
                 )}
 
                 <ScrollView
-                    style={tw`flex-1`}
+                    className="flex-1"
                     showsVerticalScrollIndicator={false}
                 >
                     {/* Info Card */}
-                    <View style={tw`flex-row bg-[#1D2229] rounded-xl p-4 my-3`}>
-                        <MaterialIcons name="auto-awesome" size={28} color="#60A5FB" style={tw`mt-1`} />
-                        <View style={tw`flex-1 ml-3`}>
-                            <Text style={tw`text-white text-lg leading-8`}>
+                    <View className="flex-row bg-[#1D2229] rounded-xl p-4 my-3">
+                        <MaterialIcons name="auto-awesome" size={28} color="#60A5FB" className="mt-1" />
+                        <View className="flex-1 ml-3">
+                            <Text className="text-white text-lg leading-8">
                                 Based on your facial scan, these workouts were created to strengthen and balance your features.
                             </Text>
                         </View>
@@ -119,20 +116,21 @@ const DailyRoutine = () => {
                             activeOpacity={0.8}
                             disabled={exercise.completed}
                         >
-                            <View style={[
-                                tw`flex-row justify-between items-center rounded-xl p-4 my-2`,
-                                exercise.completed
-                                    ? tw`bg-[#1a3a2d] border border-[#4ade80]`
+                            <View className={`
+                                flex-row justify-between items-center rounded-xl p-4 my-2
+                                ${exercise.completed
+                                    ? 'bg-[#1a3a2d] border border-[#4ade80]'
                                     : index === currentExerciseIndex
-                                        ? tw`bg-[#2A3A4F] border border-[#60A5FB]`
-                                        : tw`bg-[#1D2229]`,
-                                exercise.completed && tw`opacity-70`
-                            ]}>
-                                <View style={tw`flex-row items-center`}>
-                                    <View style={[
-                                        tw`p-3 rounded-xl mr-4`,
-                                        exercise.completed ? tw`bg-[#2a5c46]` : tw`bg-[#202F41]`
-                                    ]}>
+                                        ? 'bg-[#2A3A4F] border border-[#60A5FB]'
+                                        : 'bg-[#1D2229]'
+                                }
+                                ${exercise.completed && 'opacity-70'}
+                            `}>
+                                <View className="flex-row items-center">
+                                    <View className={`
+                                        p-3 rounded-xl mr-4
+                                        ${exercise.completed ? 'bg-[#2a5c46]' : 'bg-[#202F41]'}
+                                    `}>
                                         <MaterialCommunityIcons
                                             name={exercise.icon as any}
                                             size={28}
@@ -140,13 +138,13 @@ const DailyRoutine = () => {
                                         />
                                     </View>
                                     <View>
-                                        <Text style={[
-                                            tw`text-lg font-medium`,
-                                            exercise.completed ? tw`text-[#4ade80]` : tw`text-white`
-                                        ]}>
+                                        <Text className={`
+                                            text-lg font-medium
+                                            ${exercise.completed ? 'text-[#4ade80]' : 'text-white'}
+                                        `}>
                                             {exercise.name}
                                         </Text>
-                                        <Text style={tw`text-[#9CA3AF] text-sm mt-1`}>
+                                        <Text className="text-[#9CA3AF] text-sm mt-1">
                                             {exercise.duration} {exercise.completed ? '✓' : ''}
                                         </Text>
                                     </View>
@@ -161,16 +159,16 @@ const DailyRoutine = () => {
                     ))}
                 </ScrollView>
 
-                <View style={tw`pb-6 pt-4 bg-[#000000]`}>
+                <View className="pb-6 pt-4 bg-[#000000]">
                     <TouchableOpacity
                         onPress={handleStartWorkout}
                         activeOpacity={0.8}
-                        style={[
-                            tw`p-5 rounded-xl flex-row gap-2 items-center justify-center`,
-                            allCompleted ? tw`bg-[#4ade80]` : tw`bg-[#60A5FB]`
-                        ]}
+                        className={`
+                            p-5 rounded-xl flex-row gap-2 items-center justify-center
+                            ${allCompleted ? 'bg-[#4ade80]' : 'bg-[#60A5FB]'}
+                        `}
                     >
-                        <Text style={tw`text-white text-center text-xl font-semibold`}>
+                        <Text className="text-white text-center text-xl font-semibold">
                             {allCompleted ? 'View Progress in TrackGym' : `Start ${nextExercise?.name || 'Workout'}`}
                         </Text>
                     </TouchableOpacity>

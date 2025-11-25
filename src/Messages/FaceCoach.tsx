@@ -13,6 +13,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import io, { Socket } from 'socket.io-client';
 
 // ============================================
 // TYPES
@@ -36,11 +37,64 @@ interface ChatResponse {
 }
 
 // ============================================
-// API FUNCTIONS
+// SOCKET.IO CONFIGURATION
 // ============================================
-const BASE_URL = 'https://your-backend.com/api/facecoach';
-const TIMEOUT = 30000;
+const SOCKET_URL = 'https://your-backend.com'; // Replace with your backend URL
+const USER_ID = 'user123'; // Replace with actual user ID from auth
 
+// ============================================
+// SOCKET.IO HOOK
+// ============================================
+const useSocketIO = () => {
+    const socketRef = useRef<Socket | null>(null);
+    const [isConnected, setIsConnected] = useState(false);
+
+    useEffect(() => {
+        // Initialize Socket.IO connection
+        socketRef.current = io(SOCKET_URL, {
+            transports: ['websocket'],
+            autoConnect: true,
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            query: {
+                userId: USER_ID,
+            },
+        });
+
+        const socket = socketRef.current;
+
+        // Connection event handlers
+        socket.on('connect', () => {
+            console.log('✅ Socket.IO Connected:', socket.id);
+            setIsConnected(true);
+        });
+
+        socket.on('disconnect', () => {
+            console.log('❌ Socket.IO Disconnected');
+            setIsConnected(false);
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('🔴 Socket.IO Connection Error:', error);
+            setIsConnected(false);
+        });
+
+        // Cleanup on unmount
+        return () => {
+            if (socket) {
+                socket.disconnect();
+                console.log('🧹 Socket.IO Cleaned up');
+            }
+        };
+    }, []);
+
+    return { socket: socketRef.current, isConnected };
+};
+
+// ============================================
+// MOCK DATA (FALLBACK - Remove when API is ready)
+// ============================================
 const getMockResponse = (message: string): ChatResponse => {
     const lowerMessage = message.toLowerCase();
 
@@ -95,30 +149,6 @@ const getMockSuggestions = (): SuggestedQuestion[] => {
     ];
 };
 
-const sendMessageToAPI = async (
-    userId: string,
-    message: string,
-    conversationHistory: Message[]
-): Promise<ChatResponse> => {
-    try {
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        return getMockResponse(message);
-    } catch (error) {
-        console.error('API Error:', error);
-        return getMockResponse(message);
-    }
-};
-
-const fetchSuggestedQuestions = async (userId: string): Promise<SuggestedQuestion[]> => {
-    try {
-        return getMockSuggestions();
-    } catch (error) {
-        console.error('Failed to fetch suggestions:', error);
-        return getMockSuggestions();
-    }
-};
-
 // ============================================
 // COMPONENTS
 // ============================================
@@ -168,7 +198,7 @@ const SuggestedQuestionButton: React.FC<SuggestedQuestionButtonProps> = ({
     <TouchableOpacity
         onPress={() => onPress(question.text)}
         className="flex-row items-center bg-transparent border border-gray-100 rounded-lg px-4 py-2.5 mb-2 mx-2"
-        style={{ minWidth: 300 }} // or whatever width you prefer
+        style={{ minWidth: 300 }}
     >
         <MaterialCommunityIcons name="message-outline" size={24} color="#60A5FB" />
         <Text className="text-gray-300 text-lg ml-2 flex-shrink">{question.text}</Text>
@@ -180,6 +210,7 @@ const SuggestedQuestionButton: React.FC<SuggestedQuestionButtonProps> = ({
 // ============================================
 const FaceCoach: React.FC = () => {
     const navigator = useNavigation();
+    const { socket, isConnected } = useSocketIO();
 
     const [messages, setMessages] = useState<Message[]>([
         {
@@ -192,24 +223,101 @@ const FaceCoach: React.FC = () => {
     const [inputText, setInputText] = useState<string>('');
     const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [useMockData, setUseMockData] = useState<boolean>(true); // Toggle this when API is ready
 
     const scrollViewRef = useRef<ScrollView>(null);
-    const USER_ID = 'user123';
 
+    // ============================================
+    // SOCKET.IO EVENT LISTENERS
+    // ============================================
     useEffect(() => {
-        const loadQuestions = async (): Promise<void> => {
-            const questions = await fetchSuggestedQuestions(USER_ID);
-            setSuggestedQuestions(questions);
-        };
-        loadQuestions();
-    }, []);
+        if (!socket || useMockData) return;
 
+        // Listen for chat responses
+        socket.on('chat:response', (response: ChatResponse) => {
+            console.log('📨 Received chat response:', response);
+
+            setMessages((prev) =>
+                prev.filter((msg) => !msg.isLoading).concat({
+                    id: Date.now().toString(),
+                    text: response.answer,
+                    isUser: false,
+                    timestamp: new Date(),
+                })
+            );
+
+            if (response.suggestions && response.suggestions.length > 0) {
+                setSuggestedQuestions(
+                    response.suggestions.map((suggestion, index) => ({
+                        id: `suggestion-${Date.now()}-${index}`,
+                        text: suggestion,
+                    }))
+                );
+            }
+
+            setIsLoading(false);
+        });
+
+        // Listen for suggested questions
+        socket.on('suggestions:update', (suggestions: string[]) => {
+            console.log('💡 Received suggestions:', suggestions);
+            setSuggestedQuestions(
+                suggestions.map((suggestion, index) => ({
+                    id: `suggestion-${Date.now()}-${index}`,
+                    text: suggestion,
+                }))
+            );
+        });
+
+        // Listen for typing indicator (optional)
+        socket.on('chat:typing', () => {
+            console.log('⌨️ AI is typing...');
+            // You can add typing indicator logic here if needed
+        });
+
+        // Listen for errors
+        socket.on('chat:error', (error: { message: string }) => {
+            console.error('🔴 Chat error:', error);
+            setMessages((prev) =>
+                prev.filter((msg) => !msg.isLoading).concat({
+                    id: Date.now().toString(),
+                    text: error.message || "Sorry, something went wrong. Please try again.",
+                    isUser: false,
+                    timestamp: new Date(),
+                })
+            );
+            setIsLoading(false);
+        });
+
+        // Cleanup listeners
+        return () => {
+            socket.off('chat:response');
+            socket.off('suggestions:update');
+            socket.off('chat:typing');
+            socket.off('chat:error');
+        };
+    }, [socket, useMockData]);
+
+    // Load initial suggestions
+    useEffect(() => {
+        if (useMockData) {
+            setSuggestedQuestions(getMockSuggestions());
+        } else if (socket && isConnected) {
+            // Request initial suggestions from server
+            socket.emit('suggestions:fetch', { userId: USER_ID });
+        }
+    }, [socket, isConnected, useMockData]);
+
+    // Auto-scroll on new messages
     useEffect(() => {
         setTimeout(() => {
             scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
     }, [messages]);
 
+    // ============================================
+    // MESSAGE HANDLING
+    // ============================================
     const handleSendMessage = async (text: string): Promise<void> => {
         if (!text.trim() || isLoading) return;
 
@@ -234,38 +342,90 @@ const FaceCoach: React.FC = () => {
 
         setMessages((prev) => [...prev, loadingMessage]);
 
-        try {
-            const response = await sendMessageToAPI(USER_ID, text, messages);
+        // ============================================
+        // SWITCH BETWEEN MOCK DATA AND SOCKET.IO
+        // ============================================
+        if (useMockData) {
+        // MOCK DATA MODE (Remove this when API is ready)
+            try {
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+                const response = getMockResponse(text);
 
-            setMessages((prev) =>
-                prev.filter((msg) => !msg.isLoading).concat({
-                    id: Date.now().toString(),
-                    text: response.answer,
-                    isUser: false,
-                    timestamp: new Date(),
-                })
-            );
-
-            if (response.suggestions && response.suggestions.length > 0) {
-                setSuggestedQuestions(
-                    response.suggestions.map((suggestion, index) => ({
-                        id: `suggestion-${index}`,
-                        text: suggestion,
-                    }))
+                setMessages((prev) =>
+                    prev.filter((msg) => !msg.isLoading).concat({
+                        id: Date.now().toString(),
+                        text: response.answer,
+                        isUser: false,
+                        timestamp: new Date(),
+                    })
                 );
+
+                if (response.suggestions && response.suggestions.length > 0) {
+                    setSuggestedQuestions(
+                        response.suggestions.map((suggestion, index) => ({
+                            id: `suggestion-${index}`,
+                            text: suggestion,
+                        }))
+                    );
+                }
+            } catch (error) {
+                console.error('Mock API error:', error);
+                setMessages((prev) =>
+                    prev.filter((msg) => !msg.isLoading).concat({
+                        id: Date.now().toString(),
+                        text: "Sorry, I'm having trouble connecting right now. Please try again.",
+                        isUser: false,
+                        timestamp: new Date(),
+                    })
+                );
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error('Failed to send message:', error);
-            setMessages((prev) =>
-                prev.filter((msg) => !msg.isLoading).concat({
-                    id: Date.now().toString(),
-                    text: "Sorry, I'm having trouble connecting right now. Please try again.",
-                    isUser: false,
-                    timestamp: new Date(),
-                })
-            );
-        } finally {
-            setIsLoading(false);
+        } else {
+            // SOCKET.IO MODE (Use this when API is ready)
+            if (!socket || !isConnected) {
+                setMessages((prev) =>
+                    prev.filter((msg) => !msg.isLoading).concat({
+                        id: Date.now().toString(),
+                        text: "Connection lost. Please check your internet and try again.",
+                        isUser: false,
+                        timestamp: new Date(),
+                    })
+                );
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                // Emit message to server
+                socket.emit('chat:message', {
+                    userId: USER_ID,
+                    message: text.trim(),
+                    conversationHistory: messages
+                        .filter((msg) => !msg.isLoading)
+                        .map((msg) => ({
+                            text: msg.text,
+                            isUser: msg.isUser,
+                            timestamp: msg.timestamp,
+                        })),
+                    timestamp: new Date().toISOString(),
+                });
+
+                console.log('📤 Message sent via Socket.IO:', text);
+
+                // Response will be handled by socket.on('chat:response') listener
+            } catch (error) {
+                console.error('Socket.IO send error:', error);
+                setMessages((prev) =>
+                    prev.filter((msg) => !msg.isLoading).concat({
+                        id: Date.now().toString(),
+                        text: "Failed to send message. Please try again.",
+                        isUser: false,
+                        timestamp: new Date(),
+                    })
+                );
+                setIsLoading(false);
+            }
         }
     };
 
@@ -282,21 +442,25 @@ const FaceCoach: React.FC = () => {
             <StatusBar style="light" />
 
             {/* Header */}
-            <View className="flex-row items-center justify-between px-4 py-3 ">
-                <TouchableOpacity className="" onPress={() => navigator.goBack()}>
+            <View className="flex-row items-center justify-between px-4 py-3">
+                <TouchableOpacity onPress={() => navigator.goBack()}>
                     <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
-                <View className='flex-row gap-2 '>
+                <View className="flex-row gap-2">
                     <Text className="text-white text-2xl font-bold">
                         Ask Face Coach
                     </Text>
                     <Ionicons name="chatbubble-ellipses" size={24} color="white" />
-
                 </View>
                 <View>
-
+                    {/* Connection Status Indicator */}
+                    {!useMockData && (
+                        <View
+                            className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'
+                                }`}
+                        />
+                    )}
                 </View>
-
             </View>
 
             <KeyboardAvoidingView
@@ -330,7 +494,7 @@ const FaceCoach: React.FC = () => {
                 </ScrollView>
 
                 {/* Input Area */}
-                <View className="px-4 py-4 ">
+                <View className="px-4 py-4">
                     <View className="flex-row items-center bg-[#1F2937] rounded-xl px-4 py-3 border border-gray-700">
                         <TextInput
                             className="flex-1 text-white text-base max-h-20"
