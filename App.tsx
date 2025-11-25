@@ -1,4 +1,3 @@
-// Import necessary libraries and components
 import NetInfo from '@react-native-community/netinfo';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as React from 'react';
@@ -6,7 +5,6 @@ import { Alert, BackHandler } from 'react-native';
 
 import "./global.css";
 
-// Import all screen components
 import AuthScreen from './src/Auth/AuthScreen';
 import OtpAuth from './src/Auth/OtpAuth';
 import CreateNewPassword from './src/ForgotPassword/CreateNewPassword';
