@@ -272,7 +272,7 @@ const GoalChart = ({ goal }: GoalChartProps) => {
           bezier
           withDots={false}
           withInnerLines={true}
-          withOuterLines={false}
+          withOuterLines={true}
           withVerticalLines={false}
           withHorizontalLines={true}
           withVerticalLabels={false}
@@ -560,7 +560,7 @@ const DailyTrack = () => {
           style={[
             tw`absolute bottom-19 right-0 z-50 px-5 py-4 rounded-2xl flex-row items-center justify-center`,
             {
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              backgroundColor: 'rgba(0, 0, 0, 0.50)',
               borderColor: 'rgba(255, 255, 255, 0.3)',
               borderWidth: 1,
               shadowColor: '#000',
