@@ -7,7 +7,6 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { RootStackParamList } from '../types/navigation';
 import { useWorkout } from '../utils/WorkoutProvider';
 
-// Define the route prop type for this screen
 type ExerciseScreenRouteProp = RouteProp<RootStackParamList, 'Exercise'>;
 
 interface InstructionItemProps {
@@ -25,17 +24,13 @@ const InstructionItem = ({ text }: InstructionItemProps) => (
 
 const Exercise = () => {
     const navigation = useNavigation();
-    // Properly typed route
     const { exercises } = useWorkout();
-
     const route = useRoute<ExerciseScreenRouteProp>();
     const exerciseId = route.params.exerciseId;
-    // Now TypeScript knows exerciseId exists
 
     const exercise = exercises.find(ex => ex.id === exerciseId) || exercises[0];
 
     const handleStartExercise = () => {
-        // Properly typed navigation
         navigation.navigate('Sessions', {
             exerciseId: exercise.id,
         });

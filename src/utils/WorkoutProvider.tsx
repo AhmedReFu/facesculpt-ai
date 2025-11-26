@@ -1,7 +1,6 @@
 // contexts/WorkoutContext.tsx
 import React, { createContext, ReactNode, useContext, useState } from 'react';
 
-// In your WorkoutContext.tsx
 export interface Exercise {
     id: number;
     name: string;
@@ -11,7 +10,7 @@ export interface Exercise {
     instructions: string[];
     completed: boolean;
     durationInSeconds: number;
-    description?: string; // Add this line
+    description?: string;
 }
 
 interface WorkoutContextType {
@@ -23,12 +22,12 @@ interface WorkoutContextType {
     moveToNextExercise: () => void;
     isWorkoutCompleted: boolean;
     workoutProgress: number;
+    getNextIncompleteExercise: () => Exercise | null;
 }
 
 const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
 
 export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
-    // Initial exercises data
     const [exercises, setExercises] = useState<Exercise[]>([
         {
             id: 1,
@@ -47,7 +46,6 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
                 'Release slowly and reset posture.',
             ]
         },
-
         {
             id: 2,
             name: 'Eye Circle Massage',
@@ -131,6 +129,10 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
         return exercises[currentExerciseIndex] || null;
     };
 
+    const getNextIncompleteExercise = (): Exercise | null => {
+        return exercises.find(exercise => !exercise.completed) || null;
+    };
+
     const isWorkoutCompleted = exercises.every(exercise => exercise.completed);
     const workoutProgress = exercises.filter(ex => ex.completed).length / exercises.length;
 
@@ -142,7 +144,8 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
         getCurrentExercise,
         moveToNextExercise,
         isWorkoutCompleted,
-        workoutProgress
+        workoutProgress,
+        getNextIncompleteExercise
     };
 
     return (

@@ -14,24 +14,22 @@ type DailyRoutineNavigationProp = StackNavigationProp<RootStackParamList, 'Daily
 
 const DailyRoutine = () => {
     const navigation = useNavigation<DailyRoutineNavigationProp>();
-    const { exercises, currentExerciseIndex, getCurrentExercise, isWorkoutCompleted } = useWorkout();
+    const { exercises, currentExerciseIndex, getNextIncompleteExercise, isWorkoutCompleted } = useWorkout();
 
     const handleExercisePress = (exercise: any) => {
         navigation.navigate('Exercise', {
-            exerciseId: exercise.id, // Keep as number since your context uses number
+            exerciseId: exercise.id,
         });
     };
 
     const handleStartWorkout = () => {
         if (isWorkoutCompleted) {
-            // All workouts completed - go to TrackGym
             navigation.navigate('DailyTrack');
         } else {
-            // Start workout with current exercise
-            const currentExercise = getCurrentExercise();
-            if (currentExercise) {
+            const nextExercise = getNextIncompleteExercise();
+            if (nextExercise) {
                 navigation.navigate('Exercise', {
-                    exerciseId: currentExercise.id,
+                    exerciseId: nextExercise.id,
                 });
             }
         }
@@ -42,14 +40,9 @@ const DailyRoutine = () => {
         navigation.goBack();
     };
 
-    const getNextIncompleteExercise = () => {
-        return exercises.find(exercise => !exercise.completed) || exercises[0];
-    };
-
     const nextExercise = getNextIncompleteExercise();
     const allCompleted = isWorkoutCompleted;
 
-    // Calculate progress percentage safely
     const completedExercises = exercises.filter(ex => ex.completed).length;
     const progressPercentage = exercises.length > 0 ? (completedExercises / exercises.length) * 100 : 0;
 
@@ -144,7 +137,7 @@ const DailyRoutine = () => {
                                         `}>
                                             {exercise.name}
                                         </Text>
-                                        <Text className="text-[#9CA3AF] text-sm mt-1">
+                                        <Text className="text-[#9CA3AF] text-lg mt-1">
                                             {exercise.duration} {exercise.completed ? '✓' : ''}
                                         </Text>
                                     </View>

@@ -11,13 +11,14 @@ import {
     StatusBar,
     Text,
     TextInput,
+    ToastAndroid,
     TouchableOpacity,
     View
 } from 'react-native';
 
-import Toast from 'react-native-toast-message';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Images } from '../constants';
-import { useBackHandler } from '../hook/useBackHandler';
+import { useBackHandler } from '../lib/useBackHandler';
 
 type RootStackParamList = {
     DailyTrack: undefined;
@@ -63,7 +64,13 @@ const AuthScreen = () => {
 
     const handleSignIn = async () => {
         if (!number || !password) {
-            Toast.show({ type: 'error', text1: 'Invalid user please enter correct details.' });
+
+            ToastAndroid.showWithGravity(
+                'Invalid user please enter correct details.',
+                ToastAndroid.SHORT,
+                ToastAndroid.CENTER,
+
+            );
             return;
         }
 
@@ -71,20 +78,37 @@ const AuthScreen = () => {
             // Validate mobile number format
             const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/; // Indian mobile number format
             if (!allNumberRegex.test(number)) {
-                Toast.show({ type: 'error', text1: 'Please enter a valid 11-digit mobile number.' });
+                ToastAndroid.showWithGravity(
+                    'Please enter a valid 11-digit mobile number.',
+                    ToastAndroid.SHORT,
+                    ToastAndroid.CENTER,
+
+                );
                 return;
             }
 
             // Validate password length
             if (password.length < 6) {
-                Toast.show({ type: 'error', text1: "Password must be at least 6 characters long." });
+
+                ToastAndroid.showWithGravity(
+                    'Password must be at least 6 characters long.',
+                    ToastAndroid.SHORT,
+                    ToastAndroid.CENTER,
+
+                );
                 return;
             }
 
             const data = await AsyncStorage.getItem("user");
 
             if (!data) {
-                Toast.show({ type: 'error', });
+
+                ToastAndroid.showWithGravity(
+                    'No User Found',
+                    ToastAndroid.SHORT,
+                    ToastAndroid.CENTER,
+
+                );
                 return;
             }
 
@@ -92,14 +116,26 @@ const AuthScreen = () => {
 
             // Validate stored user data
             if (!user || !user.number || !user.password) {
-                Toast.show({ type: 'error', text1: 'Invalid user data. Please sign up again.' });
+
+                ToastAndroid.showWithGravity(
+                    'Invalid user data. Please sign up again.',
+                    ToastAndroid.SHORT,
+                    ToastAndroid.CENTER,
+
+                );
                 await AsyncStorage.removeItem("user");
                 return;
             }
 
             // Check credentials
             if (user.number !== number || user.password !== password) {
-                Toast.show({ type: 'error', text1: 'Invalid mobile number or password.' });
+
+                ToastAndroid.showWithGravity(
+                    'Invalid mobile number or password.',
+                    ToastAndroid.SHORT,
+                    ToastAndroid.CENTER,
+
+                );
                 return;
             }
 
@@ -112,7 +148,13 @@ const AuthScreen = () => {
             await AsyncStorage.setItem("currentUser", JSON.stringify(user));
             const subscribe = await AsyncStorage.getItem("subscribe");
             // console.log("Sign in successful:", parseInt(user.number));
-            Toast.show({ type: 'success', text1: "Sign in successfully" });
+
+            ToastAndroid.showWithGravity(
+                'Sign in successfully ✓',
+                ToastAndroid.SHORT,
+                ToastAndroid.CENTER,
+
+            );
             // Navigate to home screen
             // navigation.navigate('Home');
 
@@ -127,14 +169,26 @@ const AuthScreen = () => {
 
         } catch (error) {
             console.error("Sign-in error:", error);
-            Toast.show({ type: 'error', text1: 'An error occurred during sign-in.' });
+
+            ToastAndroid.showWithGravity(
+                `Sign-in error: ${error}`,
+                ToastAndroid.SHORT,
+                ToastAndroid.CENTER,
+
+            );
         }
     };
 
     const handleSignUp = async () => {
         if (!name || !number || !password) {
 
-            Toast.show({ type: 'error', text1: 'Please fill in all fields.' });
+
+            ToastAndroid.showWithGravity(
+                `Please fill in all fields.`,
+                ToastAndroid.SHORT,
+                ToastAndroid.CENTER,
+
+            );
             return;
         }
 
@@ -142,7 +196,13 @@ const AuthScreen = () => {
             // Name validation
             if (name.trim().length < 2) {
 
-                Toast.show({ type: 'error', text1: 'Please enter a valid name (at least 2 characters).' });
+
+                ToastAndroid.showWithGravity(
+                    'Please enter a valid name (at least 2 characters).',
+                    ToastAndroid.SHORT,
+                    ToastAndroid.CENTER,
+
+                );
                 return;
             }
 
@@ -150,13 +210,25 @@ const AuthScreen = () => {
             const universalPhoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
             if (!allNumberRegex.test(number)) {
 
-                Toast.show({ type: 'error', text1: 'Please enter a valid 11-digit mobile number.' });
+
+                ToastAndroid.showWithGravity(
+                    'Please enter a valid 11-digit mobile number.',
+                    ToastAndroid.SHORT,
+                    ToastAndroid.CENTER,
+
+                );
                 return;
             }
 
             // Password validation
             if (password.length < 6) {
-                Toast.show({ type: 'error', text1: '"Password must be at least 6 characters long."' });
+
+                ToastAndroid.showWithGravity(
+                    'Password must be at least 6 characters long.',
+                    ToastAndroid.SHORT,
+                    ToastAndroid.CENTER,
+
+                );
                 return;
             }
 
@@ -165,10 +237,13 @@ const AuthScreen = () => {
             if (existingData) {
                 const existingUser = JSON.parse(existingData);
                 if (existingUser.number === number) {
-                    Toast.show({
-                        type: 'error',
-                        text1: '"An account with this mobile number already exists."'
-                    });
+
+                    ToastAndroid.showWithGravity(
+                        'An account with this mobile number already exists.',
+                        ToastAndroid.SHORT,
+                        ToastAndroid.CENTER,
+                    );
+
                     return;
                 }
             }
@@ -196,10 +271,12 @@ const AuthScreen = () => {
 
         } catch (error) {
             console.error("Sign-up error:", error);
-            Toast.show({
-                type: 'error',
-                text1: "An error occurred during sign-up."
-            });
+
+            ToastAndroid.showWithGravity(
+                'An error occurred during sign-up.',
+                ToastAndroid.SHORT,
+                ToastAndroid.CENTER,
+            );
         }
     };
 
@@ -223,190 +300,192 @@ const AuthScreen = () => {
     };
 
     return (
-        <View className="flex-1 bg-[#000000]">
-            <StatusBar barStyle="light-content" />
+        <SafeAreaProvider>
+            <SafeAreaView className="flex-1 bg-[#000000]">
+                <StatusBar barStyle="light-content" />
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                className="flex-1"
-            >
-
-                <ScrollView
-                    className="flex-1 px-4"
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-start" }}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    className="flex-1"
                 >
-                    {/* Logo */}
-                    <View className="items-center my-20">
-                        {/* <Text className="text-6xl font-bold text-white">Logo</Text> */}
-                        <Image source={Images.Icon} resizeMode="contain" />
-                        <Toast />
-                    </View>
-                    {/* Tab Switcher */}
-                    <View className="flex-row border-2 border-white rounded-full p-1 mb-8">
-                        <TouchableOpacity
-                            className={`flex-1 py-3 rounded-full items-center ${activeTab === 'signin' ? 'bg-blue-400' : 'bg-transparent'
-                                }`}
-                            onPress={() => switchTab('signin')}
-                        >
-                            <Text className={`text-lg font-bold ${activeTab === 'signin' ? 'text-white' : 'text-white'
-                                }`}>
-                                Sign In
+
+                    <ScrollView
+                        className="flex-1 px-4"
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-start" }}
+                    >
+                        {/* Logo */}
+                        <View className="items-center my-20">
+                            {/* <Text className="text-6xl font-bold text-white">Logo</Text> */}
+                            <Image source={Images.Icon} resizeMode="contain" />
+
+                        </View>
+                        {/* Tab Switcher */}
+                        <View className="flex-row border-2 border-white rounded-full p-1 mb-8">
+                            <TouchableOpacity
+                                className={`flex-1 py-3 rounded-full items-center ${activeTab === 'signin' ? 'bg-blue-400' : 'bg-transparent'
+                                    }`}
+                                onPress={() => switchTab('signin')}
+                            >
+                                <Text className={`text-lg font-bold ${activeTab === 'signin' ? 'text-white' : 'text-white'
+                                    }`}>
+                                    Sign In
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                className={`flex-1 py-3 rounded-full items-center ${activeTab === 'signup' ? 'bg-blue-400' : 'bg-transparent'
+                                    }`}
+                                onPress={() => switchTab('signup')}
+                            >
+                                <Text className={`text-lg font-bold ${activeTab === 'signup' ? 'text-white' : 'text-white'
+                                    }`}>
+                                    Sign Up
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Welcome Section */}
+                        <View className="mb-8">
+                            <Text className="text-2xl font-bold text-white mb-3 ">
+                                {activeTab === 'signin' ? 'Welcome!' : 'Create Your Account'}
                             </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            className={`flex-1 py-3 rounded-full items-center ${activeTab === 'signup' ? 'bg-blue-400' : 'bg-transparent'
-                                }`}
-                            onPress={() => switchTab('signup')}
-                        >
-                            <Text className={`text-lg font-bold ${activeTab === 'signup' ? 'text-white' : 'text-white'
-                                }`}>
-                                Sign Up
+                            <Text className="text-lg text-white leading-5">
+                                {activeTab === 'signin'
+                                    ? 'Log in to your account to access your face scan data and reports.'
+                                    : 'Join the AI Face Scan community and explore your facial insights instantly.'
+                                }
                             </Text>
-                        </TouchableOpacity>
-                    </View>
+                        </View>
 
-                    {/* Welcome Section */}
-                    <View className="mb-8">
-                        <Text className="text-2xl font-bold text-white mb-3 ">
-                            {activeTab === 'signin' ? 'Welcome!' : 'Create Your Account'}
-                        </Text>
-                        <Text className="text-lg text-white leading-5">
-                            {activeTab === 'signin'
-                                ? 'Log in to your account to access your face scan data and reports.'
-                                : 'Join the AI Face Scan community and explore your facial insights instantly.'
-                            }
-                        </Text>
-                    </View>
-
-                    {/* Divider */}
+                        {/* Divider */}
 
 
-                    {/* Form Container */}
+                        {/* Form Container */}
 
-                    <View className="space-y-6">
-                        {/* Name Input - Only for Sign Up */}
-                        {activeTab === 'signup' && (
-                            <View className="space-y-3">
-                                <Text className="text-lg font-semibold text-white">Name</Text>
+                        <View className="space-y-6">
+                            {/* Name Input - Only for Sign Up */}
+                            {activeTab === 'signup' && (
+                                <View className="space-y-3">
+                                    <Text className="text-lg font-semibold text-white">Name</Text>
+                                    <TextInput
+                                        className="bg-transparent border-2 border-gray-600 rounded-xl px-4 py-4 text-lg text-white"
+                                        placeholder="Enter your name"
+                                        placeholderTextColor="#6B7280"
+                                        value={name}
+                                        onChangeText={setName}
+                                        autoCapitalize="words"
+                                    />
+                                </View>
+                            )}
+
+                            {/* Email Input */}
+                            <View className="my-4">
+                                <Text className="text-lg font-semibold text-white">
+                                    Phone Number
+                                </Text>
                                 <TextInput
                                     className="bg-transparent border-2 border-gray-600 rounded-xl px-4 py-4 text-lg text-white"
-                                    placeholder="Enter your name"
+                                    placeholder="Enter your phone number"
                                     placeholderTextColor="#6B7280"
-                                    value={name}
-                                    onChangeText={setName}
-                                    autoCapitalize="words"
+                                    value={number}
+                                    onChangeText={setNumber}
+                                    keyboardType="number-pad"
+                                    autoCapitalize="none"
+                                    autoComplete="email"
                                 />
                             </View>
-                        )}
 
-                        {/* Email Input */}
-                        <View className="my-4">
-                            <Text className="text-lg font-semibold text-white">
-                                Phone Number
-                            </Text>
-                            <TextInput
-                                className="bg-transparent border-2 border-gray-600 rounded-xl px-4 py-4 text-lg text-white"
-                                placeholder="Enter your phone number"
-                                placeholderTextColor="#6B7280"
-                                value={number}
-                                onChangeText={setNumber}
-                                keyboardType="number-pad"
-                                autoCapitalize="none"
-                                autoComplete="email"
-                            />
-                        </View>
-
-                        {/* Password Input */}
-                        <View className="space-y-6">
-                            <Text className="text-base font-semibold text-white">Password</Text>
-                            <View className="relative">
-                                <TextInput
-                                    className="bg-transparent border-2 border-gray-600 rounded-xl px-4 py-4 text-base text-white pr-12"
-                                    placeholder="••••••••"
-                                    placeholderTextColor="#6B7280"
-                                    value={password}
-                                    onChangeText={setPassword}
-                                    secureTextEntry={!showPassword}
-                                    autoComplete="password"
-                                />
-                                <TouchableOpacity
-                                    className="absolute right-4 top-4"
-                                    onPress={() => setShowPassword(!showPassword)}
-                                >
-                                    <Ionicons
-                                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                                        size={20}
-                                        color="#9CA3AF"
+                            {/* Password Input */}
+                            <View className="space-y-6">
+                                <Text className="text-base font-semibold text-white">Password</Text>
+                                <View className="relative">
+                                    <TextInput
+                                        className="bg-transparent border-2 border-gray-600 rounded-xl px-4 py-4 text-base text-white pr-12"
+                                        placeholder="••••••••"
+                                        placeholderTextColor="#6B7280"
+                                        value={password}
+                                        onChangeText={setPassword}
+                                        secureTextEntry={!showPassword}
+                                        autoComplete="password"
                                     />
-                                </TouchableOpacity>
+                                    <TouchableOpacity
+                                        className="absolute right-4 top-4"
+                                        onPress={() => setShowPassword(!showPassword)}
+                                    >
+                                        <Ionicons
+                                            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                                            size={20}
+                                            color="#9CA3AF"
+                                        />
+                                    </TouchableOpacity>
+                                </View>
                             </View>
-                        </View>
 
-                        {/* Sign In Specific Options */}
-                        {activeTab === 'signin' && (
-                            <View className="flex-row justify-between items-start my-4">
+                            {/* Sign In Specific Options */}
+                            {activeTab === 'signin' && (
+                                <View className="flex-row justify-between items-start my-4">
+                                    <TouchableOpacity
+                                        className="flex-row items-center space-x-3"
+                                        onPress={() => setRememberMe(!rememberMe)}
+                                    >
+                                        <View className={`w-7 h-7 mr-2 border-2 rounded items-center justify-center ${rememberMe ? 'bg-blue-400 border-blue-400' : 'border-gray-600'
+                                            }`}>
+                                            {rememberMe && (
+                                                <Ionicons name="checkmark" size={20} color="#fff" />
+                                            )}
+                                        </View>
+                                        <Text className="text-lg text-gray-400">Remember Me</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={handleForgotPassword}>
+                                        <Text className="text-lg text-red-500 font-semibold">Forgot Password?</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+
+                            {/* Sign Up Specific Options */}
+                            {activeTab === 'signup' && (
                                 <TouchableOpacity
-                                    className="flex-row items-center space-x-3"
-                                    onPress={() => setRememberMe(!rememberMe)}
+                                    className="flex-row items-center  my-4"
+                                    onPress={() => setAgreeTerms(!agreeTerms)}
                                 >
-                                    <View className={`w-7 h-7 mr-2 border-2 rounded items-center justify-center ${rememberMe ? 'bg-blue-400 border-blue-400' : 'border-gray-600'
+                                    <View className={`w-7 h-7 border-2 rounded items-center justify-center mr-2 ${agreeTerms ? 'bg-blue-400 border-blue-400' : 'border-gray-600'
                                         }`}>
-                                        {rememberMe && (
+                                        {agreeTerms && (
                                             <Ionicons name="checkmark" size={20} color="#fff" />
                                         )}
                                     </View>
-                                    <Text className="text-lg text-gray-400">Remember Me</Text>
+                                    <Text className="text-md text-gray-400 font-semibold">
+                                        I agree to the Terms & Conditions and Privacy Policy
+                                    </Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={handleForgotPassword}>
-                                    <Text className="text-lg text-red-500 font-semibold">Forgot Password?</Text>
-                                </TouchableOpacity>
-                            </View>
-                        )}
+                            )}
 
-                        {/* Sign Up Specific Options */}
-                        {activeTab === 'signup' && (
+                            {/* Submit Button */}
                             <TouchableOpacity
-                                className="flex-row items-center  my-4"
-                                onPress={() => setAgreeTerms(!agreeTerms)}
+                                className={`py-5 rounded-xl items-center mt-2 ${(activeTab === 'signin' ? !isSignInValid : !isSignUpValid)
+                                    ? 'bg-gray-700 opacity-60'
+                                    : 'bg-blue-400'
+                                    }`}
+                                onPress={activeTab === 'signin' ? handleSignIn : handleSignUp}
+                                disabled={activeTab === 'signin' ? !isSignInValid : !isSignUpValid}
+                                activeOpacity={0.8}
                             >
-                                <View className={`w-7 h-7 border-2 rounded items-center justify-center mr-2 ${agreeTerms ? 'bg-blue-400 border-blue-400' : 'border-gray-600'
-                                    }`}>
-                                    {agreeTerms && (
-                                        <Ionicons name="checkmark" size={20} color="#fff" />
-                                    )}
-                                </View>
-                                <Text className="text-md text-gray-400 font-semibold">
-                                    I agree to the Terms & Conditions and Privacy Policy
+                                <Text className="text-white text-xl font-semibold">
+                                    {activeTab === 'signin' ? 'Log In' : 'Sign Up'}
                                 </Text>
                             </TouchableOpacity>
-                        )}
 
-                        {/* Submit Button */}
-                        <TouchableOpacity
-                            className={`py-5 rounded-xl items-center mt-2 ${(activeTab === 'signin' ? !isSignInValid : !isSignUpValid)
-                                ? 'bg-gray-700 opacity-60'
-                                : 'bg-blue-400'
-                                }`}
-                            onPress={activeTab === 'signin' ? handleSignIn : handleSignUp}
-                            disabled={activeTab === 'signin' ? !isSignInValid : !isSignUpValid}
-                            activeOpacity={0.8}
-                        >
-                            <Text className="text-white text-xl font-semibold">
-                                {activeTab === 'signin' ? 'Log In' : 'Sign Up'}
-                            </Text>
-                        </TouchableOpacity>
-
-                    </View>
+                        </View>
 
 
-                    {/* Bottom Spacer */}
-                    <View className="h-8" />
+                        {/* Bottom Spacer */}
+                        <View className="h-8" />
 
-                </ScrollView>
-            </KeyboardAvoidingView>
+                    </ScrollView>
+                </KeyboardAvoidingView>
 
-        </View>
+            </SafeAreaView>
+        </SafeAreaProvider>
     );
 };
 

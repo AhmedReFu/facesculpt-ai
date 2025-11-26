@@ -1,11 +1,10 @@
 // screens/Sessions.tsx
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { CommonActions, RouteProp, useNavigation, useRoute } from '@react-navigation/native'; // ADD CommonActions
+import { CommonActions, RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import ToastManager, { Toast } from 'toastify-react-native';
+import { ScrollView, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
 import { RootStackParamList } from '../types/navigation';
 import { useWorkout } from '../utils/WorkoutProvider';
 
@@ -36,6 +35,7 @@ const Sessions = () => {
     const [timeLeft, setTimeLeft] = useState(exercise?.durationInSeconds || 10);
     const [isRunning, setIsRunning] = useState(false);
     const [isCompleted, setIsCompleted] = useState(exercise?.completed || false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // Update local state when exercise changes
@@ -55,7 +55,6 @@ const Sessions = () => {
                 setTimeLeft((prev) => {
                     if (prev <= 1) {
                         setIsRunning(false);
-                        handleAutoComplete();
                         return 0;
                     }
                     return prev - 1;
@@ -74,6 +73,14 @@ const Sessions = () => {
         };
     }, [isRunning, timeLeft, exercise?.reps, isCompleted]);
 
+    // Handle auto-complete when timer reaches 0
+    useEffect(() => {
+        if (timeLeft === 0 && !isCompleted && !exercise?.reps && isRunning) {
+            setIsRunning(false);
+            handleAutoComplete();
+        }
+    }, [timeLeft, isCompleted, exercise?.reps, isRunning]);
+
     const handleAutoComplete = () => {
         if (exercise && !exercise.completed) {
             completeExercise(exercise.id);
@@ -82,11 +89,11 @@ const Sessions = () => {
     };
 
     const handleStartPause = () => {
+        if (isProcessing) return;
+
         if (exercise?.reps) {
-            // For reps-based exercises, just navigate to next
             handleNextExercise();
         } else {
-            // For duration-based exercises, start/pause timer
             if (timeLeft === 0) {
                 setTimeLeft(exercise?.durationInSeconds || 10);
                 setIsCompleted(false);
@@ -105,35 +112,41 @@ const Sessions = () => {
     };
 
     const handleMarkComplete = () => {
-        if (exercise && !exercise.completed) {
-            completeExercise(exercise.id);
-            setIsCompleted(true);
-            Toast.success(`Successfully Complete ${exercise.name}.`)
-            setIsRunning(false);
+        if (isProcessing || !exercise || exercise.completed) return;
 
-            // Show completed state for 1 second before navigating
-            setTimeout(() => {
+        setIsProcessing(true);
+        completeExercise(exercise.id);
+        setIsCompleted(true);
+
+        ToastAndroid.showWithGravity(
+            `Successfully Complete ${exercise.name}.`,
+            ToastAndroid.SHORT,
+            ToastAndroid.CENTER,
+        );
+        setIsRunning(false);
+
+        const workoutCompleted = isWorkoutCompleted;
+
+        setTimeout(() => {
+            if (workoutCompleted) {
+                navigation.dispatch(
+                    CommonActions.reset({
+                        index: 1,
+                        routes: [
+                            { name: 'DailyTrack' },
+                            { name: 'DailyRoutine' },
+                        ],
+                    })
+                );
+            } else {
                 moveToNextExercise();
                 const nextExercise = getCurrentExercise();
 
-                if (isWorkoutCompleted) {
-                    // All exercises completed - RESET navigation to remove workout history
-                    navigation.dispatch(
-                        CommonActions.reset({
-                            index: 1, // This makes DailyRoutine current, with DailyTrack in history
-                            routes: [
-                                { name: 'DailyTrack' },
-                                { name: 'DailyRoutine' },
-                            ],
-                        })
-                    );
-                } else if (nextExercise && !nextExercise.completed) {
-                    // Go to next exercise (normal navigation)
+                if (nextExercise) {
                     navigation.navigate('Sessions', {
                         exerciseId: nextExercise.id,
                     });
                 } else {
-                    // No next exercise or all completed - RESET navigation
                     navigation.dispatch(
                         CommonActions.reset({
                             index: 1,
@@ -144,8 +157,9 @@ const Sessions = () => {
                         })
                     );
                 }
-            }, 3000);
-        }
+            }
+            setIsProcessing(false);
+        }, 1000);
     };
 
     const handlePrevious = () => {
@@ -153,14 +167,16 @@ const Sessions = () => {
     };
 
     const handleNextExercise = () => {
+        if (isProcessing) return;
+
+        moveToNextExercise();
         const nextExercise = getCurrentExercise();
-        if (nextExercise && nextExercise.id !== exercise?.id) {
-            moveToNextExercise();
+
+        if (nextExercise && !nextExercise.completed) {
             navigation.navigate('Sessions', {
                 exerciseId: nextExercise.id,
             });
         } else {
-            // If no next exercise, RESET navigation to DailyRoutine
             navigation.dispatch(
                 CommonActions.reset({
                     index: 1,
@@ -174,7 +190,6 @@ const Sessions = () => {
     };
 
     const handleBackToRoutine = () => {
-        // Use reset instead of navigate to clear workout history
         navigation.dispatch(
             CommonActions.reset({
                 index: 1,
@@ -263,7 +278,7 @@ const Sessions = () => {
                             {showCompletedState ? 'Done!' : `${timeLeft}s`}
                         </Text>
 
-                        <Text className="text-[#9CA3AF] text-sm mb-4">
+                        <Text className="text-[#9CA3AF] text-lg mb-4">
                             {showCompletedState ? 'Completed!' : timeLeft === 0 ? 'Completed!' : isRunning ? 'Running...' : 'Ready to start'}
                         </Text>
 
@@ -291,13 +306,13 @@ const Sessions = () => {
                         </View>
 
                         <Text className={`
-                            text-white text-sm font-bold mb-2
+                            text-white text-lg font-bold mb-2
                             ${showCompletedState ? 'text-green-400' : ''}
                         `}>
                             {exercise.duration}
                         </Text>
 
-                        <Text className="text-[#9CA3AF] text-sm mb-4">
+                        <Text className="text-[#9CA3AF] text-lg mb-4">
                             {showCompletedState ? 'Completed!' : 'Complete all reps'}
                         </Text>
                     </View>
@@ -318,6 +333,7 @@ const Sessions = () => {
                                 onPress={handlePrevious}
                                 className="flex-1 bg-[#252b33] py-4 rounded-2xl flex-row items-center justify-center"
                                 activeOpacity={0.7}
+                                disabled={isProcessing}
                             >
                                 <Ionicons name="chevron-back" size={20} color="white" className="mr-1" />
                                 <Text className="text-white font-semibold text-base">Prev</Text>
@@ -331,6 +347,7 @@ const Sessions = () => {
                                         ${isRunning ? 'bg-[#f59e0b]' : 'bg-[#60A5FB]'}
                                     `}
                                     activeOpacity={0.7}
+                                    disabled={isProcessing}
                                 >
                                     <Text className="text-white font-semibold text-base">
                                         {timeLeft === 0 ? 'Restart' : isRunning ? 'Running...' : 'Start'}
@@ -341,6 +358,7 @@ const Sessions = () => {
                                     onPress={handleNextExercise}
                                         className="flex-1 bg-[#60A5FB] py-4 rounded-2xl flex-row items-center justify-center"
                                     activeOpacity={0.7}
+                                        disabled={isProcessing}
                                 >
                                         <Text className="text-white font-semibold text-base">Next</Text>
                                         <Ionicons name="chevron-forward" size={20} color="white" className="ml-1" />
@@ -354,21 +372,23 @@ const Sessions = () => {
                             className={`
                                 py-6 rounded-2xl flex-row items-center justify-center
                                 ${showCompletedState ? 'bg-[#4ade80]' : 'bg-[#d4dce5]'}
+                                ${isProcessing ? 'opacity-50' : ''}
                             `}
                             activeOpacity={0.7}
+                            disabled={isProcessing}
                         >
                             {showCompletedState ? (
                                 <>
                                     <MaterialIcons name="check-circle" size={24} color="white" className="mr-2" />
                                     <Text className="text-white font-semibold text-base">
-                                        Completed! Tap to return
+                                        {isProcessing ? 'Processing...' : 'Completed! Tap to return'}
                                     </Text>
                                 </>
                             ) : (
                                 <>
                                         <MaterialIcons name="check-circle-outline" size={24} color="#1a1f24" className="mr-2" />
                                         <Text className="text-[#1a1f24] font-semibold text-base">
-                                        Mark Complete
+                                            {isProcessing ? 'Processing...' : 'Mark Complete'}
                                     </Text>
                                 </>
                             )}
@@ -385,6 +405,7 @@ const Sessions = () => {
                                 onPress={handlePrevious}
                                 className="flex-1 bg-[#252b33] py-4 rounded-2xl flex-row items-center justify-center"
                                 activeOpacity={0.7}
+                                disabled={isProcessing}
                             >
                                 <Ionicons name="chevron-back" size={20} color="white" className="mr-1" />
                                 <Text className="text-white font-semibold text-base">Prev</Text>
@@ -395,6 +416,7 @@ const Sessions = () => {
                                     onPress={handleNextExercise}
                                     className="flex-1 bg-[#60A5FB] py-4 rounded-2xl flex-row items-center justify-center"
                                     activeOpacity={0.7}
+                                    disabled={isProcessing}
                                 >
                                     <Text className="text-white font-semibold text-base">Next</Text>
                                     <Ionicons name="chevron-forward" size={20} color="white" className="ml-1" />
@@ -404,6 +426,7 @@ const Sessions = () => {
                                     onPress={handleNextExercise}
                                         className="flex-1 bg-[#60A5FB] py-4 rounded-2xl flex-row items-center justify-center"
                                     activeOpacity={0.7}
+                                        disabled={isProcessing}
                                 >
                                         <Text className="text-white font-semibold text-base">Next Exercise</Text>
                                         <Ionicons name="chevron-forward" size={20} color="white" className="ml-1" />
@@ -417,21 +440,23 @@ const Sessions = () => {
                             className={`
                                 py-6 rounded-2xl flex-row items-center justify-center
                                 ${showCompletedState ? 'bg-[#4ade80]' : 'bg-[#d4dce5]'}
+                                ${isProcessing ? 'opacity-50' : ''}
                             `}
                             activeOpacity={0.7}
+                            disabled={isProcessing}
                         >
                             {showCompletedState ? (
                                 <>
                                     <MaterialIcons name="check-circle" size={24} color="white" className="mr-2" />
                                     <Text className="text-white font-semibold text-base">
-                                        Completed! Tap to return
+                                        {isProcessing ? 'Processing...' : 'Completed! Tap to return'}
                                     </Text>
                                 </>
                             ) : (
                                 <>
                                         <MaterialIcons name="check-circle-outline" size={24} color="#1a1f24" className="mr-2" />
                                         <Text className="text-[#1a1f24] font-semibold text-base">
-                                        Mark Complete
+                                            {isProcessing ? 'Processing...' : 'Mark Complete'}
                                     </Text>
                                 </>
                             )}
@@ -439,7 +464,7 @@ const Sessions = () => {
                     </>
                 )}
             </View>
-            <ToastManager />
+
         </View>
     );
 };

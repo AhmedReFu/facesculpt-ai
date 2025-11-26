@@ -7,7 +7,7 @@ import React, { useEffect } from 'react';
 import { Image, Text, View } from 'react-native';
 import CustomButton from '../Components/CustomButton';
 import { Images } from '../constants';
-import { useNavigationReset } from '../hook/useNavigationReset';
+import { useNavigationReset } from '../lib/useNavigationReset';
 
 const Home = () => {
     const navigator = useNavigation();

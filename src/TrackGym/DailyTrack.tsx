@@ -1,6 +1,6 @@
 import { FontAwesome6, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -11,23 +11,78 @@ import {
   LayoutChangeEvent,
   ScrollView,
   Text,
+  ToastAndroid,
   TouchableOpacity,
   View
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Toast } from 'toastify-react-native';
 import tw from 'twrnc';
-import { useBackHandler } from '../hook/useBackHandler';
+import { useBackHandler } from '../lib/useBackHandler';
 
 const { width: WINDOW_WIDTH } = Dimensions.get('window');
 const CHART_MARGIN_HORIZONTAL = -20;
 const CHART_WIDTH = WINDOW_WIDTH - CHART_MARGIN_HORIZONTAL * 2;
 
+// Define navigation types
+type RootStackParamList = {
+  Auth: undefined;
+  DailyRoutine: undefined;
+  FaceScan: undefined;
+  FaceCoach: undefined;
+  // Add other screens as needed
+};
+
+// ============================================
+// TYPES
+// ============================================
+interface Goal {
+  id: string;
+  name: string;
+  icon: string;
+  current: number;
+  target: number;
+  unit: string;
+  changePercent: number;
+  chartData: number[];
+}
+
+interface LeaderboardEntry {
+  rank: number;
+  name: string;
+  change: number;
+  score: number;
+  isUser: boolean;
+  trend: 'up' | 'down' | 'neutral';
+}
+
+interface Achievement {
+  id: string;
+  title: string;
+  subtitle: string;
+  completed: boolean;
+}
+
+interface ProgressData {
+  dayCompleted: number;
+  streak: number;
+  goals: Goal[];
+  overallProgress: number;
+  nextBadgeDays: number;
+  motivationMessage: string;
+  improvementMessage: string;
+}
+
+interface LeaderboardData {
+  userRank: number;
+  userScore: number;
+  entries: LeaderboardEntry[];
+}
+
 // ============================================
 // MOCK DATA (Use while developing/testing)
 // ============================================
-const getMockData = () => ({
+const getMockData = (): ProgressData => ({
   dayCompleted: 1,
   streak: 1,
   goals: [
@@ -68,7 +123,7 @@ const getMockData = () => ({
   improvementMessage: 'Your face is 50% more defined than last week - keep it up!',
 });
 
-const getMockLeaderboard = () => ({
+const getMockLeaderboard = (): LeaderboardData => ({
   userRank: 3,
   userScore: 53,
   entries: [
@@ -78,7 +133,7 @@ const getMockLeaderboard = () => ({
   ],
 });
 
-const getMockAchievements = () => ([
+const getMockAchievements = (): Achievement[] => ([
   {
     id: 'jawline-complete',
     title: 'Sharper Jawline: 100% complete',
@@ -90,7 +145,7 @@ const getMockAchievements = () => ([
 // ============================
 // Utility: generate last N day labels
 // ============================
-const generateLastNDates = (n: number) => {
+const generateLastNDates = (n: number): string[] => {
   const arr: string[] = [];
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date();
@@ -104,11 +159,15 @@ const generateLastNDates = (n: number) => {
 // ============================================
 // COMPONENTS
 // ============================================
-const GoalChart = ({ goal }: any) => {
+interface GoalChartProps {
+  goal: Goal;
+}
+
+const GoalChart = ({ goal }: GoalChartProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const chartContainerRef = useRef<View | null>(null);
-  const hideTimeoutRef = useRef<any>(null);
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [containerHeight, setContainerHeight] = useState(150);
 
   const pointsCount = Array.isArray(goal.chartData) ? goal.chartData.length : 0;
@@ -140,7 +199,7 @@ const GoalChart = ({ goal }: any) => {
     },
   };
 
-  const getIndexByTouch = (touchX: number, totalWidth: number) => {
+  const getIndexByTouch = (touchX: number, totalWidth: number): number => {
     const available = totalWidth;
     if (pointsCount <= 1) return 0;
     const step = available / pointsCount;
@@ -254,14 +313,18 @@ const GoalChart = ({ goal }: any) => {
   );
 };
 
-const LeaderboardEntry = ({ entry }: any) => {
-  const getTrendColor = () => {
+interface LeaderboardEntryProps {
+  entry: LeaderboardEntry;
+}
+
+const LeaderboardEntry = ({ entry }: LeaderboardEntryProps) => {
+  const getTrendColor = (): string => {
     if (entry.trend === 'up') return 'text-green-400';
     if (entry.trend === 'down') return 'text-red-400';
     return 'text-gray-400';
   };
 
-  const getTrendSymbol = () => {
+  const getTrendSymbol = (): string => {
     if (entry.trend === 'up') return '↑';
     if (entry.trend === 'down') return '↓';
     return '';
@@ -289,18 +352,14 @@ const LeaderboardEntry = ({ entry }: any) => {
 // MAIN COMPONENT
 // ============================================
 const DailyTrack = () => {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
-
-  const navigation = useNavigation();
-
-  const [data, setData] = useState<any>(null);
-  const [leaderboard, setLeaderboard] = useState<any>(null);
-  const [achievements, setAchievements] = useState<any[]>([]);
+  const [data, setData] = useState<ProgressData | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardData | null>(null);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-
 
   useEffect(() => {
     loadAllData();
@@ -310,8 +369,6 @@ const DailyTrack = () => {
     setLoading(true);
     setError(null);
 
-    // // console.log(user.name)
-
     try {
       // Using mock data directly since API is not configured
       const progressData = getMockData();
@@ -319,7 +376,7 @@ const DailyTrack = () => {
       const achievementsData = getMockAchievements();
       const data: any = await AsyncStorage.getItem("user");
       const user = JSON.parse(data);
-      setUsers(user?.name)
+      setUsers(user?.name || '');
 
       setData(progressData);
       setLeaderboard(leaderboardData);
@@ -333,12 +390,16 @@ const DailyTrack = () => {
   };
 
   const handleUser = async () => {
-    // await AsyncStorage.removeItem("user");
-    // await AsyncStorage.removeItem("subscribe");
     await AsyncStorage.removeItem("isLoggedIn");
-    Toast.warn("Logout Successfully")
-    navigation.navigate("Auth")
-  }
+
+    ToastAndroid.showWithGravity(
+      'Logout Successfully',
+      ToastAndroid.SHORT,
+      ToastAndroid.CENTER,
+
+    );
+    navigation.navigate("Auth");
+  };
 
   useBackHandler();
 
@@ -348,6 +409,7 @@ const DailyTrack = () => {
       { text: 'Exit', onPress: () => BackHandler.exitApp() },
     ]);
   };
+
 
 
   // Loading State
@@ -380,13 +442,12 @@ const DailyTrack = () => {
       <View style={tw`mb-2`}>
         <View style={tw`flex-row items-center`}>
           <TouchableOpacity onPress={handleBackPress} style={tw`absolute left-0 z-10`}>
-            {/* <Ionicons name="arrow-back" size={28} color="white" /> */}
             <MaterialIcons name="exit-to-app" size={28} color="white" />
           </TouchableOpacity>
 
           <Text style={tw`text-white text-xl font-semibold flex-1 text-center`}>Daily Progress</Text>
           <TouchableOpacity onPress={handleUser}>
-            <Text className='text-white'>
+            <Text style={tw`text-white`}>
               {users}
             </Text>
           </TouchableOpacity>
@@ -415,7 +476,7 @@ const DailyTrack = () => {
               <Text style={tw`text-white text-lg font-semibold`}>Goal Progress</Text>
             </View>
 
-            {data.goals.map((goal: any) => (
+            {data.goals.map((goal: Goal) => (
               <GoalChart key={goal.id} goal={goal} />
             ))}
           </View>
@@ -434,7 +495,7 @@ const DailyTrack = () => {
           </View>
 
           {/* Achievements */}
-          {achievements.map((achievement: any) => (
+          {achievements.map((achievement: Achievement) => (
             <View key={achievement.id} style={tw`bg-[#181C22] rounded-2xl p-4 mt-4 flex-row items-center`}>
               <View style={tw`bg-[#60A5FB] w-10 h-10 rounded-full items-center justify-center mr-3`}>
                 <Ionicons name="flag" size={20} color="black" />
@@ -454,9 +515,6 @@ const DailyTrack = () => {
                   <FontAwesome6 name="chart-simple" size={24} color="#60A5FB" />
                   <Text style={tw`text-white text-xl font-bold ml-2`}>Leaderboard (private)</Text>
                 </View>
-                <TouchableOpacity>
-
-                </TouchableOpacity>
               </View>
 
               <View style={tw`flex-row justify-between py-2`}>
@@ -469,11 +527,13 @@ const DailyTrack = () => {
                 <Text style={tw`text-white font-bold text-xl`}>{leaderboard.userScore}</Text>
               </View>
 
-              {leaderboard.entries.map((entry: any) => (
+              {leaderboard.entries.map((entry: LeaderboardEntry) => (
                 <LeaderboardEntry key={entry.rank} entry={entry} />
               ))}
             </View>
           )}
+
+
 
           {/* Bottom Buttons */}
           <View style={tw`bg-[#0D0F14] pt-20`}>
@@ -496,7 +556,7 @@ const DailyTrack = () => {
       {/* FaceCoach Button */}
       <View>
         <TouchableOpacity
-          onPress={() => (navigation as any).navigate('FaceCoach')}
+          onPress={() => navigation.navigate('FaceCoach')}
           style={[
             tw`absolute bottom-19 right-0 z-50 px-5 py-4 rounded-2xl flex-row items-center justify-center`,
             {
