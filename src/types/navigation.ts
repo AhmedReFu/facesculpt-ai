@@ -18,7 +18,7 @@ export type RootStackParamList = {
   Sessions: {
     exerciseId: number; // Should match your context (number)
   };
-  FaceCoach: undefined;
+  FaceCoach: { token: string };
 };
 
 // Declare global types for useNavigation

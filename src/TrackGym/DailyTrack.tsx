@@ -25,12 +25,15 @@ const { width: WINDOW_WIDTH } = Dimensions.get('window');
 const CHART_MARGIN_HORIZONTAL = -20;
 const CHART_WIDTH = WINDOW_WIDTH - CHART_MARGIN_HORIZONTAL * 2;
 
-// Define navigation types
+// ============================================
+// FIXED NAVIGATION TYPES
+// ============================================
 type RootStackParamList = {
   Auth: undefined;
   DailyRoutine: undefined;
+  UnlockFacialGym: undefined;
   FaceScan: undefined;
-  FaceCoach: undefined;
+  FaceCoach: { token: string }; // Add token parameter here
   // Add other screens as needed
 };
 
@@ -360,6 +363,7 @@ const DailyTrack = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState('');
+  const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -367,44 +371,62 @@ const DailyTrack = () => {
   }, []);
 
   const loadAllData = async () => {
-    setLoading(true);
-    setError(null);
-    const netState = await NetInfo.fetch();
-    if (netState.isConnected) {
-      try {
-        // Using mock data directly since API is not configured
-        const progressData = getMockData();
-        const leaderboardData = getMockLeaderboard();
-        const achievementsData = getMockAchievements();
-        const data: any = await AsyncStorage.getItem("user");
-        const user = JSON.parse(data);
-        setUsers(user?.phone_number || '');
+    try {
+      setLoading(true);
+      setError(null);
 
-        setData(progressData);
-        setLeaderboard(leaderboardData);
-        setAchievements(achievementsData);
-      } catch (err) {
-        console.error('Failed to load data:', err);
-        setError('Failed to load data. Please try again.');
-      } finally {
-        setLoading(false);
+      // Load token first
+      const tokens = await AsyncStorage.getItem('token');
+      const subscribe = await AsyncStorage.getItem('subscribe');
+      setToken(tokens);
+      console.log(subscribe)
+      // Check if token exists
+      if (!tokens) {
+        console.log('No token found, redirecting to Auth');
+        navigation.navigate("Auth");
+        return;
       }
-    }
-    else {
-      BackHandler.exitApp();
-    }
+      if (!subscribe) {
+        console.log('No token found, redirecting to Auth');
+        navigation.navigate("UnlockFacialGym");
+        return;
+      }
 
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        BackHandler.exitApp();
+        return;
+      }
 
+      // Using mock data directly since API is not configured
+      const progressData = getMockData();
+      const leaderboardData = getMockLeaderboard();
+      const achievementsData = getMockAchievements();
+      const userData: any = await AsyncStorage.getItem("user");
+      const user = JSON.parse(userData);
+      setUsers(user?.phone_number || '');
+
+      setData(progressData);
+      setLeaderboard(leaderboardData);
+      setAchievements(achievementsData);
+
+    } catch (err) {
+      console.error('Failed to load data:', err);
+      setError('Failed to load data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUser = async () => {
     await AsyncStorage.removeItem("isLoggedIn");
+    await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("user");
 
     ToastAndroid.showWithGravity(
       'Logout Successfully',
       ToastAndroid.SHORT,
       ToastAndroid.CENTER,
-
     );
     navigation.navigate("Auth");
   };
@@ -418,7 +440,29 @@ const DailyTrack = () => {
     ]);
   };
 
+  const handleFaceCoachPress = () => {
+    if (!token) {
+      Alert.alert(
+        'Authentication Required',
+        'Please login again to access FaceCoach',
+        [
+          {
+            text: 'Login',
+            onPress: () => navigation.navigate("Auth")
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          }
+        ]
+      );
+      return;
+    }
 
+    navigation.navigate('FaceCoach', {
+      token: token
+    });
+  };
 
   // Loading State
   if (loading) {
@@ -449,8 +493,6 @@ const DailyTrack = () => {
       <StatusBar style="light" />
       <View className='mb-2'>
         <View className='flex-row items-center'>
-
-
           <Text className='text-white text-xl font-semibold flex-1 text-center'>Daily Progress</Text>
           <TouchableOpacity onPress={handleUser} className=''>
             <MaterialIcons name="exit-to-app" size={28} color="white" />
@@ -537,8 +579,6 @@ const DailyTrack = () => {
             </View>
           )}
 
-
-
           {/* Bottom Buttons */}
           <View className='bg-[#000000] pt-20'>
             <View className='flex-row gap-4'>
@@ -560,7 +600,7 @@ const DailyTrack = () => {
       {/* FaceCoach Button */}
       <View>
         <TouchableOpacity
-          onPress={() => navigation.navigate('FaceCoach')}
+          onPress={handleFaceCoachPress}
           className='absolute bottom-24 right-0  px-5 py-5 rounded-2xl flex-row items-center justify-center'
           style={
             {
@@ -569,7 +609,6 @@ const DailyTrack = () => {
               borderWidth: 1,
             }
           }
-
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons
