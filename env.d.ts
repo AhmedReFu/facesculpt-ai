@@ -6,4 +6,5 @@ declare module "@env" {
   export const LOGIN: string;
   export const REGISTER: string;
   export const REVENUE_API: string;
+  export const GET_PLAN: string;
 }
