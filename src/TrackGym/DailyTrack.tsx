@@ -1,5 +1,6 @@
 import { FontAwesome6, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from "@react-native-community/netinfo";
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
@@ -368,25 +369,32 @@ const DailyTrack = () => {
   const loadAllData = async () => {
     setLoading(true);
     setError(null);
+    const netState = await NetInfo.fetch();
+    if (netState.isConnected) {
+      try {
+        // Using mock data directly since API is not configured
+        const progressData = getMockData();
+        const leaderboardData = getMockLeaderboard();
+        const achievementsData = getMockAchievements();
+        const data: any = await AsyncStorage.getItem("user");
+        const user = JSON.parse(data);
+        setUsers(user?.phone_number || '');
 
-    try {
-      // Using mock data directly since API is not configured
-      const progressData = getMockData();
-      const leaderboardData = getMockLeaderboard();
-      const achievementsData = getMockAchievements();
-      const data: any = await AsyncStorage.getItem("user");
-      const user = JSON.parse(data);
-      setUsers(user?.name || '');
-
-      setData(progressData);
-      setLeaderboard(leaderboardData);
-      setAchievements(achievementsData);
-    } catch (err) {
-      console.error('Failed to load data:', err);
-      setError('Failed to load data. Please try again.');
-    } finally {
-      setLoading(false);
+        setData(progressData);
+        setLeaderboard(leaderboardData);
+        setAchievements(achievementsData);
+      } catch (err) {
+        console.error('Failed to load data:', err);
+        setError('Failed to load data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
     }
+    else {
+      BackHandler.exitApp();
+    }
+
+
   };
 
   const handleUser = async () => {
@@ -437,27 +445,23 @@ const DailyTrack = () => {
   }
 
   return (
-    <SafeAreaView style={tw`flex-1 bg-[#000000] px-4`}>
+    <SafeAreaView className='flex-1 bg-[#000000] px-4'>
       <StatusBar style="light" />
-      <View style={tw`mb-2`}>
-        <View style={tw`flex-row items-center`}>
-          <TouchableOpacity onPress={handleBackPress} style={tw`absolute left-0 z-10`}>
-            <MaterialIcons name="exit-to-app" size={28} color="white" />
-          </TouchableOpacity>
+      <View className='mb-2'>
+        <View className='flex-row items-center'>
 
-          <Text style={tw`text-white text-xl font-semibold flex-1 text-center`}>Daily Progress</Text>
-          <TouchableOpacity onPress={handleUser}>
-            <Text style={tw`text-white`}>
-              {users}
-            </Text>
+
+          <Text className='text-white text-xl font-semibold flex-1 text-center'>Daily Progress</Text>
+          <TouchableOpacity onPress={handleUser} className=''>
+            <MaterialIcons name="exit-to-app" size={28} color="white" />
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView style={tw`flex-1`} contentContainerStyle={tw`pb-1`} showsVerticalScrollIndicator={false}>
-        <View style={tw`pt-4`}>
+      <ScrollView className='flex-1' contentContainerStyle={{ paddingBottom: 4 }} showsVerticalScrollIndicator={false}>
+        <View className='pt-2'>
           {/* Header */}
-          <Text style={tw`text-white text-3xl font-bold mb-4`}>Day {data.dayCompleted} complete!</Text>
+          <Text className='text-white text-2xl font-bold mb-4'>Day {data.dayCompleted} complete! </Text>
 
           {/* Streak Badge */}
           <View style={tw`bg-[#1E2532] p-3 rounded-full flex-row items-center self-start`}>
@@ -509,7 +513,7 @@ const DailyTrack = () => {
 
           {/* Leaderboard */}
           {leaderboard && (
-            <View style={tw`mt-5 bg-[#181C22] rounded-3xl p-5`}>
+            <View style={tw`my-5 bg-[#181C22] rounded-3xl p-5`}>
               <View style={tw`flex-row items-center justify-between mb-4`}>
                 <View style={tw`flex-row items-center`}>
                   <FontAwesome6 name="chart-simple" size={24} color="#60A5FB" />
@@ -536,17 +540,17 @@ const DailyTrack = () => {
 
 
           {/* Bottom Buttons */}
-          <View style={tw`bg-[#0D0F14] pt-20`}>
-            <View style={tw`flex-row gap-3`}>
+          <View className='bg-[#000000] pt-20'>
+            <View className='flex-row gap-4'>
               <TouchableOpacity
                 onPress={() => navigation.navigate("DailyRoutine")}
-                style={tw`flex-1 bg-[#60A5FB] py-4 rounded-2xl`}>
-                <Text style={tw`text-white font-bold text-center text-sm`}>Start Today's Session</Text>
+                className='flex-1 bg-[#60A5FB] py-5 rounded-2xl'>
+                <Text className='text-white font-bold text-center text-lg'>Start Today's Session</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => navigation.navigate("FaceScan")}
-                style={tw` bg-[#1C1E26] border border-white/20 px-6 py-4 rounded-2xl`}>
-                <Text style={tw`text-white font-bold text-center text-sm`}>Check-in Scan</Text>
+                className='flex-1 bg-[#1C1E26] border border-white/20 py-5 rounded-2xl'>
+                <Text className='text-white font-bold text-center text-lg'>Check-in Scan</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -557,38 +561,31 @@ const DailyTrack = () => {
       <View>
         <TouchableOpacity
           onPress={() => navigation.navigate('FaceCoach')}
-          style={[
-            tw`absolute bottom-19 right-0 z-50 px-5 py-4 rounded-2xl flex-row items-center justify-center`,
+          className='absolute bottom-24 right-0  px-5 py-5 rounded-2xl flex-row items-center justify-center'
+          style={
             {
-              backgroundColor: 'rgba(0, 0, 0, 0.50)',
-              borderColor: 'rgba(255, 255, 255, 0.3)',
+              backgroundColor: 'rgba(0, 0, 0, 0.20)',
+              borderColor: 'rgba(255, 255, 255, 0.30)',
               borderWidth: 1,
-              shadowColor: '#000',
-              shadowOffset: {
-                width: 0,
-                height: 8,
-              },
-              shadowOpacity: 0.5,
-              shadowRadius: 16,
-              elevation: 12,
             }
-          ]}
+          }
+
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons
             name="message-text-outline"
             size={20}
             color="white"
-            style={tw`mr-2`}
+            className='mr-2'
           />
-          <Text style={tw`text-white text-sm font-semibold mx-1`}>
+          <Text className='text-white text-sm font-semibold mx-1'>
             Ask FaceCoach
           </Text>
           <Ionicons
             name="chatbubble-ellipses"
-            size={18}
+            size={20}
             color="white"
-            style={tw`ml-1`}
+            className='ml-1'
           />
         </TouchableOpacity>
       </View>
