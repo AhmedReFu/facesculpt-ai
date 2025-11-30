@@ -4,12 +4,12 @@
     "slug": "facesculpt-ai",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ahmedrefu.facesculptai",
+      "bundleIdentifier": "com.AhmedReFU.facesculptai",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Allow camera access to scan your face"
@@ -18,7 +18,7 @@
     "android": {
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.ahmedrefu.facesculptai",
+      "package": "com.AhmedReFU.facesculptai",
       "permissions": ["android.permission.CAMERA"]
     },
     "web": {
