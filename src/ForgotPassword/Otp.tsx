@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Image,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -90,6 +91,12 @@ const Otp = () => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <ScrollView
+
+                className="flex-1"
+            >
+
+
             {/* Back Button - Top Left */}
             <View style={styles.header}>
                 <TouchableOpacity
@@ -178,7 +185,8 @@ const Otp = () => {
                         Continue
                     </Text>
                 </TouchableOpacity>
-            </View>
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 };

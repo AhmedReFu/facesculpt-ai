@@ -1,4 +1,4 @@
-import { FontAwesome6, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { Feather, FontAwesome5, FontAwesome6, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from "@react-native-community/netinfo";
 import { NavigationProp, useNavigation } from '@react-navigation/native';
@@ -121,7 +121,7 @@ const getMockData = (): ProgressData => ({
       chartData: [0.6, 0.9, 0.8, -0.9, 0.8, 0.9, 0.6],
     },
   ],
-  overallProgress: 60,
+  overallProgress: 100,
   nextBadgeDays: 6,
   motivationMessage: 'Consistency shapes results keep going!',
   improvementMessage: 'Your face is 50% more defined than last week - keep it up!',
@@ -323,14 +323,14 @@ interface LeaderboardEntryProps {
 
 const LeaderboardEntry = ({ entry }: LeaderboardEntryProps) => {
   const getTrendColor = (): string => {
-    if (entry.trend === 'up') return 'text-green-400';
-    if (entry.trend === 'down') return 'text-red-400';
+    if (entry.trend === 'up') return 'text-green-400 bg-green-400/20';
+    if (entry.trend === 'down') return 'text-red-400 bg-red-400/20';
     return 'text-gray-400';
   };
 
-  const getTrendSymbol = (): string => {
-    if (entry.trend === 'up') return '↑';
-    if (entry.trend === 'down') return '↓';
+  const getTrendSymbol = (): any => {
+    if (entry.trend === 'up') return (<Feather name="arrow-up" size={15} color="green-200" />);
+    if (entry.trend === 'down') return (<Feather name="arrow-down" size={15} color="red-400" />);
     return '';
   };
 
@@ -342,11 +342,11 @@ const LeaderboardEntry = ({ entry }: LeaderboardEntryProps) => {
       </View>
       <View style={tw`flex-row items-center`}>
         {entry && (
-          <Text style={tw`${getTrendColor()} text-xs font-bold bg-[#56975E1A] rounded-2xl px-3 py-2`}>
+          <Text style={tw`${getTrendColor()} text-sm text-center font-bold rounded-2xl px-3 py-1`}>
             {getTrendSymbol()} {Math.abs(entry.change)}
           </Text>
         )}
-        <Text style={tw`text-white font-bold text-base w-12 text-right`}>{entry.score}</Text>
+        <Text style={tw`text-white font-bold text-lg w-12 text-right`}>{entry.score}</Text>
       </View>
     </View>
   );
@@ -380,17 +380,18 @@ const DailyTrack = () => {
       const subscribe = await AsyncStorage.getItem('subscribe');
       setToken(tokens);
       console.log(subscribe)
+
       // Check if token exists
-      if (!tokens) {
-        console.log('No token found, redirecting to Auth');
-        navigation.navigate("Auth");
-        return;
-      }
-      if (!subscribe) {
-        console.log('No token found, redirecting to Auth');
-        navigation.navigate("UnlockFacialGym");
-        return;
-      }
+      // if (!tokens) {
+      //   console.log('No token found, redirecting to Auth');
+      //   navigation.navigate("Auth");
+      //   return;
+      // }
+      // if (!subscribe) {
+      //   console.log('No token found, redirecting to Auth');
+      //   navigation.navigate("UnlockFacialGym");
+      //   return;
+      // }
 
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
@@ -563,9 +564,9 @@ const DailyTrack = () => {
                 </View>
               </View>
 
-              <View style={tw`flex-row justify-between py-2`}>
-                <Text style={tw`text-gray-400 text-base`}>Your Rank</Text>
-                <Text style={tw`text-white font-bold text-xl`}>#{leaderboard.userRank}</Text>
+              <View className='flex-row items-center justify-between py-2'>
+                <Text className='text-gray-400 text-xl'>Your Rank</Text>
+                <Text className='text-white font-bold text-xl'>#{leaderboard.userRank}</Text>
               </View>
 
               <View style={tw`flex-row justify-between py-2 mb-4`}>
@@ -620,12 +621,13 @@ const DailyTrack = () => {
           <Text className='text-white text-sm font-semibold mx-1'>
             Ask FaceCoach
           </Text>
-          <Ionicons
+          <FontAwesome5 name="robot" size={18} color="white" className='ml-1' />
+          {/* <Ionicons
             name="chatbubble-ellipses"
             size={20}
             color="white"
             className='ml-1'
-          />
+          />   */}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

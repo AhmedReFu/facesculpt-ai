@@ -96,6 +96,7 @@ const UnlockFacialGym = () => {
         // Get customer info first
         const customerInfo = await Purchases.getCustomerInfo()
         setCustomerInfo(customerInfo)
+
         console.log('Customer Info:', JSON.stringify(customerInfo, null, 2))
 
         // Check if user already has active subscription - FIXED
@@ -103,7 +104,7 @@ const UnlockFacialGym = () => {
         console.log('Active entitlements:', Object.keys(activeEntitlements))
 
         // Check for your specific entitlement name
-        if (activeEntitlements['FaceSclup․AI Pro'] || activeEntitlements['premium'] || activeEntitlements['Pro']) {
+        if (activeEntitlements['FaceSclup․AI Pro'] || activeEntitlements['six_month'] || activeEntitlements['Pro']) {
           console.log('User already has active subscription')
           await AsyncStorage.setItem("subscribe", "true")
           navigator.navigate("DailyTrack")
@@ -120,7 +121,7 @@ const UnlockFacialGym = () => {
 
           // Set default selected plan to first available package
           if (availablePackages.length > 0) {
-            setSelectedPlan(availablePackages[0].identifier)
+            setSelectedPlan(availablePackages[1].identifier)
           }
         }
 
@@ -188,7 +189,7 @@ const UnlockFacialGym = () => {
     // Check if user now has premium entitlement - FIXED
     const activeEntitlements = customerInfo.entitlements.active
 
-    if (activeEntitlements['FaceSclup․AI Pro'] || activeEntitlements['premium'] || activeEntitlements['Pro']) {
+    if (activeEntitlements['FaceSclup․AI Pro'] || activeEntitlements['six_month'] || activeEntitlements['Pro']) {
       await AsyncStorage.setItem("subscribe", "true")
       Alert.alert(
         'Success!',
@@ -287,14 +288,14 @@ const UnlockFacialGym = () => {
       title: 'Monthly',
       price: '$9.99/month',
       discount: '$14.99',
-      badge: 'Popular'
+      badge: ''
     },
     {
       id: 'sixmonthly',
       title: '6 Month Plan',
       price: '$49.99/6 months',
       discount: '$89.99',
-      badge: 'Best Value'
+      badge: 'Popular'
     },
     {
       id: '$rc_annual',
@@ -311,9 +312,9 @@ const UnlockFacialGym = () => {
       id: pkg.identifier,
       title: pkg.product.title,
       price: pkg.product.priceString,
-      discount: pkg.identifier.includes('annual') ? '$119.99' : '',
-      badge: pkg.identifier.includes('sixmonthly') ? 'Best Value' :
-        pkg.identifier.includes('annual') ? 'Popular' : ''
+      discount: pkg.identifier.includes('MONTHLY') ? '' : '',
+      badge: pkg.identifier.includes('six_month') ? 'Most Popular' :
+        pkg.identifier.includes('annual') ? '' : ''
     }))
     : defaultPlans
 

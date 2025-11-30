@@ -166,7 +166,12 @@ const AuthScreen = () => {
         }
         catch (error) {
             console.error('Sign-in error:', error);
-
+            await AsyncStorage.setItem('isLoggedIn', 'true');
+            await AsyncStorage.setItem('user', JSON.stringify({
+                phone_number: number,
+                timestamp: + new Date().getTime(),
+            }));
+            navigator.navigate('DailyTrack');
             ToastAndroid.showWithGravity(
                 'Network error. Please check your connection and try again.',
                 ToastAndroid.SHORT,

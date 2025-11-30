@@ -5,6 +5,8 @@ import { BlurView } from 'expo-blur';
 import React, { useEffect, useState } from 'react';
 import {
     Image,
+    KeyboardAvoidingView,
+    Platform,
     StatusBar,
     StyleSheet,
     Text,
@@ -130,7 +132,10 @@ export default function CreateNewPassword() {
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#000000" />
-
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                className="flex-1"
+            >
             <View style={styles.content}>
                 {/* Back Button */}
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -302,7 +307,8 @@ export default function CreateNewPassword() {
                         </View>
                     </View>
                 </BlurView>
-            )}
+                )}
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
