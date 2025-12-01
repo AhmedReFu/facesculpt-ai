@@ -22,7 +22,8 @@ import { Images } from '../constants';
 import { useBackHandler } from '../lib/useBackHandler';
 
 // ============ API Configuration ============
-const API_BASE_URL = IPA_BASE; // Replace with your actual API URL
+const API_BASE_URL = IPA_BASE;
+console.log(IPA_BASE)// Replace with your actual API URL
 const API_ENDPOINTS = {
     LOGIN: LOGIN,
     REGISTER: REGISTER ,
@@ -123,7 +124,7 @@ const AuthScreen = () => {
             if (response.ok && data.success) {
                 // Store tokens and user data
                 await AsyncStorage.setItem('token', data.data.token);
-                
+                console.log(data.data.token)
                 await AsyncStorage.setItem('refresh_token', data.data.refresh_token);
                 
                 await AsyncStorage.setItem('isLoggedIn', 'true');
@@ -143,7 +144,8 @@ const AuthScreen = () => {
                 );
 
                 // Navigate based on subscription status
-                const subscribe = await AsyncStorage.getItem('isLoggedIn');
+                const subscribe = await AsyncStorage.getItem('subscribe');
+                console.log(subscribe)
                 setTimeout(() => {
                     if (subscribe === 'true') {
                         navigator.navigate('DailyTrack');
@@ -164,6 +166,12 @@ const AuthScreen = () => {
         }
         catch (error) {
             console.error('Sign-in error:', error);
+            // await AsyncStorage.setItem('isLoggedIn', 'true');
+            // await AsyncStorage.setItem('user', JSON.stringify({
+            //     phone_number: number,
+            //     timestamp: + new Date().getTime(),
+            // }));
+            // navigator.navigate('DailyTrack');
             ToastAndroid.showWithGravity(
                 'Network error. Please check your connection and try again.',
                 ToastAndroid.SHORT,

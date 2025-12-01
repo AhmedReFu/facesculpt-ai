@@ -1,5 +1,5 @@
 // contexts/WorkoutContext.tsx
-import React, { createContext, ReactNode, useContext, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 export interface Exercise {
     id: number;
@@ -28,6 +28,9 @@ interface WorkoutContextType {
 const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
 
 export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
+
+
+
     const [exercises, setExercises] = useState<Exercise[]>([
         {
             id: 1,
@@ -98,6 +101,8 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
             ]
         },
     ]);
+
+
 
     const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number>(0);
 

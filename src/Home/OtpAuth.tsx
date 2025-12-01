@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Image,
+    ScrollView,
     Text,
     TextInput,
     TouchableOpacity,
@@ -145,146 +146,151 @@ const OtpAuth = () => {
 
     return (
         <SafeAreaView className="flex-1 bg-black">
-            <View className="flex-1 px-6 justify-center">
-                {/* Back Button */}
-                <TouchableOpacity
-                    onPress={handleBack}
-                    className={`absolute top-16 left-6 z-10 ${showSuccessModal ? 'opacity-0' : 'opacity-100'}`}
-                >
-                    <Ionicons name="arrow-back" size={28} color="#fff" />
-                </TouchableOpacity>
 
-                {/* Logo */}
-                {/* <Text className="text-6xl font-bold text-white text-center mb-20">
+            <ScrollView>
+                <View className="flex-1 px-6 justify-center">
+                    {/* Back Button */}
+                    <TouchableOpacity
+                        onPress={handleBack}
+                        className={`absolute top-16 left-6 z-10 ${showSuccessModal ? 'opacity-0' : 'opacity-100'}`}
+                    >
+                        <Ionicons name="arrow-back" size={28} color="#fff" />
+                    </TouchableOpacity>
+
+                    {/* Logo */}
+                    {/* <Text className="text-6xl font-bold text-white text-center mb-20">
                     Logo
                 </Text> */}
-                <Image source={Images.Icon} resizeMode="contain" className='self-center mb-20' />
-                {/* Heading */}
-                <Text className="text-3xl font-bold text-white text-center mb-3">
-                    Verification Code
-                </Text>
-
-                {/* Subtext */}
-                <Text className="text-xl text-gray-400 text-center mb-12 leading-6 px-2">
-                    A code has been sent to your mobile number. Please enter it to continue.
-                </Text>
-
-                {/* OTP Inputs */}
-                <View className="flex-row justify-between mb-10 px-5">
-                    {code.map((digit, index) => (
-                        <TextInput
-                            key={index}
-                            placeholder="0"
-                            placeholderTextColor="#6B7280"
-                            ref={(ref) => {
-                                if (ref) {
-                                    inputsRef.current[index] = ref;
-                                }
-                            }}
-                            className={`w-16 h-16 bg-gray-800 text-white text-center rounded-xl text-2xl font-bold border-2 ${digit ? 'border-blue-400 bg-blue-900/30' : 'border-gray-700'
-                                }`}
-                            keyboardType="number-pad"
-                            maxLength={1}
-                            value={digit}
-                            onChangeText={text => handleChange(text, index)}
-                            onKeyPress={(e) => handleKeyPress(e, index)}
-                            selectTextOnFocus
-                            autoFocus={index === 0}
-                        />
-                    ))}
-                </View>
-
-                {/* Resend Code Section */}
-                <View className="items-center mb-10">
-                    <Text className="text-gray-400 text-base mb-2 text-center">
-                        Didn't receive the code?{' '}
-                        <Text
-                            className={`font-semibold ${timer !== 0 ? 'text-gray-600 line-through' : 'text-blue-400'
-                                }`}
-                            onPress={handleResend}
-                        >
-                            Resend code
-                        </Text>
+                    <Image source={Images.Icon} resizeMode="contain" className='self-center mb-20' />
+                    {/* Heading */}
+                    <Text className="text-3xl font-bold text-white text-center mb-3">
+                        Verification Code
                     </Text>
 
-                    {timer !== 0 && (
-                        <Text className="text-blue-400 text-base font-medium text-center">
-                            Resend code in 00:{timer < 10 ? `0${timer}` : timer}
+                    {/* Subtext */}
+                    <Text className="text-xl text-gray-400 text-center mb-12 leading-6 px-2">
+                        A code has been sent to your mobile number. Please enter it to continue.
+                    </Text>
+
+                    {/* OTP Inputs */}
+                    <View className="flex-row justify-between mb-10 px-5">
+                        {code.map((digit, index) => (
+                            <TextInput
+                                key={index}
+                                placeholder="0"
+                                placeholderTextColor="#6B7280"
+                                ref={(ref) => {
+                                    if (ref) {
+                                        inputsRef.current[index] = ref;
+                                    }
+                                }}
+                                className={`w-16 h-16 bg-gray-800 text-white text-center rounded-xl text-2xl font-bold border-2 ${digit ? 'border-blue-400 bg-blue-900/30' : 'border-gray-700'
+                                    }`}
+                                keyboardType="default"
+                                maxLength={1}
+                                value={digit}
+                                onChangeText={text => handleChange(text, index)}
+                                onKeyPress={(e) => handleKeyPress(e, index)}
+                                selectTextOnFocus
+                                autoFocus={index === 0}
+                            />
+                        ))}
+                    </View>
+
+                    {/* Resend Code Section */}
+                    <View className="items-center mb-10">
+                        <Text className="text-gray-400 text-base mb-2 text-center">
+                            Didn't receive the code?{' '}
+                            <Text
+                                className={`font-semibold ${timer !== 0 ? 'text-gray-600 line-through' : 'text-blue-400'
+                                    }`}
+                                onPress={handleResend}
+                            >
+                                Resend code
+                            </Text>
                         </Text>
-                    )}
+
+                        {timer !== 0 && (
+                            <Text className="text-blue-400 text-base font-medium text-center">
+                                Resend code in 00:{timer < 10 ? `0${timer}` : timer}
+                            </Text>
+                        )}
+                    </View>
+
+                    {/* Continue Button */}
+                    <TouchableOpacity
+                        className={`w-full py-4 rounded-xl items-center mb-5 ${isContinueDisabled ? 'bg-gray-700 opacity-60' : 'bg-blue-400'
+                            }`}
+                        onPress={() => handleSubmit()}
+                        disabled={isContinueDisabled}
+                    >
+                        <Text className="text-white font-bold text-lg">
+                            Continue
+                        </Text>
+                    </TouchableOpacity>
                 </View>
 
-                {/* Continue Button */}
-                <TouchableOpacity
-                    className={`w-full py-4 rounded-xl items-center mb-5 ${isContinueDisabled ? 'bg-gray-700 opacity-60' : 'bg-blue-400'
-                        }`}
-                    onPress={() => handleSubmit()}
-                    disabled={isContinueDisabled}
-                >
-                    <Text className="text-white font-bold text-lg">
-                        Continue
-                    </Text>
-                </TouchableOpacity>
-            </View>
+                {/* Success Modal with Blur */}
+                {showSuccessModal && (
+                    <BlurView
+                        intensity={70}
+                        tint="dark"
+                        className="absolute inset-0 justify-center items-center px-4"
+                    >
+                        <View className="w-full max-w-[400px]">
+                            <View className="bg-[#1A2028] rounded-3xl p-10 items-center border border-gray-700/50">
+                                {/* Success Icon with gradient border effect bg-blue-400/10   w-24 h-24  border-4 border-blue-400 */}
+                                <View className="mb-6">
+                                    <View className=" rounded-full  justify-center items-center ">
+                                        {/* <Ionicons name="checkmark" size={50} color="#60A5FA" /> */}
+                                        <MaterialCommunityIcons name="check-decagram-outline" size={80} color="#60A5FA" />
+                                    </View>
+                                </View>
 
-            {/* Success Modal with Blur */}
-            {showSuccessModal && (
-                <BlurView
-                    intensity={70}
-                    tint="dark"
-                    className="absolute inset-0 justify-center items-center px-4"
-                >
-                    <View className="w-full max-w-[400px]">
-                        <View className="bg-[#1A2028] rounded-3xl p-10 items-center border border-gray-700/50">
-                            {/* Success Icon with gradient border effect bg-blue-400/10   w-24 h-24  border-4 border-blue-400 */}
-                            <View className="mb-6">
-                                <View className=" rounded-full  justify-center items-center ">
-                                    {/* <Ionicons name="checkmark" size={50} color="#60A5FA" /> */}
-                                    <MaterialCommunityIcons name="check-decagram-outline" size={80} color="#60A5FA" />
+                                {/* Success Title */}
+                                <Text className="text-2xl font-bold text-white text-center mb-3">
+                                    Successful!
+                                </Text>
+
+                                {/* Success Subtitle */}
+                                <Text className="text-base text-gray-400 text-center mb-8 leading-6">
+                                    Your registration was completed{'\n'}successfully
+                                </Text>
+
+                                {/* Circular Spinner Animation */}
+                                <View className="w-16 h-16 items-center justify-center">
+                                    {spinnerDots.map((dot, index) => {
+                                        const angle = (dot.angle + spinnerRotation) * (Math.PI / 180);
+                                        const radius = 20;
+                                        const x = Math.cos(angle) * radius;
+                                        const y = Math.sin(angle) * radius;
+
+                                        return (
+                                            <View
+                                                key={index}
+                                                style={{
+                                                    position: 'absolute',
+                                                    width: dot.size,
+                                                    height: dot.size,
+                                                    borderRadius: dot.size / 2,
+                                                    backgroundColor: '#60A5FA',
+                                                    opacity: dot.opacity,
+                                                    transform: [
+                                                        { translateX: x },
+                                                        { translateY: y }
+                                                    ]
+                                                }}
+                                            />
+                                        );
+                                    })}
                                 </View>
                             </View>
-
-                            {/* Success Title */}
-                            <Text className="text-2xl font-bold text-white text-center mb-3">
-                                Successful!
-                            </Text>
-
-                            {/* Success Subtitle */}
-                            <Text className="text-base text-gray-400 text-center mb-8 leading-6">
-                                Your registration was completed{'\n'}successfully
-                            </Text>
-
-                            {/* Circular Spinner Animation */}
-                            <View className="w-16 h-16 items-center justify-center">
-                                {spinnerDots.map((dot, index) => {
-                                    const angle = (dot.angle + spinnerRotation) * (Math.PI / 180);
-                                    const radius = 20;
-                                    const x = Math.cos(angle) * radius;
-                                    const y = Math.sin(angle) * radius;
-
-                                    return (
-                                        <View
-                                            key={index}
-                                            style={{
-                                                position: 'absolute',
-                                                width: dot.size,
-                                                height: dot.size,
-                                                borderRadius: dot.size / 2,
-                                                backgroundColor: '#60A5FA',
-                                                opacity: dot.opacity,
-                                                transform: [
-                                                    { translateX: x },
-                                                    { translateY: y }
-                                                ]
-                                            }}
-                                        />
-                                    );
-                                })}
-                            </View>
                         </View>
-                    </View>
-                </BlurView>
-            )}
+                    </BlurView>
+                )}
+            </ScrollView>
+
+
         </SafeAreaView>
     );
 };

@@ -108,9 +108,9 @@ const ResetPassword = () => {
                         <Text style={styles.label}>Phone Number</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Enter your phone number"
+                            placeholder="e.g., +19844864234 with country code"
                             placeholderTextColor="#6B7280"
-                            keyboardType="number-pad"
+                            keyboardType="default"
                             autoCapitalize="none"
                             autoComplete="tel"
                             autoCorrect={false}
