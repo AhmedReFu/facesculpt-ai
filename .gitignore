@@ -43,4 +43,5 @@ yarn-error.*
 
 # generated native folders
 /ios
-/android_blank.txt
+/android
+_blank.txt
