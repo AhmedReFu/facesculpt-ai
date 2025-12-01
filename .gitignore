@@ -13,7 +13,7 @@ node_modules/
 .expo/
 dist/
 web-build/
-_blank.txt
+_blank.txt  # ← Add this line
 
 # Native
 .kotlin/
