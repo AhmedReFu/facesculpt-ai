@@ -5,20 +5,18 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// ============================================
-// TYPES
-// ============================================
+
 interface Message {
     id: string;
     text: string;
@@ -32,18 +30,6 @@ interface SuggestedQuestion {
     text: string;
 }
 
-interface ChatResponse {
-    answer: string;
-    suggestions?: string[];
-}
-
-interface WebSocketMessage {
-    type: string;
-    message?: string;
-    service?: string;
-    created_at?: string;
-    [key: string]: any;
-}
 
 type FaceCoachScreenRouteProp = RouteProp<
     {
@@ -79,18 +65,15 @@ const useWebSocket = (token: string | null) => {
             return;
         }
 
-        // Clean the base URL
         let cleanBase = IPA_BASE.replace(/^(https?:\/\/)/, '');
         cleanBase = cleanBase.replace(/\/+$/, '');
 
-        // Determine protocol based on environment
         const wsProtocol = cleanBase.includes('localhost') ||
             cleanBase.includes('127.0.0.1') ||
             cleanBase.includes('192.168')
             ? 'ws'
             : 'wss';
 
-        // FIXED: Include token in WebSocket URL (not after connection)
         const urlVariants = [
             `${wsProtocol}://${cleanBase}/ws/chat/?token=${token}`,
             `${wsProtocol}://${cleanBase}/ws/cnau/?token=${token}`,
@@ -107,7 +90,6 @@ const useWebSocket = (token: string | null) => {
                 setConnectionError('Unable to connect to server');
                 reconnectAttemptsRef.current++;
 
-                // Auto-retry with exponential backoff
                 if (reconnectAttemptsRef.current < maxReconnectAttempts) {
                     const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
                     addLog(`🔄 Retrying in ${delay / 1000}s (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})`);
@@ -125,17 +107,14 @@ const useWebSocket = (token: string | null) => {
             addLog(`URL: ${WS_URL.replace(token, '***TOKEN***')}`);
 
             try {
-                // Close existing connection
                 if (wsRef.current) {
                     wsRef.current.close();
                     wsRef.current = null;
                 }
 
-                // Create WebSocket with token in URL
                 const websocket = new WebSocket(WS_URL);
                 wsRef.current = websocket;
 
-                // Connection timeout
                 const connectionTimeout = setTimeout(() => {
                     if (websocket.readyState !== WebSocket.OPEN) {
                         addLog('⏰ Connection timeout');
@@ -153,7 +132,6 @@ const useWebSocket = (token: string | null) => {
                     setConnectionError(null);
                     reconnectAttemptsRef.current = 0;
 
-                    // Send ping to verify connection
                     setTimeout(() => {
                         if (websocket.readyState === WebSocket.OPEN) {
                             const pingMessage = {
@@ -183,7 +161,6 @@ const useWebSocket = (token: string | null) => {
                     addLog(`🔴 Error on URL ${currentUrlIndex + 1}`);
                     setIsConnected(false);
 
-                    // Try next URL
                     currentUrlIndex++;
                     if (currentUrlIndex < urlVariants.length) {
                         addLog(`🔄 Trying next URL...`);
@@ -198,7 +175,6 @@ const useWebSocket = (token: string | null) => {
                     addLog(`❌ Closed: ${event.code} - ${event.reason || 'No reason'}`);
                     setIsConnected(false);
 
-                    // Handle close codes
                     if (event.code === 1000) {
                         addLog('✅ Normal closure');
                         return;
@@ -216,12 +192,10 @@ const useWebSocket = (token: string | null) => {
                     addLog(`🔴 ${errorMsg}`);
                     setConnectionError(errorMsg);
 
-                    // Try next URL if available
                     if (currentUrlIndex < urlVariants.length - 1) {
                         currentUrlIndex++;
                         setTimeout(tryConnect, 1000);
                     } else {
-                        // Attempt reconnection with backoff
                         reconnectAttemptsRef.current++;
                         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
                             const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
@@ -248,14 +222,12 @@ const useWebSocket = (token: string | null) => {
             }
         };
 
-        // Start connection
         tryConnect();
     };
 
     useEffect(() => {
         connectWebSocket();
 
-    // Cleanup
         return () => {
             if (reconnectTimeoutRef.current) {
                 clearTimeout(reconnectTimeoutRef.current);
@@ -268,7 +240,6 @@ const useWebSocket = (token: string | null) => {
         };
     }, [token]);
 
-    // Send message function
     const sendMessage = (message: any): boolean => {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
             addLog('🔴 Cannot send - not connected');
@@ -293,7 +264,6 @@ const useWebSocket = (token: string | null) => {
         }
     };
 
-    // Manual reconnect
     const reconnect = () => {
         addLog('🔄 Manual reconnect');
         reconnectAttemptsRef.current = 0;
@@ -301,7 +271,6 @@ const useWebSocket = (token: string | null) => {
         connectWebSocket();
     };
 
-    // Add message listener
     const addMessageListener = (handler: (event: MessageEvent) => void) => {
         if (wsRef.current) {
             messageHandlerRef.current = handler;
@@ -309,7 +278,6 @@ const useWebSocket = (token: string | null) => {
         }
     };
 
-    // Remove message listener
     const removeMessageListener = () => {
         if (wsRef.current && messageHandlerRef.current) {
             wsRef.current.removeEventListener('message', messageHandlerRef.current);
@@ -329,65 +297,6 @@ const useWebSocket = (token: string | null) => {
     };
 };
 
-// ============================================
-// MOCK DATA (FALLBACK)
-// ============================================
-const getMockResponse = (message: string): ChatResponse => {
-    const lowerMessage = message.toLowerCase();
-
-    if (lowerMessage.includes('puff') || lowerMessage.includes('swell')) {
-        return {
-            answer: 'Focus on posture, tongue posture, and short resistance drills. Keep reps controlled; avoid jaw clenching.',
-            suggestions: [
-                'How to reduce puffiness quickly?',
-                'Best exercises for jawline definition?',
-                'When will I see results?',
-            ],
-        };
-    }
-
-    if (lowerMessage.includes('lymph') || lowerMessage.includes('drainage')) {
-        return {
-            answer: 'Try gentle lymphatic drainage to reduce puffiness. Stay hydrated and avoid excess salt.',
-            suggestions: [
-                'Show me lymphatic massage technique',
-                'What causes lymphatic buildup?',
-                'Diet tips for reducing puffiness',
-            ],
-        };
-    }
-
-    if (lowerMessage.includes('rescan') || lowerMessage.includes('scan')) {
-        return {
-            answer: 'For accurate progress tracking, I recommend rescanning your face every 2 weeks. Make sure to scan at the same time of day under consistent lighting conditions.',
-            suggestions: [
-                'How to get the best scan results?',
-                'What time of day is best for scanning?',
-                'My scan results seem inconsistent',
-            ],
-        };
-    }
-
-    if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
-        return {
-            answer: "Hello! I'm FaceCoach, your AI assistant for facial exercises and progress tracking. How can I help you today?",
-            suggestions: [
-                'Why is my jawline puffy today?',
-                'How often should I do lymph drainage?',
-                'When should I rescan my face?',
-            ],
-        };
-    }
-
-    return {
-        answer: "I understand you're asking about: " + message + ". As your FaceCoach, I recommend focusing on consistent daily exercises and proper technique for best results. Would you like specific advice on any particular aspect of your routine?",
-        suggestions: [
-            'Why is my jawline puffy today?',
-            'How often should I do lymph drainage?',
-            'When should I rescan my face?',
-        ],
-    };
-};
 
 const getMockSuggestions = (): SuggestedQuestion[] => {
     return [
@@ -466,29 +375,34 @@ const FaceCoach: React.FC = () => {
         websocket,
         isConnected,
         connectionError,
-        connectionLogs,
         sendMessage,
-        reconnect,
         addMessageListener,
         removeMessageListener
     } = useWebSocket(token);
 
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: '1',
-            text: "Hi! I'm FaceCoach. Ask me anything about your routine or scans.",
-            isUser: false,
-            timestamp: new Date(),
-        },
-    ]);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState<string>('');
     const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [useMockData, setUseMockData] = useState<boolean>(true);
-    const [showDebug, setShowDebug] = useState<boolean>(true);
+    const [hasShownWelcome, setHasShownWelcome] = useState<boolean>(false);
 
     const scrollViewRef = useRef<ScrollView>(null);
     const responseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Show welcome message only when connected
+    useEffect(() => {
+        if (isConnected && !hasShownWelcome) {
+            setMessages([{
+                id: '1',
+                text: "Hi! I'm FaceCoach. Ask me anything about your routine or scans.",
+                isUser: false,
+                timestamp: new Date(),
+            }]);
+            setSuggestedQuestions(getMockSuggestions());
+            setHasShownWelcome(true);
+        }
+    }, [isConnected, hasShownWelcome]);
 
     // Setup WebSocket message listener
     useEffect(() => {
@@ -499,7 +413,6 @@ const FaceCoach: React.FC = () => {
                 const data = JSON.parse(event.data);
                 console.log('📨 WebSocket received:', data);
 
-                // Handle different message types
                 if (data.type === 'auth_success' || data.status === 'authenticated') {
                     console.log('🔐 Authentication successful');
                     setUseMockData(false);
@@ -511,17 +424,14 @@ const FaceCoach: React.FC = () => {
                     return;
                 }
 
-                // Handle chat response
                 if (data.type === 'message' || data.message || data.response || data.answer) {
                     const responseText = data.message || data.response || data.answer || "I received your message.";
 
-                    // Clear timeout
                     if (responseTimeoutRef.current) {
                         clearTimeout(responseTimeoutRef.current);
                         responseTimeoutRef.current = null;
                     }
 
-                    // Remove loading message and add response
                     setMessages((prev) =>
                         prev.filter((msg) => !msg.isLoading).concat({
                             id: Date.now().toString(),
@@ -533,7 +443,6 @@ const FaceCoach: React.FC = () => {
 
                     setIsLoading(false);
 
-                    // Update suggestions
                     if (data.suggestions && Array.isArray(data.suggestions)) {
                         setSuggestedQuestions(
                             data.suggestions.map((suggestion: string, index: number) => ({
@@ -555,7 +464,6 @@ const FaceCoach: React.FC = () => {
         };
     }, [websocket]);
 
-    // Auto-switch to mock if connection fails
     useEffect(() => {
         if (connectionError && !useMockData && !isConnected) {
             console.log('🔄 Switching to mock data');
@@ -563,7 +471,6 @@ const FaceCoach: React.FC = () => {
         }
     }, [connectionError, useMockData, isConnected]);
 
-    // Switch to real connection when connected
     useEffect(() => {
         if (isConnected && useMockData) {
             console.log('✅ Switching to real connection');
@@ -571,63 +478,30 @@ const FaceCoach: React.FC = () => {
         }
     }, [isConnected]);
 
-    // Load initial suggestions
+    // Auto-scroll when messages change or keyboard opens
     useEffect(() => {
-        setSuggestedQuestions(getMockSuggestions());
+        const keyboardDidShowListener = Keyboard.addListener(
+            'keyboardDidShow',
+            () => {
+                setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 100);
+            }
+        );
+
+        return () => {
+            keyboardDidShowListener.remove();
+        };
     }, []);
 
-    // Auto-scroll
     useEffect(() => {
         setTimeout(() => {
             scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
     }, [messages]);
 
-    // Test connection
-    const testRealConnection = () => {
-        console.log('=== CONNECTION DEBUG ===');
-        console.log('Token:', token?.substring(0, 20) + '...');
-        console.log('Base URL:', IPA_BASE);
-        console.log('WebSocket State:', websocket?.readyState);
-        console.log('Is Connected:', isConnected);
-        console.log('Connection Error:', connectionError);
-        console.log('Using Mock Data:', useMockData);
-        console.log('======================');
-
-        if (websocket && isConnected) {
-            Alert.alert(
-                'Test Connection',
-                'Sending test message...',
-                [{ text: 'OK' }]
-            );
-
-            const testMessage = {
-                type: 'message',
-                service: 'AT',
-                message: 'Test from React Native',
-                created_at: new Date().toISOString()
-            };
-
-            sendMessage(testMessage);
-        } else {
-            Alert.alert(
-                'Not Connected',
-                `Status: ${isConnected ? 'Connected' : 'Disconnected'}\nError: ${connectionError || 'None'}\nMode: ${useMockData ? 'Mock' : 'Real'}`,
-                [{ text: 'OK' }]
-            );
-        }
-    };
-
-    const handleManualReconnect = () => {
-        setUseMockData(false);
-        reconnect();
-    };
-
-    // ============================================
-    // MESSAGE HANDLING
-    // ============================================
     const handleSendMessage = async (text: string): Promise<void> => {
-        if (!text.trim() || isLoading) return;
+        if (!text.trim() || isLoading || !isConnected) return;
 
         const userMessage: Message = {
             id: Date.now().toString(),
@@ -650,7 +524,6 @@ const FaceCoach: React.FC = () => {
 
         setMessages((prev) => [...prev, loadingMessage]);
 
-        // Try real WebSocket first
         if (!useMockData && websocket && isConnected) {
             try {
                 const messageData = {
@@ -667,60 +540,18 @@ const FaceCoach: React.FC = () => {
                     throw new Error('Failed to send');
                 }
 
-                // Set response timeout
                 responseTimeoutRef.current = setTimeout(() => {
                     console.log('⏰ Response timeout, using mock');
                     if (responseTimeoutRef.current) {
                         clearTimeout(responseTimeoutRef.current);
                     }
                     setUseMockData(true);
-                    handleSendMessageWithMockData(text);
                 }, 10000);
 
             } catch (error) {
                 console.error('WebSocket error:', error);
                 setUseMockData(true);
-                handleSendMessageWithMockData(text);
             }
-        } else {
-            handleSendMessageWithMockData(text);
-        }
-    };
-
-    const handleSendMessageWithMockData = async (text: string) => {
-        try {
-            await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 700));
-            const response = getMockResponse(text);
-
-            setMessages((prev) =>
-                prev.filter((msg) => !msg.isLoading).concat({
-                    id: Date.now().toString(),
-                    text: response.answer,
-                    isUser: false,
-                    timestamp: new Date(),
-                })
-            );
-
-            if (response.suggestions && response.suggestions.length > 0) {
-                setSuggestedQuestions(
-                    response.suggestions.map((suggestion, index) => ({
-                        id: `suggestion-${Date.now()}-${index}`,
-                        text: suggestion,
-                    }))
-                );
-            }
-        } catch (error) {
-            console.error('Mock error:', error);
-            setMessages((prev) =>
-                prev.filter((msg) => !msg.isLoading).concat({
-                    id: Date.now().toString(),
-                    text: "Sorry, I'm having trouble. Please try again.",
-                    isUser: false,
-                    timestamp: new Date(),
-                })
-            );
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -732,110 +563,44 @@ const FaceCoach: React.FC = () => {
         handleSendMessage(inputText);
     };
 
-    const getConnectionStatus = () => {
-        if (useMockData) {
-            return { text: 'Demo', color: 'text-yellow-400', bgColor: 'bg-yellow-500' };
-        }
-        if (isConnected) {
-            return { text: 'Live', color: 'text-green-400', bgColor: 'bg-green-500' };
-        }
-        return { text: 'Connecting', color: 'text-blue-400', bgColor: 'bg-blue-500' };
-    };
-
-    const status = getConnectionStatus();
-
     return (
-        <SafeAreaView className="flex-1 bg-[#0D0F14]">
-            <StatusBar style="light" />
+        <View className="flex-1 bg-[#0D0F14]">
+            <SafeAreaView className="flex-1" edges={['top']}>
+                <StatusBar style="light" />
 
-            {/* Header */}
-            <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-800">
-                <TouchableOpacity
-                    onPress={() => navigator.goBack()}
-                    className="p-2"
-                >
-                    <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-                <View className="flex-row gap-2 items-center">
-                    <Ionicons name="chatbubble-ellipses" size={24} color="#60A5FA" />
-                    <Text className="text-white text-xl font-bold">Face Coach</Text>
-                </View>
-                <View className="flex-row items-center gap-2">
-                    <TouchableOpacity onPress={() => setShowDebug(!showDebug)}>
-                        <View className={`w-2 h-2 rounded-full ${status.bgColor}`} />
+                {/* Header */}
+                <View className="flex-row items-center justify-center px-4 py-3 bg-[#0D0F14]">
+                    <TouchableOpacity
+                        onPress={() => navigator.goBack()}
+                        className="p-2 absolute left-4"
+                    >
+                        <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
                     </TouchableOpacity>
-                    <Text className={`text-xs ${status.color}`}>{status.text}</Text>
-                    <TouchableOpacity onPress={testRealConnection}>
-                        <Ionicons name="bug-outline" size={16} color="white" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={handleManualReconnect}>
-                        <Ionicons name="refresh" size={16} color="white" />
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            <KeyboardAvoidingView
-                className="flex-1"
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-            >
-                {/* Debug Panel */}
-                {showDebug && (
-                    <View className="bg-black/90 p-3 border-b border-gray-700">
-                        <View className="flex-row justify-between items-center mb-2">
-                            <Text className="text-white font-bold text-xs">Debug Info</Text>
-                            <TouchableOpacity onPress={handleManualReconnect}>
-                                <Text className="text-blue-400 text-xs">Reconnect</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View className="space-y-1">
-                            <Text className="text-green-400 text-xs">
-                                Connected: {isConnected ? 'Yes' : 'No'}
-                            </Text>
-                            <Text className="text-red-400 text-xs">
-                                Error: {connectionError || 'None'}
-                            </Text>
-                            <Text className="text-yellow-400 text-xs">
-                                Mode: {useMockData ? 'Demo' : 'Live'}
-                            </Text>
-                            <Text className="text-blue-400 text-xs">
-                                WS State: {websocket?.readyState ?? 'N/A'}
-                            </Text>
-                        </View>
-                        {connectionLogs.length > 0 && (
-                            <ScrollView className="max-h-20 mt-2">
-                                {connectionLogs.slice(-5).map((log, index) => (
-                                    <Text key={index} className="text-gray-400 text-xs">
-                                        {log}
-                                    </Text>
-                                ))}
-                            </ScrollView>
-                        )}
+                    <View className="flex-row gap-2 items-center">
+                        <Ionicons name="chatbubble-ellipses" size={24} color="#60A5FA" />
+                        <Text className="text-white text-xl font-bold">Face Coach</Text>
                     </View>
-                )}
+                </View>
 
-                {/* Connection Error Banner */}
-                {connectionError && !useMockData && (
-                    <View className="bg-red-900/50 px-4 py-2 border-b border-red-700">
-                        <View className="flex-row justify-between items-center">
-                            <Text className="text-red-200 text-sm flex-1">
-                                {connectionError}
+                {/* Connection Status */}
+                {!isConnected && (
+                    <View className="px-4 py-3 bg-[#1F2937] border-b border-gray-700">
+                        <View className="flex-row items-center justify-center gap-2">
+                            <ActivityIndicator size="small" color="#60A5FA" />
+                            <Text className="text-gray-300 text-sm">
+                                {connectionError ? 'Connection failed. Retrying...' : 'Connecting to FaceCoach...'}
                             </Text>
-                            <TouchableOpacity onPress={handleManualReconnect}>
-                                <Text className="text-red-100 text-sm font-bold">Retry</Text>
-                            </TouchableOpacity>
                         </View>
                     </View>
                 )}
 
                 {/* Suggested Questions */}
-                {suggestedQuestions.length > 0 && (
-                    <View className="px-4 py-4 border-b border-gray-800 bg-[#0F1724]/50">
-                        <Text className="text-gray-400 text-sm mb-3 ml-2">Quick questions:</Text>
+                {isConnected && suggestedQuestions.length > 0 && (
+                    <View className="py-4 border-b border-gray-800">
                         <ScrollView
                             horizontal
                             showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={{ paddingHorizontal: 4 }}
+                            contentContainerStyle={{ paddingHorizontal: 12 }}
                         >
                             {suggestedQuestions.map((question) => (
                                 <SuggestedQuestionButton
@@ -848,64 +613,79 @@ const FaceCoach: React.FC = () => {
                     </View>
                 )}
 
-                {/* Messages */}
-                <ScrollView
-                    ref={scrollViewRef}
+                <KeyboardAvoidingView
                     className="flex-1"
-                    contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 16 }}
-                    showsVerticalScrollIndicator={false}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
                 >
-                    {messages.map((message) => (
-                        <MessageBubble key={message.id} message={message} />
-                    ))}
-                </ScrollView>
+                    {/* Messages */}
+                    <ScrollView
+                        ref={scrollViewRef}
+                        className="flex-1"
+                        contentContainerStyle={{
+                            paddingHorizontal: 16,
+                            paddingTop: 16,
+                            paddingBottom: 16,
+                        }}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                        keyboardDismissMode="interactive"
+                    >
+                        {messages.length === 0 && !isConnected && (
+                            <View className="flex-1 items-center justify-center py-20">
+                                <Ionicons name="chatbubble-ellipses-outline" size={64} color="#374151" />
+                                <Text className="text-gray-500 text-center mt-4 text-base">
+                                    Waiting for connection...
+                                </Text>
+                            </View>
+                        )}
+                        {messages.map((message) => (
+                            <MessageBubble key={message.id} message={message} />
+                        ))}
+                    </ScrollView>
 
-                {/* Input Area */}
-                <View className="px-4 py-4 bg-[#0D0F14] border-t border-gray-800">
-                    <View className="flex-row items-center bg-[#1F2937] rounded-xl px-4 py-3 border border-gray-600">
-                        <TextInput
-                            className="flex-1 text-white text-base max-h-20"
-                            value={inputText}
-                            onChangeText={setInputText}
-                            placeholder="Ask about your routine, scans, or progress..."
-                            placeholderTextColor="#6B7280"
-                            multiline
-                            maxLength={500}
-                            editable={!isLoading}
-                            onSubmitEditing={handleSubmit}
-                            returnKeyType="send"
-                        />
-                        <TouchableOpacity
-                            onPress={handleSubmit}
-                            disabled={!inputText.trim() || isLoading}
-                            className={`ml-3 rounded-lg w-10 h-10 items-center justify-center ${!inputText.trim() || isLoading
-                                ? 'bg-gray-600'
-                                : 'bg-[#60A5FA]'
-                                }`}
-                        >
-                            {isLoading ? (
-                                <ActivityIndicator size="small" color="#FFFFFF" />
-                            ) : (
-                                    <Ionicons name="send" size={18} color="#FFFFFF" />
-                            )}
-                        </TouchableOpacity>
+                    {/* Input Area - Fixed at bottom */}
+                    <View className="bg-[#0D0F14] mb-4 border-t border-gray-800">
+                        <View className="px-4 py-3">
+                            <View className={`flex-row items-center rounded-xl px-4 py-3 border ${isConnected ? 'bg-[#1F2937] border-gray-600' : 'bg-[#151921] border-gray-700'
+                                }`}>
+                                <TextInput
+                                    className="flex-1 text-white text-base"
+                                    style={{ maxHeight: 100 }}
+                                    value={inputText}
+                                    onChangeText={setInputText}
+                                    placeholder={
+                                        isConnected
+                                            ? "Ask about your routine, scans, or progress..."
+                                            : "Waiting for connection..."
+                                    }
+                                    placeholderTextColor="#6B7280"
+                                    multiline
+                                    maxLength={500}
+                                    editable={isConnected && !isLoading}
+                                    returnKeyType="send"
+                                    blurOnSubmit={false}
+                                />
+                                <TouchableOpacity
+                                    onPress={handleSubmit}
+                                    disabled={!inputText.trim() || isLoading || !isConnected}
+                                    className={`ml-3 rounded-lg w-10 h-10 items-center justify-center ${!inputText.trim() || isLoading || !isConnected
+                                        ? 'bg-gray-600'
+                                        : 'bg-[#60A5FA]'
+                                        }`}
+                                >
+                                    {isLoading ? (
+                                        <ActivityIndicator size="small" color="#FFFFFF" />
+                                    ) : (
+                                        <Ionicons name="send" size={18} color="#FFFFFF" />
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
                     </View>
-
-                    {/* Connection status info */}
-                    <View className="flex-row justify-between items-center mt-2">
-                        <Text className="text-gray-500 text-xs">
-                            {useMockData
-                                ? "Demo mode - responses are simulated"
-                                : "Connected to server"
-                            }
-                        </Text>
-                        <Text className="text-gray-500 text-xs">
-                            {inputText.length}/500
-                        </Text>
-                    </View>
-                </View>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        </View>
     );
 };
 

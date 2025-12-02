@@ -177,6 +177,7 @@ function RootStack() {
           }}
           initialRouteName='Home'
         >
+
           <Stack.Screen name="Home" component={Home} />
           <Stack.Screen name="Auth" component={AuthScreen} />
           <Stack.Screen name="OtpAuth" component={OtpAuth} />
@@ -192,9 +193,11 @@ function RootStack() {
           <Stack.Screen name="FaceMetrics" component={FaceMetrics} />
           <Stack.Screen name="ChooseGoal" component={ChooseGoal} />
           <Stack.Screen name="UnlockFacialGym" component={UnlockFacialGym} />
+
         </Stack.Navigator>
       </AppNavigationContainer>
-    </WorkoutProvider>
+    </WorkoutProvider >
+
   );
 }
 

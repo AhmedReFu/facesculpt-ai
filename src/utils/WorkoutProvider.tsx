@@ -1,5 +1,13 @@
 // contexts/WorkoutContext.tsx
+import { GET_PLAN, IPA_BASE } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
+
+const API_BASE_URL = IPA_BASE;
+const API_ENDPOINTS = {
+    GET_PLAN: GET_PLAN,
+};
 
 export interface Exercise {
     id: number;
@@ -11,6 +19,7 @@ export interface Exercise {
     completed: boolean;
     durationInSeconds: number;
     description?: string;
+    order: number;
 }
 
 interface WorkoutContextType {
@@ -23,88 +32,134 @@ interface WorkoutContextType {
     isWorkoutCompleted: boolean;
     workoutProgress: number;
     getNextIncompleteExercise: () => Exercise | null;
+    loading: boolean;
+    workoutPlanId: number | null;
+    fetchWorkoutPlan: () => Promise<void>;
 }
 
 const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
 
+// Helper function to parse duration string to seconds
+const parseDurationToSeconds = (duration: string): number => {
+    const trimmed = duration.trim().toLowerCase();
+
+    // Check for seconds (e.g., "10s", "30s")
+    if (trimmed.includes('s') && !trimmed.includes('min')) {
+        const seconds = parseInt(trimmed.replace('s', ''));
+        return isNaN(seconds) ? 10 : seconds;
+    }
+
+    // Check for minutes (e.g., "5 min", "2min")
+    if (trimmed.includes('min')) {
+        const minutes = parseInt(trimmed.replace(/[^0-9]/g, ''));
+        return isNaN(minutes) ? 60 : minutes * 60;
+    }
+
+    // Check for reps (e.g., "20 reps", "15reps")
+    if (trimmed.includes('rep')) {
+        const reps = parseInt(trimmed.replace(/[^0-9]/g, ''));
+        return isNaN(reps) ? 10 : reps;
+    }
+
+    // Default
+    return 10;
+};
+
+// Helper function to determine if exercise is rep-based
+const isRepBased = (duration: string): boolean => {
+    const trimmed = duration.trim().toLowerCase();
+    return trimmed.includes('rep');
+};
+
+// Map target metric to icon
+const getIconForMetric = (metric: string, index: number): string => {
+    const icons = ['meditation', 'face-man', 'emoticon-happy', 'account-circle', 'head', 'skull'];
+
+    switch (metric?.toUpperCase()) {
+        case 'JAWLINE':
+            return 'meditation';
+        case 'SYMMETRY':
+            return 'face-man';
+        case 'PUFFINESS':
+            return 'emoticon-happy';
+        case 'GENERAL':
+        default:
+            return icons[index % icons.length];
+    }
+};
+
 export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
-
-
-
-    const [exercises, setExercises] = useState<Exercise[]>([
-        {
-            id: 1,
-            name: 'Jaw Clench Hold',
-            duration: '10s',
-            reps: false,
-            durationInSeconds: 10,
-            icon: 'meditation',
-            completed: false,
-            description: 'Clench your jaw muscles tightly and hold for the duration.',
-            instructions: [
-                'Sit upright with relaxed shoulders.',
-                'Engage the target muscle gently first.',
-                'Increase tension to a firm, pain-free hold.',
-                'Breathe steadily through your nose.',
-                'Release slowly and reset posture.',
-            ]
-        },
-        {
-            id: 2,
-            name: 'Eye Circle Massage',
-            duration: '8 reps',
-            reps: true,
-            durationInSeconds: 10,
-            icon: 'face-man',
-            completed: false,
-            description: 'Make gentle circles around your eyes with your ring fingers.',
-            instructions: [
-                'Apply clean hands and optional facial oil.',
-                'Use gentle, upward strokes.',
-                'Follow lymph pathways toward the ears.',
-                'Keep pressure light and consistent.',
-                'Finish with slow, calming breaths.',
-            ]
-        },
-        {
-            id: 3,
-            name: 'Chew Motion',
-            duration: '20 reps',
-            reps: true,
-            durationInSeconds: 10,
-            icon: 'food-apple',
-            completed: false,
-            description: 'Perform exaggerated chewing motions to strengthen jaw muscles.',
-            instructions: [
-                'Sit in a comfortable position.',
-                'Perform slow chewing motions.',
-                'Keep your jaw relaxed.',
-                'Maintain steady breathing.',
-                'Focus on the jaw muscles.',
-            ]
-        },
-        {
-            id: 4,
-            name: 'Cheek Lift',
-            duration: '15 reps',
-            reps: true,
-            durationInSeconds: 10,
-            icon: 'emoticon-happy',
-            completed: false,
-            description: 'Lift your cheeks upward to tone facial muscles.',
-            instructions: [
-                'Smile widely to engage cheek muscles.',
-                'Hold the position steadily.',
-                'Keep breathing normally.',
-                'Feel the muscle tension.',
-                'Release gently.',
-            ]
-        },
-    ]);
-
-
-
+    const [exercises, setExercises] = useState<Exercise[]>([]);
     const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number>(0);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [workoutPlanId, setWorkoutPlanId] = useState<number | null>(null);
+
+    useEffect(() => {
+        fetchWorkoutPlan();
+    }, []);
+
+    const fetchWorkoutPlan = async () => {
+        try {
+            setLoading(true);
+
+            // Get access token
+            const accessToken = await AsyncStorage.getItem('token');
+
+            if (!accessToken) {
+                console.log('No token found');
+                setLoading(false);
+                return;
+            }
+
+            // Fetch workout plan from API
+            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.GET_PLAN}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const result = await response.json();
+            console.log('Workout Plan Response:', result);
+
+            if (response.ok && result.success && result.data) {
+                const apiData = result.data
+                setWorkoutPlanId(apiData.id);
+
+                // Transform API exercises to app format
+                const transformedExercises: Exercise[] = apiData.exercises.map((item: any, index: number) => ({
+                    id: item.order || index + 1,
+                    name: item.exercise.name,
+                    duration: item.reps,
+                    reps: isRepBased(item.reps),
+                    durationInSeconds: parseDurationToSeconds(item.reps),
+                    icon: getIconForMetric(item.exercise.target_metric, index),
+                    completed: false,
+                    description: item.exercise.description,
+                    instructions: item.exercise.instructions || [],
+                    order: item.order,
+                }));
+
+                // Sort by order
+                transformedExercises.sort((a, b) => a.order - b.order);
+
+                setExercises(transformedExercises);
+                console.log('Transformed exercises:', transformedExercises);
+            } else {
+                throw new Error(result.message || 'Failed to load workout plan');
+
+            }
+
+        } catch (error) {
+            console.error('Failed to fetch workout plan:', error);
+            Alert.alert('Error', 'Failed to load workout plan. Please try again.');
+
+        } finally {
+
+            setLoading(false);
+        }
+    };
 
     const completeExercise = (exerciseId: number) => {
         setExercises(prev =>
@@ -138,8 +193,10 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
         return exercises.find(exercise => !exercise.completed) || null;
     };
 
-    const isWorkoutCompleted = exercises.every(exercise => exercise.completed);
-    const workoutProgress = exercises.filter(ex => ex.completed).length / exercises.length;
+    const isWorkoutCompleted = exercises.length > 0 && exercises.every(exercise => exercise.completed);
+
+
+    const workoutProgress = exercises.length > 0 ? exercises.filter(ex => ex.completed).length / exercises.length : 0;
 
     const contextValue: WorkoutContextType = {
         exercises,
@@ -150,7 +207,10 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
         moveToNextExercise,
         isWorkoutCompleted,
         workoutProgress,
-        getNextIncompleteExercise
+        getNextIncompleteExercise,
+        loading,
+        workoutPlanId,
+        fetchWorkoutPlan,
     };
 
     return (

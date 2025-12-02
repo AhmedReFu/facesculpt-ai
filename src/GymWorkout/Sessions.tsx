@@ -138,6 +138,7 @@ const Sessions = () => {
                         ],
                     })
                 );
+
             } else {
                 moveToNextExercise();
                 const nextExercise = getCurrentExercise();

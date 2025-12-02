@@ -1,3 +1,4 @@
+import { DAILY_TRACK, IPA_BASE } from '@env';
 import { Feather, FontAwesome5, FontAwesome6, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from "@react-native-community/netinfo";
@@ -7,7 +8,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  BackHandler,
   Dimensions,
   LayoutChangeEvent,
   ScrollView,
@@ -21,25 +21,62 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from 'twrnc';
 import { useBackHandler } from '../lib/useBackHandler';
 
+const API_BASE_URL = IPA_BASE;
+const API_ENDPOINTS = {
+  DAILY_TRACK: DAILY_TRACK,
+};
+
 const { width: WINDOW_WIDTH } = Dimensions.get('window');
 const CHART_MARGIN_HORIZONTAL = -20;
 const CHART_WIDTH = WINDOW_WIDTH - CHART_MARGIN_HORIZONTAL * 2;
 
 // ============================================
-// FIXED NAVIGATION TYPES
+// TYPES
 // ============================================
 type RootStackParamList = {
   Auth: undefined;
   DailyRoutine: undefined;
   UnlockFacialGym: undefined;
   FaceScan: undefined;
-  FaceCoach: { token: string }; // Add token parameter here
-  // Add other screens as needed
+  FaceCoach: { token: string };
 };
 
-// ============================================
-// TYPES
-// ============================================
+interface ScanData {
+  id: number;
+  image: string;
+  jawline_angle: number;
+  symmetry_score: number;
+  puffiness_index: number;
+  created_at: string;
+}
+
+interface Competitor {
+  rank: string;
+  name: string;
+  score: number;
+  trend: string;
+}
+
+interface LeaderboardData {
+  your_rank: string;
+  your_score: number;
+  competitors: Competitor[];
+}
+
+interface ProgressSummary {
+  overall_progress: number;
+  jawline_status: string;
+  goals_hit: string[];
+}
+
+interface DashboardData {
+  streak_days: number;
+  graph_data: ScanData[];
+  progress_summary: ProgressSummary;
+  leaderboard: LeaderboardData;
+  badges: any[];
+}
+
 interface Goal {
   id: string;
   name: string;
@@ -60,92 +97,6 @@ interface LeaderboardEntry {
   trend: 'up' | 'down' | 'neutral';
 }
 
-interface Achievement {
-  id: string;
-  title: string;
-  subtitle: string;
-  completed: boolean;
-}
-
-interface ProgressData {
-  dayCompleted: number;
-  streak: number;
-  goals: Goal[];
-  overallProgress: number;
-  nextBadgeDays: number;
-  motivationMessage: string;
-  improvementMessage: string;
-}
-
-interface LeaderboardData {
-  userRank: number;
-  userScore: number;
-  entries: LeaderboardEntry[];
-}
-
-// ============================================
-// MOCK DATA (Use while developing/testing)
-// ============================================
-const getMockData = (): ProgressData => ({
-  dayCompleted: 1,
-  streak: 1,
-  goals: [
-    {
-      id: 'jawline',
-      name: 'Jawline',
-      icon: '#D69544',
-      current: -130,
-      target: 220,
-      unit: '°',
-      changePercent: 50,
-      chartData: [-130, -40, 100, 170, 100, 190, 220],
-    },
-    {
-      id: 'symmetry',
-      name: 'Symmetry',
-      icon: '#519659',
-      current: 100,
-      target: -97,
-      unit: '%',
-      changePercent: 50,
-      chartData: [100, 50, 0, -90, -40, -90, -100],
-    },
-    {
-      id: 'depuff',
-      name: 'Depuff Progress',
-      icon: '#60A5FB',
-      current: 0.5,
-      target: 0.5,
-      unit: '%',
-      changePercent: 50,
-      chartData: [0.6, 0.9, 0.8, -0.9, 0.8, 0.9, 0.6],
-    },
-  ],
-  overallProgress: 100,
-  nextBadgeDays: 6,
-  motivationMessage: 'Consistency shapes results keep going!',
-  improvementMessage: 'Your face is 50% more defined than last week - keep it up!',
-});
-
-const getMockLeaderboard = (): LeaderboardData => ({
-  userRank: 3,
-  userScore: 53,
-  entries: [
-    { rank: 1, name: 'Last Week', change: 145, score: 145, isUser: false, trend: 'up' },
-    { rank: 2, name: 'Best Week', change: 0, score: 145, isUser: false, trend: 'up' },
-    { rank: 3, name: 'You', change: -92, score: 92, isUser: true, trend: 'down' },
-  ],
-});
-
-const getMockAchievements = (): Achievement[] => ([
-  {
-    id: 'jawline-complete',
-    title: 'Sharper Jawline: 100% complete',
-    subtitle: '(Goal 118°)',
-    completed: true,
-  },
-]);
-
 // ============================
 // Utility: generate last N day labels
 // ============================
@@ -158,6 +109,64 @@ const generateLastNDates = (n: number): string[] => {
     arr.push(label);
   }
   return arr;
+};
+
+// ============================
+// Transform API data to chart format
+// ============================
+const transformGraphData = (graphData: ScanData[]): Goal[] => {
+  const jawlineData = graphData.map(item => item.jawline_angle);
+  const symmetryData = graphData.map(item => item.symmetry_score);
+  const puffinessData = graphData.map(item => item.puffiness_index);
+
+  const latestScan = graphData[graphData.length - 1];
+
+  return [
+    {
+      id: 'jawline',
+      name: 'Jawline',
+      icon: '#D69544',
+      current: latestScan?.jawline_angle || 0,
+      target: 132, // Default target, can be dynamic
+      unit: '°',
+      changePercent: 50, // Calculate based on data
+      chartData: jawlineData,
+    },
+    {
+      id: 'symmetry',
+      name: 'Symmetry',
+      icon: '#519659',
+      current: latestScan?.symmetry_score || 0,
+      target: 97,
+      unit: '%',
+      changePercent: 50,
+      chartData: symmetryData,
+    },
+    {
+      id: 'depuff',
+      name: 'Depuff Progress',
+      icon: '#60A5FB',
+      current: latestScan?.puffiness_index || 0,
+      target: 0.3,
+      unit: '',
+      changePercent: 50,
+      chartData: puffinessData,
+    },
+  ];
+};
+
+const transformLeaderboard = (apiLeaderboard: LeaderboardData): LeaderboardEntry[] => {
+  return apiLeaderboard.competitors.map((competitor, index) => {
+    const trendValue = parseInt(competitor.trend.replace('+', ''));
+    return {
+      rank: parseInt(competitor.rank.replace('#', '')),
+      name: competitor.name,
+      change: trendValue,
+      score: competitor.score,
+      isUser: competitor.name === 'You',
+      trend: trendValue > 0 ? 'up' : trendValue < 0 ? 'down' : 'neutral'
+    };
+  });
 };
 
 // ============================================
@@ -175,7 +184,7 @@ const GoalChart = ({ goal }: GoalChartProps) => {
   const [containerHeight, setContainerHeight] = useState(150);
 
   const pointsCount = Array.isArray(goal.chartData) ? goal.chartData.length : 0;
-  const xLabels = generateLastNDates(pointsCount || 30);
+  const xLabels = generateLastNDates(pointsCount || 7);
 
   useEffect(() => {
     return () => {
@@ -243,19 +252,17 @@ const GoalChart = ({ goal }: GoalChartProps) => {
 
   return (
     <View style={tw`mb-5`}>
-      {/* Header */}
       <View style={tw`flex-row items-center mb-1`}>
         <Text style={tw`text-base mr-2`}>
           <MaterialIcons name="show-chart" size={24} color={goal.icon} />
         </Text>
         <Text style={tw`text-white text-lg font-normal`}>
-          {goal.name} ({goal.unit}) - {goal.current}
+          {goal.name} ({goal.unit}) - {goal.current.toFixed(1)}
           {goal.unit} → {goal.target}
           {goal.unit} goal
         </Text>
       </View>
 
-      {/* Chart container */}
       <View
         ref={chartContainerRef}
         onLayout={onContainerLayout}
@@ -284,7 +291,6 @@ const GoalChart = ({ goal }: GoalChartProps) => {
           style={{ marginLeft: 0 }}
         />
 
-        {/* Tooltip */}
         {selectedIndex !== null && selectedIndex >= 0 && (
           <View
             style={{
@@ -302,14 +308,13 @@ const GoalChart = ({ goal }: GoalChartProps) => {
           >
             <Text style={{ color: '#9CA3AF', fontSize: 12 }}>{xLabels[selectedIndex]}</Text>
             <Text style={{ color: '#60A5FB', fontWeight: '700', fontSize: 14 }}>
-              {goal.chartData[selectedIndex]}
+              {goal.chartData[selectedIndex].toFixed(goal.unit === '' ? 2 : 1)}
               {goal.unit}
             </Text>
           </View>
         )}
       </View>
 
-      {/* Percentage */}
       <Text style={tw`text-gray-400 text-sm mt-1`}>
         +{goal.changePercent}% vs last week
       </Text>
@@ -329,9 +334,9 @@ const LeaderboardEntry = ({ entry }: LeaderboardEntryProps) => {
   };
 
   const getTrendSymbol = (): any => {
-    if (entry.trend === 'up') return (<Feather name="arrow-up" size={15} color="green-200" />);
-    if (entry.trend === 'down') return (<Feather name="arrow-down" size={15} color="red-400" />);
-    return '';
+    if (entry.trend === 'up') return (<Feather name="arrow-up" size={15} color="green" />);
+    if (entry.trend === 'down') return (<Feather name="arrow-down" size={15} color="red" />);
+    return null;
   };
 
   return (
@@ -341,12 +346,12 @@ const LeaderboardEntry = ({ entry }: LeaderboardEntryProps) => {
         <Text style={tw`text-gray-400 text-base`}>{entry.name}</Text>
       </View>
       <View style={tw`flex-row items-center`}>
-        {entry && (
+        {entry.change !== 0 && (
           <Text style={tw`${getTrendColor()} text-sm text-center font-bold rounded-2xl px-3 py-1`}>
             {getTrendSymbol()} {Math.abs(entry.change)}
           </Text>
         )}
-        <Text style={tw`text-white font-bold text-lg w-12 text-right`}>{entry.score}</Text>
+        <Text style={tw`text-white font-bold text-lg w-12 text-right ml-2`}>{entry.score}</Text>
       </View>
     </View>
   );
@@ -358,62 +363,79 @@ const LeaderboardEntry = ({ entry }: LeaderboardEntryProps) => {
 const DailyTrack = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
-  const [data, setData] = useState<ProgressData | null>(null);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardData | null>(null);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState('');
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadAllData();
+    loadDashboardData();
   }, []);
 
-  const loadAllData = async () => {
+  const loadDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Load token first
-      const tokens = await AsyncStorage.getItem('token');
-      const subscribe = await AsyncStorage.getItem('subscribe');
-      setToken(tokens);
-      console.log(subscribe)
+      // Get access token
+      const accessToken = await AsyncStorage.getItem('token');
+      setToken(accessToken);
 
-      // Check if token exists
-      // if (!tokens) {
-      //   console.log('No token found, redirecting to Auth');
-      //   navigation.navigate("Auth");
-      //   return;
-      // }
-      // if (!subscribe) {
-      //   console.log('No token found, redirecting to Auth');
-      //   navigation.navigate("UnlockFacialGym");
-      //   return;
-      // }
-
-      const netState = await NetInfo.fetch();
-      if (!netState.isConnected) {
-        BackHandler.exitApp();
+      if (!accessToken) {
+        navigation.navigate("Auth");
         return;
       }
 
-      // Using mock data directly since API is not configured
-      const progressData = getMockData();
-      const leaderboardData = getMockLeaderboard();
-      const achievementsData = getMockAchievements();
-      const userData: any = await AsyncStorage.getItem("user");
-      const user = JSON.parse(userData);
-      setUsers(user?.phone_number || '');
+      // Check network
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        throw new Error('No internet connection');
+      }
 
-      setData(progressData);
-      setLeaderboard(leaderboardData);
-      setAchievements(achievementsData);
+      // Fetch dashboard data from API
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DAILY_TRACK}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+      console.log('Dashboard API Response:', result);
+
+      // Handle 401 - Token expired
+      if (response.status === 401) {
+        await AsyncStorage.removeItem('token');
+        Alert.alert(
+          'Session Expired',
+          'Please log in again',
+          [{ text: 'OK', onPress: () => navigation.navigate('Auth') }]
+        );
+        return;
+      }
+
+      if (response.ok && result.success) {
+        const apiData: DashboardData = result.data;
+        setDashboardData(apiData);
+
+        // Transform graph data to goals
+        const transformedGoals = transformGraphData(apiData.graph_data);
+        setGoals(transformedGoals);
+
+        // Transform leaderboard
+        const transformedLeaderboard = transformLeaderboard(apiData.leaderboard);
+        setLeaderboardEntries(transformedLeaderboard);
+
+      } else {
+        throw new Error(result.message || 'Failed to load dashboard');
+      }
 
     } catch (err) {
-      console.error('Failed to load data:', err);
-      setError('Failed to load data. Please try again.');
+      console.error('Failed to load dashboard:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -434,35 +456,19 @@ const DailyTrack = () => {
 
   useBackHandler();
 
-  const handleBackPress = () => {
-    Alert.alert('Exit App', 'Are you sure you want to exit?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Exit', onPress: () => BackHandler.exitApp() },
-    ]);
-  };
-
   const handleFaceCoachPress = () => {
     if (!token) {
       Alert.alert(
         'Authentication Required',
         'Please login again to access FaceCoach',
         [
-          {
-            text: 'Login',
-            onPress: () => navigation.navigate("Auth")
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel'
-          }
+          { text: 'Login', onPress: () => navigation.navigate("Auth") },
+          { text: 'Cancel', style: 'cancel' }
         ]
       );
       return;
     }
-
-    navigation.navigate('FaceCoach', {
-      token: token
-    });
+    navigation.navigate('FaceCoach', { token });
   };
 
   // Loading State
@@ -476,54 +482,54 @@ const DailyTrack = () => {
   }
 
   // Error State
-  if (error || !data) {
+  if (error || !dashboardData) {
     return (
       <View style={tw`flex-1 bg-[#0D0F14] items-center justify-center px-6`}>
         <Ionicons name="alert-circle" size={64} color="#EF4444" />
         <Text style={tw`text-white text-xl font-bold mt-4 text-center`}>Oops! Something went wrong</Text>
         <Text style={tw`text-gray-400 text-sm mt-2 text-center`}>{error || 'Unable to load your data'}</Text>
-        <TouchableOpacity style={tw`mt-6 bg-[#60A5FB] px-8 py-3 rounded-xl`} onPress={loadAllData}>
+        <TouchableOpacity style={tw`mt-6 bg-[#60A5FB] px-8 py-3 rounded-xl`} onPress={loadDashboardData}>
           <Text style={tw`text-white font-semibold text-base`}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+
+
   return (
-    <SafeAreaView className='flex-1 bg-[#000000] px-4'>
+    <SafeAreaView style={tw`flex-1 bg-[#000000] px-4`}>
       <StatusBar style="light" />
-      <View className='mb-2'>
-        <View className='flex-row items-center'>
-          <Text className='text-white text-xl font-semibold flex-1 text-center'>Daily Progress</Text>
-          <TouchableOpacity onPress={handleUser} className=''>
+      <View style={tw`mb-2`}>
+        <View style={tw`flex-row items-center`}>
+          <Text style={tw`text-white text-xl font-semibold flex-1 text-center`}>Daily Progress</Text>
+          <TouchableOpacity onPress={handleUser}>
             <MaterialIcons name="exit-to-app" size={28} color="white" />
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView className='flex-1' contentContainerStyle={{ paddingBottom: 4 }} showsVerticalScrollIndicator={false}>
-        <View className='pt-2'>
+      <ScrollView style={tw`flex-1`} contentContainerStyle={{ paddingBottom: 4 }} showsVerticalScrollIndicator={false}>
+        <View style={tw`pt-2`}>
           {/* Header */}
-          <Text className='text-white text-2xl font-bold mb-4'>Day {data.dayCompleted} complete! </Text>
+          <Text style={tw`text-white text-2xl font-bold mb-4`}>{dashboardData.badges}!</Text>
 
           {/* Streak Badge */}
           <View style={tw`bg-[#1E2532] p-3 rounded-full flex-row items-center self-start`}>
-            <Text style={tw`text-lg mr-2`}>
-              <MaterialIcons name="local-fire-department" size={24} color="#60A5FB" />
+            <MaterialIcons name="local-fire-department" size={24} color="#60A5FB" />
+            <Text style={tw`text-white text-lg font-normal ml-2`}>
+              Streak: {dashboardData.streak_days} days
             </Text>
-            <Text style={tw`text-white text-lg font-normal`}>Streak: {data.streak} days</Text>
           </View>
 
           {/* Goal Progress Card */}
           <View style={tw`mt-5 bg-[#181C22] rounded-3xl p-5`}>
             <View style={tw`flex-row items-center mb-2`}>
-              <Text style={tw`text-xl mr-2`}>
-                <Ionicons name="flag" size={24} color="#60A5FB" />
-              </Text>
-              <Text style={tw`text-white text-lg font-semibold`}>Goal Progress</Text>
+              <Ionicons name="flag" size={24} color="#60A5FB" />
+              <Text style={tw`text-white text-lg font-semibold ml-2`}>Goal Progress</Text>
             </View>
 
-            {data.goals.map((goal: Goal) => (
+            {goals.map((goal: Goal) => (
               <GoalChart key={goal.id} goal={goal} />
             ))}
           </View>
@@ -531,67 +537,64 @@ const DailyTrack = () => {
           {/* Overall Progress */}
           <View style={tw`mt-5`}>
             <Text style={tw`text-white text-xl font-bold mb-3`}>
-              Toward Improve Symmetry, Sharper Jawline, Reduce Puffiness: {data.overallProgress}%
+              Overall Progress: {dashboardData.progress_summary.overall_progress}%
             </Text>
             <View style={tw`bg-gray-800 h-3 rounded-full overflow-hidden`}>
-              <View style={[tw`bg-[#60A5FB] h-full rounded-full`, { width: `${data.overallProgress}%` }]} />
+              <View
+                style={[
+                  tw`bg-[#60A5FB] h-full rounded-full`,
+                  { width: `${dashboardData.progress_summary.overall_progress}%` }
+                ]}
+              />
             </View>
-            <Text style={tw`text-gray-400 text-sm mt-2 leading-7`}>Next badge at {data.nextBadgeDays} days</Text>
-            <Text style={tw`text-white text-xl mt-3`}>{data.motivationMessage}</Text>
-            <Text style={tw`text-gray-400 text-lg mt-2`}>{data.improvementMessage}</Text>
+            <Text style={tw`text-gray-400 text-sm mt-2`}>
+              {dashboardData.progress_summary.jawline_status}
+            </Text>
+            <Text style={tw`text-white text-lg mt-3`}>
+              Keep pushing! You're making great progress.
+            </Text>
           </View>
 
-          {/* Achievements */}
-          {achievements.map((achievement: Achievement) => (
-            <View key={achievement.id} style={tw`bg-[#181C22] rounded-2xl p-4 mt-4 flex-row items-center`}>
-              <View style={tw`bg-[#60A5FB] w-10 h-10 rounded-full items-center justify-center mr-3`}>
-                <Ionicons name="flag" size={20} color="black" />
-              </View>
-              <View style={tw`flex-1`}>
-                <Text style={tw`text-white text-xl font-bold`}>{achievement.title}</Text>
-                <Text style={tw`text-white text-xl`}>{achievement.subtitle}</Text>
-              </View>
-            </View>
-          ))}
-
           {/* Leaderboard */}
-          {leaderboard && (
-            <View style={tw`my-5 bg-[#181C22] rounded-3xl p-5`}>
-              <View style={tw`flex-row items-center justify-between mb-4`}>
-                <View style={tw`flex-row items-center`}>
-                  <FontAwesome6 name="chart-simple" size={24} color="#60A5FB" />
-                  <Text style={tw`text-white text-xl font-bold ml-2`}>Leaderboard (private)</Text>
-                </View>
+          <View style={tw`my-5 bg-[#181C22] rounded-3xl p-5`}>
+            <View style={tw`flex-row items-center justify-between mb-4`}>
+              <View style={tw`flex-row items-center`}>
+                <FontAwesome6 name="chart-simple" size={24} color="#60A5FB" />
+                <Text style={tw`text-white text-xl font-bold ml-2`}>Leaderboard (private)</Text>
               </View>
-
-              <View className='flex-row items-center justify-between py-2'>
-                <Text className='text-gray-400 text-xl'>Your Rank</Text>
-                <Text className='text-white font-bold text-xl'>#{leaderboard.userRank}</Text>
-              </View>
-
-              <View style={tw`flex-row justify-between py-2 mb-4`}>
-                <Text style={tw`text-gray-400 text-base`}>Your Score</Text>
-                <Text style={tw`text-white font-bold text-xl`}>{leaderboard.userScore}</Text>
-              </View>
-
-              {leaderboard.entries.map((entry: LeaderboardEntry) => (
-                <LeaderboardEntry key={entry.rank} entry={entry} />
-              ))}
             </View>
-          )}
+
+            <View style={tw`flex-row items-center justify-between py-2`}>
+              <Text style={tw`text-gray-400 text-xl`}>Your Rank</Text>
+              <Text style={tw`text-white font-bold text-xl`}>
+                {dashboardData.leaderboard.your_rank}
+              </Text>
+            </View>
+
+            <View style={tw`flex-row justify-between py-2 mb-4`}>
+              <Text style={tw`text-gray-400 text-base`}>Your Score</Text>
+              <Text style={tw`text-white font-bold text-xl`}>
+                {dashboardData.leaderboard.your_score}
+              </Text>
+            </View>
+
+            {leaderboardEntries.map((entry: LeaderboardEntry) => (
+              <LeaderboardEntry key={entry.rank} entry={entry} />
+            ))}
+          </View>
 
           {/* Bottom Buttons */}
-          <View className='bg-[#000000] pt-20'>
-            <View className='flex-row gap-4'>
+          <View style={tw`bg-[#000000] pt-20`}>
+            <View style={tw`flex-row gap-4`}>
               <TouchableOpacity
                 onPress={() => navigation.navigate("DailyRoutine")}
-                className='flex-1 bg-[#60A5FB] py-5 rounded-2xl'>
-                <Text className='text-white font-bold text-center text-lg'>Start Today's Session</Text>
+                style={tw`flex-1 bg-[#60A5FB] py-5 rounded-2xl`}>
+                <Text style={tw`text-white font-bold text-center text-base`}>Start Today's Session</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => navigation.navigate("FaceScan")}
-                className='flex-1 bg-[#1C1E26] border border-white/20 py-5 rounded-2xl'>
-                <Text className='text-white font-bold text-center text-lg'>Check-in Scan</Text>
+                style={tw`flex-1 bg-[#1C1E26] border border-white/20 py-5 rounded-2xl`}>
+                <Text style={tw`text-white font-bold text-center text-base`}>Check-in Scan</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -602,32 +605,19 @@ const DailyTrack = () => {
       <View>
         <TouchableOpacity
           onPress={handleFaceCoachPress}
-          className='absolute bottom-24 right-0  px-5 py-5 rounded-2xl flex-row items-center justify-center'
-          style={
+          style={[
+            tw`absolute bottom-24 right-0 px-5 py-5 rounded-2xl flex-row items-center justify-center`,
             {
               backgroundColor: 'rgba(0, 0, 0, 0.20)',
               borderColor: 'rgba(255, 255, 255, 0.30)',
               borderWidth: 1,
             }
-          }
+          ]}
           activeOpacity={0.8}
         >
-          <MaterialCommunityIcons
-            name="message-text-outline"
-            size={20}
-            color="white"
-            className='mr-2'
-          />
-          <Text className='text-white text-sm font-semibold mx-1'>
-            Ask FaceCoach
-          </Text>
-          <FontAwesome5 name="robot" size={18} color="white" className='ml-1' />
-          {/* <Ionicons
-            name="chatbubble-ellipses"
-            size={20}
-            color="white"
-            className='ml-1'
-          />   */}
+          <MaterialCommunityIcons name="message-text-outline" size={20} color="white" />
+          <Text style={tw`text-white text-sm font-semibold mx-1`}>Ask FaceCoach</Text>
+          <FontAwesome5 name="robot" size={18} color="white" />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
