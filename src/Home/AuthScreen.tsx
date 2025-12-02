@@ -31,7 +31,7 @@ const API_ENDPOINTS = {
 type RootStackParamList = {
     DailyTrack: undefined;
     ResetPassword: undefined;
-    OtpAuth: undefined;
+    OtpAuth: undefined | { phone_number: string };
     FaceScan: undefined;
 };
 
@@ -258,7 +258,9 @@ const AuthScreen = () => {
                 );
 
                 // Navigate to OTP screen
-                navigator.navigate('OtpAuth');
+                navigator.navigate('OtpAuth', {
+                    phone_number: number,
+                });
 
             } else {
                 // Handle API error response

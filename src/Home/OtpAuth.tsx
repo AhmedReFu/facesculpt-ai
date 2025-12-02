@@ -1,5 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef, useState } from 'react';
@@ -19,6 +19,10 @@ type RootStackParamList = {
     CreateNewPassword: undefined;
     Auth: undefined;
 };
+interface RouteParams {
+    phone_number?: string;
+}
+
 
 type OtpScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -29,7 +33,8 @@ const OtpAuth = () => {
     const [timer, setTimer] = useState<number>(60);
     const [spinnerRotation, setSpinnerRotation] = useState<number>(0);
     const inputsRef = useRef<TextInput[]>([]);
-
+    const route = useRoute();
+    const params = route.params as RouteParams;
     // Initialize refs array
     useEffect(() => {
         inputsRef.current = inputsRef.current.slice(0, 4);
