@@ -93,17 +93,14 @@ const UnlockFacialGym = () => {
       try {
         setIsLoading(true)
 
-        // Get customer info first
         const customerInfo = await Purchases.getCustomerInfo()
         setCustomerInfo(customerInfo)
 
         console.log('Customer Info:', JSON.stringify(customerInfo, null, 2))
 
-        // Check if user already has active subscription - FIXED
         const activeEntitlements = customerInfo.entitlements.active
         console.log('Active entitlements:', Object.keys(activeEntitlements))
 
-        // Check for your specific entitlement name
         if (activeEntitlements['FaceSclup․AI Pro'] || activeEntitlements['six_month'] || activeEntitlements['Pro']) {
           console.log('User already has active subscription')
           await AsyncStorage.setItem("subscribe", "true")
@@ -111,7 +108,6 @@ const UnlockFacialGym = () => {
           return
         }
 
-        // Fetch available packages
         const offerings = await Purchases.getOfferings()
         console.log('Available Offerings:', JSON.stringify(offerings, null, 2))
 
@@ -119,7 +115,6 @@ const UnlockFacialGym = () => {
           const availablePackages = offerings.current.availablePackages
           setPackages(availablePackages)
 
-          // Set default selected plan to first available package
           if (availablePackages.length > 0) {
             setSelectedPlan(availablePackages[1].identifier)
           }
@@ -127,7 +122,7 @@ const UnlockFacialGym = () => {
 
       } catch (error) {
         console.error('Error fetching RevenueCat data:', error)
-        // Don't show alert here as it might be due to test mode
+
       } finally {
         setIsLoading(false)
       }

@@ -564,7 +564,7 @@ const FaceCoach: React.FC = () => {
     };
 
     return (
-        <View className="flex-1 bg-[#0D0F14]">
+        <ScrollView className="flex-1 bg-[#0D0F14]">
             <SafeAreaView className="flex-1" edges={['top']}>
                 <StatusBar style="light" />
 
@@ -685,7 +685,7 @@ const FaceCoach: React.FC = () => {
                     </View>
                 </KeyboardAvoidingView>
             </SafeAreaView>
-        </View>
+        </ScrollView>
     );
 };
 

@@ -21,13 +21,11 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Images } from '../constants';
 import { useBackHandler } from '../lib/useBackHandler';
 
-// ============ API Configuration ============
 const API_BASE_URL = IPA_BASE;
-console.log(IPA_BASE)// Replace with your actual API URL
+console.log(IPA_BASE)
 const API_ENDPOINTS = {
     LOGIN: LOGIN,
-    REGISTER: REGISTER ,
-    // Add other endpoints as needed
+    REGISTER: REGISTER,
 };
 
 type RootStackParamList = {
@@ -47,7 +45,7 @@ const AuthScreen = () => {
     const [agreeTerms, setAgreeTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Form states
+
     const [name, setName] = useState('');
     const [number, setNumber] = useState('');
     const [password, setPassword] = useState('');
