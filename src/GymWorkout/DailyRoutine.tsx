@@ -1,20 +1,14 @@
-// screens/DailyRoutine.tsx
-import { IPA_BASE, WORKOUT_DONE } from '@env';
+// screens/DailyRoutine.tsx - OPTIMIZED VERSION
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { RootStackParamList } from '../types/navigation';
 import { useWorkout } from '../utils/WorkoutProvider';
-
-const API_BASE_URL = IPA_BASE;
-const API_ENDPOINTS = {
-    WORKOUT_DONE: WORKOUT_DONE,
-};
 
 type DailyRoutineNavigationProp = StackNavigationProp<RootStackParamList, 'DailyRoutine'>;
 
@@ -27,11 +21,7 @@ const DailyRoutine = () => {
         isWorkoutCompleted,
         loading,
         resetWorkout,
-        fetchWorkoutPlan
     } = useWorkout();
-
-    // Track if API has been called to prevent duplicate calls
-    const apiCalledRef = useRef(false);
 
     const handleExercisePress = (exercise: any) => {
         navigation.navigate('Exercise', {
@@ -57,70 +47,8 @@ const DailyRoutine = () => {
         navigation.goBack();
     };
 
-    // API call function
-    const callWorkoutDoneAPI = async () => {
-        try {
-            const token = await AsyncStorage.getItem('token');
-
-            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.WORKOUT_DONE}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    completed_at: new Date().toISOString(),
-                    total_exercises: exercises.length,
-                }),
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                console.log('✅ Workout completion API success:', data);
-
-                // Reset workout state after successful API call
-                setTimeout(() => {
-                    resetWorkout(); // Reset all exercises to incomplete
-                    apiCalledRef.current = false; // Reset API call flag
-                    console.log('🔄 Workout state reset');
-                }, 1000); // Small delay to show completion state
-
-            } else {
-                console.error('❌ Workout completion API failed:', response.status);
-            }
-        } catch (error) {
-            console.error('❌ Error calling workout done API:', error);
-        }
-    };
-
-    // Effect to call API when workout is completed
-    useEffect(() => {
-        const allCompleted = isWorkoutCompleted;
-
-        // Call API only when workout is completed and hasn't been called yet
-        if (allCompleted && !apiCalledRef.current && exercises.length > 0) {
-            console.log('🎉 All exercises completed! Calling API...');
-            callWorkoutDoneAPI();
-            apiCalledRef.current = true;
-        }
-
-        // Reset the flag if workout is no longer completed
-        if (!allCompleted) {
-            apiCalledRef.current = false;
-        }
-    }, [isWorkoutCompleted, exercises.length]);
-
-    // Reset API flag when component mounts (for daily refresh)
-    useEffect(() => {
-        // This ensures the API can be called again on the next visit
-        return () => {
-            apiCalledRef.current = false;
-        };
-    }, []);
-
     const nextExercise = getNextIncompleteExercise();
     const allCompleted = isWorkoutCompleted;
-
     const completedExercises = exercises.filter(ex => ex.completed).length;
     const progressPercentage = exercises.length > 0 ? (completedExercises / exercises.length) * 100 : 0;
 

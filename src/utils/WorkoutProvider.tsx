@@ -1,12 +1,13 @@
-// contexts/WorkoutContext.tsx
-import { GET_PLAN, IPA_BASE } from '@env';
+// contexts/WorkoutProvider.tsx - OPTIMIZED VERSION
+import { GET_PLAN, IPA_BASE, WORKOUT_DONE } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 
 const API_BASE_URL = IPA_BASE;
 const API_ENDPOINTS = {
     GET_PLAN: GET_PLAN,
+    WORKOUT_DONE: WORKOUT_DONE,
 };
 
 export interface Exercise {
@@ -25,7 +26,7 @@ export interface Exercise {
 interface WorkoutContextType {
     exercises: Exercise[];
     currentExerciseIndex: number;
-    completeExercise: (exerciseId: number) => void;
+    completeExercise: (exerciseId: number) => Promise<void>;
     resetWorkout: () => void;
     getCurrentExercise: () => Exercise | null;
     moveToNextExercise: () => void;
@@ -39,52 +40,36 @@ interface WorkoutContextType {
 
 const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
 
-// Helper function to parse duration string to seconds
+// Helper functions
 const parseDurationToSeconds = (duration: string): number => {
     const trimmed = duration.trim().toLowerCase();
-
-    // Check for seconds (e.g., "10s", "30s")
     if (trimmed.includes('s') && !trimmed.includes('min')) {
         const seconds = parseInt(trimmed.replace('s', ''));
         return isNaN(seconds) ? 10 : seconds;
     }
-
-    // Check for minutes (e.g., "5 min", "2min")
     if (trimmed.includes('min')) {
         const minutes = parseInt(trimmed.replace(/[^0-9]/g, ''));
         return isNaN(minutes) ? 60 : minutes * 60;
     }
-
-    // Check for reps (e.g., "20 reps", "15reps")
     if (trimmed.includes('rep')) {
         const reps = parseInt(trimmed.replace(/[^0-9]/g, ''));
         return isNaN(reps) ? 10 : reps;
     }
-
-    // Default
     return 10;
 };
 
-// Helper function to determine if exercise is rep-based
 const isRepBased = (duration: string): boolean => {
-    const trimmed = duration.trim().toLowerCase();
-    return trimmed.includes('rep');
+    return duration.trim().toLowerCase().includes('rep');
 };
 
-// Map target metric to icon
 const getIconForMetric = (metric: string, index: number): string => {
     const icons = ['meditation', 'face-man', 'emoticon-happy', 'account-circle', 'head', 'skull'];
-
     switch (metric?.toUpperCase()) {
-        case 'JAWLINE':
-            return 'meditation';
-        case 'SYMMETRY':
-            return 'face-man';
-        case 'PUFFINESS':
-            return 'emoticon-happy';
+        case 'JAWLINE': return 'meditation';
+        case 'SYMMETRY': return 'face-man';
+        case 'PUFFINESS': return 'emoticon-happy';
         case 'GENERAL':
-        default:
-            return icons[index % icons.length];
+        default: return icons[index % icons.length];
     }
 };
 
@@ -94,6 +79,10 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState<boolean>(true);
     const [workoutPlanId, setWorkoutPlanId] = useState<number | null>(null);
 
+    // CRITICAL: Track if workout completion API has been called
+    const workoutCompletionCalledRef = useRef(false);
+    const isCallingAPIRef = useRef(false);
+
     useEffect(() => {
         fetchWorkoutPlan();
     }, []);
@@ -101,8 +90,6 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
     const fetchWorkoutPlan = async () => {
         try {
             setLoading(true);
-
-            // Get access token
             const accessToken = await AsyncStorage.getItem('token');
 
             if (!accessToken) {
@@ -111,7 +98,6 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
                 return;
             }
 
-            // Fetch workout plan from API
             const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.GET_PLAN}`, {
                 method: 'GET',
                 headers: {
@@ -124,10 +110,9 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
             console.log('Workout Plan Response:', result);
 
             if (response.ok && result.success && result.data) {
-                const apiData = result.data
+                const apiData = result.data;
                 setWorkoutPlanId(apiData.id);
 
-                // Transform API exercises to app format
                 const transformedExercises: Exercise[] = apiData.exercises.map((item: any, index: number) => ({
                     id: item.order || index + 1,
                     name: item.exercise.name,
@@ -141,34 +126,90 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
                     order: item.order,
                 }));
 
-                // Sort by order
                 transformedExercises.sort((a, b) => a.order - b.order);
-
                 setExercises(transformedExercises);
+
+                // Reset completion flag when new workout plan is fetched
+                workoutCompletionCalledRef.current = false;
+
                 console.log('Transformed exercises:', transformedExercises);
             } else {
                 throw new Error(result.message || 'Failed to load workout plan');
-
             }
-
         } catch (error) {
             console.error('Failed to fetch workout plan:', error);
             Alert.alert('Error', 'Failed to load workout plan. Please try again.');
-
         } finally {
-
             setLoading(false);
         }
     };
 
-    const completeExercise = (exerciseId: number) => {
-        setExercises(prev =>
-            prev.map(exercise =>
+    // OPTIMIZED: Call workout completion API
+    const callWorkoutCompletionAPI = async () => {
+        // Prevent duplicate calls
+        if (workoutCompletionCalledRef.current || isCallingAPIRef.current) {
+            console.log('⚠️ API already called or in progress, skipping...');
+            return;
+        }
+
+        try {
+            isCallingAPIRef.current = true;
+            workoutCompletionCalledRef.current = true;
+
+            const token = await AsyncStorage.getItem('token');
+            console.log('🎉 Calling workout completion API...');
+
+            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.WORKOUT_DONE}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                }
+            });
+
+
+            setInterval(() => {
+                resetWorkout();
+            }, 10000);
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Workout completion API success:', data);
+
+            } else {
+                console.error('❌ Workout completion API failed:', response.status);
+                // Reset flag on failure so it can be retried
+                workoutCompletionCalledRef.current = false;
+            }
+        } catch (error) {
+            console.error('❌ Error calling workout done API:', error);
+            // Reset flag on error so it can be retried
+            workoutCompletionCalledRef.current = false;
+        } finally {
+            isCallingAPIRef.current = false;
+        }
+    };
+
+    // OPTIMIZED: Complete exercise with automatic API call
+    const completeExercise = async (exerciseId: number) => {
+        setExercises(prev => {
+            const updated = prev.map(exercise =>
                 exercise.id === exerciseId
                     ? { ...exercise, completed: true }
                     : exercise
-            )
-        );
+            );
+
+            // Check if this completion makes ALL exercises complete
+            const allComplete = updated.every(ex => ex.completed);
+
+            if (allComplete && !workoutCompletionCalledRef.current) {
+                // Call API immediately when last exercise is completed
+                console.log('🎯 Last exercise completed, calling API...');
+                callWorkoutCompletionAPI();
+            }
+
+            return updated;
+        });
     };
 
     const moveToNextExercise = () => {
@@ -183,6 +224,8 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
             prev.map(exercise => ({ ...exercise, completed: false }))
         );
         setCurrentExerciseIndex(0);
+        // Reset the API call flag so it can be called again
+        workoutCompletionCalledRef.current = false;
     };
 
     const getCurrentExercise = (): Exercise | null => {
@@ -194,8 +237,6 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const isWorkoutCompleted = exercises.length > 0 && exercises.every(exercise => exercise.completed);
-
-
     const workoutProgress = exercises.length > 0 ? exercises.filter(ex => ex.completed).length / exercises.length : 0;
 
     const contextValue: WorkoutContextType = {
