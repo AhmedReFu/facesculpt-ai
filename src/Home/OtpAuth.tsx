@@ -1,9 +1,11 @@
+import { IPA_BASE, OTP_AUTH } from '@env';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Image,
     ScrollView,
@@ -15,29 +17,37 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Images } from '../constants';
 
+const API_BASE_URL = IPA_BASE;
+console.log(IPA_BASE);
+const API_ENDPOINTS = {
+    OTP_AUTH: OTP_AUTH,
+};
+
 type RootStackParamList = {
     CreateNewPassword: undefined;
     Auth: undefined;
 };
+
 interface RouteParams {
     phone_number?: string;
 }
-
 
 type OtpScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const OtpAuth = () => {
     const navigation = useNavigation<OtpScreenNavigationProp>();
     const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
-    const [code, setCode] = useState<string[]>(['', '', '', '']);
+    const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);
     const [timer, setTimer] = useState<number>(60);
     const [spinnerRotation, setSpinnerRotation] = useState<number>(0);
+    const [isVerifying, setIsVerifying] = useState<boolean>(false);
     const inputsRef = useRef<TextInput[]>([]);
     const route = useRoute();
     const params = route.params as RouteParams;
+
     // Initialize refs array
     useEffect(() => {
-        inputsRef.current = inputsRef.current.slice(0, 4);
+        inputsRef.current = inputsRef.current.slice(0, 6);
     }, []);
 
     // Timer effect
@@ -87,15 +97,15 @@ const OtpAuth = () => {
         newCode[index] = numericText;
         setCode(newCode);
 
-        if (numericText && index < 3) {
+        if (numericText && index < 5) {
             setTimeout(() => {
                 inputsRef.current[index + 1]?.focus();
             }, 10);
         }
 
-        if (numericText && index === 3) {
+        if (numericText && index === 5) {
             const enteredCode = newCode.join('');
-            if (enteredCode.length === 4) {
+            if (enteredCode.length === 6) {
                 handleSubmit(enteredCode);
             }
         }
@@ -109,24 +119,76 @@ const OtpAuth = () => {
         }
     };
 
-    const handleSubmit = (enteredCode?: string) => {
+    const handleSubmit = async (enteredCode?: string) => {
         const verificationCode = enteredCode || code.join('');
 
-        if (verificationCode.length < 4) {
-            Alert.alert('Error', 'Please enter a 4-digit code.');
+        if (verificationCode.length < 6) {
+            Alert.alert('Error', 'Please enter a 6-digit code.');
             return;
         }
 
-        setShowSuccessModal(true);
+        // Check if phone number is available
+        if (!params?.phone_number) {
+            Alert.alert('Error', 'Phone number is missing. Please go back and try again.');
+            return;
+        }
+
+        try {
+            setIsVerifying(true);
+
+            // Prepare OTP verification payload
+            const otpPayload = {
+                phone_number: params.phone_number,
+                otp: verificationCode
+            };
+
+            console.log('Sending OTP verification:', otpPayload);
+
+            // Send OTP verification to API
+            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.OTP_AUTH}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(otpPayload),
+            });
+
+            const result = await response.json();
+            console.log('OTP Verification Response:', result);
+
+            // Check if verification was successful
+            if (response.ok && result.success) {
+                console.log('OTP verified successfully!');
+                setShowSuccessModal(true);
+            } else {
+                // API returned error
+                throw new Error(result.message || 'Invalid or expired OTP');
+            }
+
+        } catch (error) {
+            console.error('Error verifying OTP:', error);
+            Alert.alert(
+                'Verification Failed',
+                error instanceof Error ? error.message : 'Failed to verify OTP. Please try again.'
+            );
+            // Clear the code on error
+            setCode(['', '', '', '', '', '']);
+            setTimeout(() => {
+                inputsRef.current[0]?.focus();
+            }, 100);
+        } finally {
+            setIsVerifying(false);
+        }
     };
 
     const handleResend = () => {
         if (timer === 0) {
             setTimer(60);
-            setCode(['', '', '', '']);
+            setCode(['', '', '', '', '', '']);
             setTimeout(() => {
                 inputsRef.current[0]?.focus();
             }, 100);
+            // TODO: Implement actual resend OTP API call here
             Alert.alert('Code Resent', 'A new verification code has been sent.');
         }
     };
@@ -135,7 +197,7 @@ const OtpAuth = () => {
         navigation.goBack();
     };
 
-    const isContinueDisabled = code.join('').length < 4;
+    const isContinueDisabled = code.join('').length < 6 || isVerifying;
 
     // Spinner dot positions (8 dots in a circle)
     const spinnerDots = [
@@ -151,22 +213,20 @@ const OtpAuth = () => {
 
     return (
         <SafeAreaView className="flex-1 bg-black">
-
             <ScrollView>
                 <View className="flex-1 px-6 justify-center">
                     {/* Back Button */}
                     <TouchableOpacity
                         onPress={handleBack}
                         className={`absolute top-16 left-6 z-10 ${showSuccessModal ? 'opacity-0' : 'opacity-100'}`}
+                        disabled={isVerifying}
                     >
                         <Ionicons name="arrow-back" size={28} color="#fff" />
                     </TouchableOpacity>
 
                     {/* Logo */}
-                    {/* <Text className="text-6xl font-bold text-white text-center mb-20">
-                    Logo
-                </Text> */}
                     <Image source={Images.Icon} resizeMode="contain" className='self-center mb-20' />
+
                     {/* Heading */}
                     <Text className="text-3xl font-bold text-white text-center mb-3">
                         Verification Code
@@ -174,7 +234,7 @@ const OtpAuth = () => {
 
                     {/* Subtext */}
                     <Text className="text-xl text-gray-400 text-center mb-12 leading-6 px-2">
-                        A code has been sent to your mobile number. Please enter it to continue.
+                        A code has been sent to {params?.phone_number}. Please enter it to continue.
                     </Text>
 
                     {/* OTP Inputs */}
@@ -189,15 +249,16 @@ const OtpAuth = () => {
                                         inputsRef.current[index] = ref;
                                     }
                                 }}
-                                className={`w-16 h-16 bg-gray-800 text-white text-center rounded-xl text-2xl font-bold border-2 ${digit ? 'border-blue-400 bg-blue-900/30' : 'border-gray-700'
+                                className={`w-14 h-14 bg-gray-800 text-white text-center rounded-xl text-2xl font-bold border-2 ${digit ? 'border-blue-400 bg-blue-900/30' : 'border-gray-700'
                                     }`}
-                                keyboardType="default"
+                                keyboardType="number-pad"
                                 maxLength={1}
                                 value={digit}
                                 onChangeText={text => handleChange(text, index)}
                                 onKeyPress={(e) => handleKeyPress(e, index)}
                                 selectTextOnFocus
                                 autoFocus={index === 0}
+                                editable={!isVerifying}
                             />
                         ))}
                     </View>
@@ -207,7 +268,7 @@ const OtpAuth = () => {
                         <Text className="text-gray-400 text-base mb-2 text-center">
                             Didn't receive the code?{' '}
                             <Text
-                                className={`font-semibold ${timer !== 0 ? 'text-gray-600 line-through' : 'text-blue-400'
+                                className={`font-semibold ${timer !== 0 || isVerifying ? 'text-gray-600 line-through' : 'text-blue-400'
                                     }`}
                                 onPress={handleResend}
                             >
@@ -224,14 +285,23 @@ const OtpAuth = () => {
 
                     {/* Continue Button */}
                     <TouchableOpacity
-                        className={`w-full py-4 rounded-xl items-center mb-5 ${isContinueDisabled ? 'bg-gray-700 opacity-60' : 'bg-blue-400'
+                        className={`w-full py-4 rounded-xl items-center mb-5 flex-row justify-center ${isContinueDisabled ? 'bg-gray-700 opacity-60' : 'bg-blue-400'
                             }`}
                         onPress={() => handleSubmit()}
                         disabled={isContinueDisabled}
                     >
-                        <Text className="text-white font-bold text-lg">
-                            Continue
-                        </Text>
+                        {isVerifying ? (
+                            <>
+                                <ActivityIndicator color="white" size="small" />
+                                <Text className="text-white font-bold text-lg ml-2">
+                                    Verifying...
+                                </Text>
+                            </>
+                        ) : (
+                                <Text className="text-white font-bold text-lg">
+                                    Continue
+                                </Text>
+                        )}
                     </TouchableOpacity>
                 </View>
 
@@ -244,10 +314,9 @@ const OtpAuth = () => {
                     >
                         <View className="w-full max-w-[400px]">
                             <View className="bg-[#1A2028] rounded-3xl p-10 items-center border border-gray-700/50">
-                                {/* Success Icon with gradient border effect bg-blue-400/10   w-24 h-24  border-4 border-blue-400 */}
+                                {/* Success Icon */}
                                 <View className="mb-6">
-                                    <View className=" rounded-full  justify-center items-center ">
-                                        {/* <Ionicons name="checkmark" size={50} color="#60A5FA" /> */}
+                                    <View className="rounded-full justify-center items-center">
                                         <MaterialCommunityIcons name="check-decagram-outline" size={80} color="#60A5FA" />
                                     </View>
                                 </View>
@@ -294,8 +363,6 @@ const OtpAuth = () => {
                     </BlurView>
                 )}
             </ScrollView>
-
-
         </SafeAreaView>
     );
 };

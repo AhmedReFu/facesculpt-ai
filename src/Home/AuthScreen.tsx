@@ -22,7 +22,7 @@ import { Images } from '../constants';
 import { useBackHandler } from '../lib/useBackHandler';
 
 const API_BASE_URL = IPA_BASE;
-console.log(IPA_BASE)
+console.log(IPA_BASE);
 const API_ENDPOINTS = {
     LOGIN: LOGIN,
     REGISTER: REGISTER,
@@ -44,7 +44,6 @@ const AuthScreen = () => {
     const [rememberMe, setRememberMe] = useState(true);
     const [agreeTerms, setAgreeTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-
 
     const [name, setName] = useState('');
     const [number, setNumber] = useState('');
@@ -68,7 +67,7 @@ const AuthScreen = () => {
     // Form validation
     const isSignInValid = number.length > 0 && password.length > 0;
     const isSignUpValid = name.length > 0 && number.length > 0 && password.length > 0 && agreeTerms;
-    
+
     const allNumberRegex = /^\+[1-9]\d{1,14}$/;
 
     // ============ API Sign In Handler ============
@@ -105,26 +104,31 @@ const AuthScreen = () => {
         setIsLoading(true);
 
         try {
+            const loginPayload = {
+                phone_number: number,
+                password: password,
+            };
+
+            console.log('Login payload:', loginPayload);
+
             // Call Login API
             const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.LOGIN}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    phone_number: number,
-                    password: password,
-                }),
+                body: JSON.stringify(loginPayload),
             });
-            
+
             const data = await response.json();
+            console.log('Login response:', data);
 
             if (response.ok && data.success) {
                 // Store tokens and user data
                 await AsyncStorage.setItem('token', data.data.token);
-                console.log(data.data.token)
+                console.log('Token saved:', data.data.token);
                 await AsyncStorage.setItem('refresh_token', data.data.refresh_token);
-                
+
                 await AsyncStorage.setItem('isLoggedIn', 'true');
                 await AsyncStorage.setItem('user', JSON.stringify({
                     phone_number: number,
@@ -143,7 +147,8 @@ const AuthScreen = () => {
 
                 // Navigate based on subscription status
                 const subscribe = await AsyncStorage.getItem('subscribe');
-                console.log(subscribe)
+                console.log('Subscribe status:', subscribe);
+
                 setTimeout(() => {
                     if (subscribe === 'true') {
                         navigator.navigate('DailyTrack');
@@ -161,15 +166,8 @@ const AuthScreen = () => {
                     ToastAndroid.CENTER,
                 );
             }
-        }
-        catch (error) {
+        } catch (error) {
             console.error('Sign-in error:', error);
-            // await AsyncStorage.setItem('isLoggedIn', 'true');
-            // await AsyncStorage.setItem('user', JSON.stringify({
-            //     phone_number: number,
-            //     timestamp: + new Date().getTime(),
-            // }));
-            // navigator.navigate('DailyTrack');
             ToastAndroid.showWithGravity(
                 'Network error. Please check your connection and try again.',
                 ToastAndroid.SHORT,
@@ -204,7 +202,7 @@ const AuthScreen = () => {
         // Mobile number validation
         if (!allNumberRegex.test(number)) {
             ToastAndroid.showWithGravity(
-                'Please enter a valid phone number with country code.',
+                'Please enter a valid phone number with country code (e.g., +19844864234).',
                 ToastAndroid.SHORT,
                 ToastAndroid.CENTER,
             );
@@ -221,23 +219,38 @@ const AuthScreen = () => {
             return;
         }
 
+        if (!agreeTerms) {
+            ToastAndroid.showWithGravity(
+                'Please agree to Terms & Conditions.',
+                ToastAndroid.SHORT,
+                ToastAndroid.CENTER,
+            );
+            return;
+        }
+
         setIsLoading(true);
 
         try {
+            // Prepare signup payload matching API format
+            const signupPayload = {
+                phone_number: number.trim(),
+                name: name.trim(),
+                password: password
+            };
+
+            console.log('Signup payload:', signupPayload);
+
             // Call Register API
             const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.REGISTER}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    name: name.trim(),
-                    phone_number: number,
-                    password: password,
-                }),
+                body: JSON.stringify(signupPayload),
             });
 
             const data = await response.json();
+            console.log('Signup response:', data);
 
             if (response.ok && data.success) {
                 // Store user data temporarily for OTP verification
@@ -246,28 +259,31 @@ const AuthScreen = () => {
                     phone_number: number,
                 }));
 
-                // Clear inputs
-                setName('');
-                setNumber('');
-                setPassword('');
-
                 ToastAndroid.showWithGravity(
                     'Account created successfully! Please verify OTP.',
                     ToastAndroid.SHORT,
                     ToastAndroid.CENTER,
                 );
 
-                // Navigate to OTP screen
-                navigator.navigate('OtpAuth', {
-                    phone_number: number,
-                });
+                // Navigate to OTP screen with phone number
+                setTimeout(() => {
+                    navigator.navigate('OtpAuth', {
+                        phone_number: number,
+                    });
+                }, 500);
+
+                // Clear inputs after navigation
+                setName('');
+                setNumber('');
+                setPassword('');
+                setAgreeTerms(false);
 
             } else {
                 // Handle API error response
                 const errorMessage = data.message || 'Sign up failed. Please try again.';
                 ToastAndroid.showWithGravity(
                     errorMessage,
-                    ToastAndroid.SHORT,
+                    ToastAndroid.LONG,
                     ToastAndroid.CENTER,
                 );
             }
@@ -294,10 +310,7 @@ const AuthScreen = () => {
         setPassword('');
         setName('');
         if (tab === 'signin') {
-            setName('');
             setAgreeTerms(false);
-        } else {
-            setRememberMe(true);
         }
     };
 
@@ -326,6 +339,7 @@ const AuthScreen = () => {
                                 className={`flex-1 py-3 rounded-full items-center ${activeTab === 'signin' ? 'bg-blue-400' : 'bg-transparent'
                                     }`}
                                 onPress={() => switchTab('signin')}
+                                disabled={isLoading}
                             >
                                 <Text className={`text-lg font-bold text-white`}>
                                     Sign In
@@ -335,6 +349,7 @@ const AuthScreen = () => {
                                 className={`flex-1 py-3 rounded-full items-center ${activeTab === 'signup' ? 'bg-blue-400' : 'bg-transparent'
                                     }`}
                                 onPress={() => switchTab('signup')}
+                                disabled={isLoading}
                             >
                                 <Text className={`text-lg font-bold text-white`}>
                                     Sign Up
@@ -400,6 +415,7 @@ const AuthScreen = () => {
                                         value={password}
                                         onChangeText={setPassword}
                                         secureTextEntry={!showPassword}
+                                        autoCapitalize="none"
                                         autoComplete="password"
                                         editable={!isLoading}
                                     />
@@ -467,8 +483,8 @@ const AuthScreen = () => {
                             {/* Submit Button */}
                             <TouchableOpacity
                                 className={`py-5 rounded-xl items-center mt-2 ${isLoading || (activeTab === 'signin' ? !isSignInValid : !isSignUpValid)
-                                        ? 'bg-gray-700 opacity-60'
-                                        : 'bg-blue-400'
+                                    ? 'bg-gray-700 opacity-60'
+                                    : 'bg-blue-400'
                                     }`}
                                 onPress={activeTab === 'signin' ? handleSignIn : handleSignUp}
                                 disabled={isLoading || (activeTab === 'signin' ? !isSignInValid : !isSignUpValid)}

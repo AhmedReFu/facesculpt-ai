@@ -20,7 +20,6 @@ const DailyRoutine = () => {
         getNextIncompleteExercise,
         isWorkoutCompleted,
         loading,
-        resetWorkout,
     } = useWorkout();
 
     const handleExercisePress = (exercise: any) => {

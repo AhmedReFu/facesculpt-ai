@@ -1,4 +1,4 @@
-// contexts/WorkoutProvider.tsx - OPTIMIZED VERSION
+// contexts/WorkoutProvider.tsx - COMPLETE FIXED VERSION
 import { GET_PLAN, IPA_BASE, WORKOUT_DONE } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
@@ -110,6 +110,7 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
             console.log('Workout Plan Response:', result);
 
             if (response.ok && result.success && result.data) {
+                resetWorkout();
                 const apiData = result.data;
                 setWorkoutPlanId(apiData.id);
 
@@ -144,7 +145,7 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    // OPTIMIZED: Call workout completion API
+    // Call workout completion API - ONLY when ALL exercises are done
     const callWorkoutCompletionAPI = async () => {
         // Prevent duplicate calls
         if (workoutCompletionCalledRef.current || isCallingAPIRef.current) {
@@ -157,7 +158,7 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
             workoutCompletionCalledRef.current = true;
 
             const token = await AsyncStorage.getItem('token');
-            console.log('🎉 Calling workout completion API...');
+            console.log('🎉 ALL EXERCISES COMPLETED! Calling workout completion API...');
 
             const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.WORKOUT_DONE}`, {
                 method: 'POST',
@@ -167,14 +168,15 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
                 }
             });
 
-
-            setInterval(() => {
-                resetWorkout();
-            }, 10000);
-
             if (response.ok) {
                 const data = await response.json();
                 console.log('✅ Workout completion API success:', data);
+
+                // Optional: Reset workout after 10 seconds
+                // setTimeout(() => {
+                //     resetWorkout();
+                //     console.log("🔄 Workout reset after completion");
+                // }, 10000);
 
             } else {
                 console.error('❌ Workout completion API failed:', response.status);
@@ -190,22 +192,31 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    // OPTIMIZED: Complete exercise with automatic API call
+    // Complete exercise - API called ONLY after ALL exercises are done
     const completeExercise = async (exerciseId: number) => {
         setExercises(prev => {
+            // Mark the current exercise as completed
             const updated = prev.map(exercise =>
                 exercise.id === exerciseId
                     ? { ...exercise, completed: true }
                     : exercise
             );
 
-            // Check if this completion makes ALL exercises complete
-            const allComplete = updated.every(ex => ex.completed);
+            // Count completed exercises
+            const completedCount = updated.filter(ex => ex.completed).length;
+            const totalCount = updated.length;
+
+            console.log(`📊 Progress: ${completedCount}/${totalCount} exercises completed`);
+
+            // Check if ALL exercises are now complete
+            const allComplete = completedCount === totalCount;
 
             if (allComplete && !workoutCompletionCalledRef.current) {
-                // Call API immediately when last exercise is completed
-                console.log('🎯 Last exercise completed, calling API...');
+                console.log('🎯 ALL EXERCISES COMPLETED! Calling API...');
+                // Call API only when the last exercise is marked complete
                 callWorkoutCompletionAPI();
+            } else if (!allComplete) {
+                console.log(`⏳ Still ${totalCount - completedCount} exercise(s) remaining...`);
             }
 
             return updated;
@@ -226,6 +237,7 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
         setCurrentExerciseIndex(0);
         // Reset the API call flag so it can be called again
         workoutCompletionCalledRef.current = false;
+        console.log('🔄 Workout has been reset');
     };
 
     const getCurrentExercise = (): Exercise | null => {

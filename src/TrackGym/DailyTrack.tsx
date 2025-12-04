@@ -27,7 +27,7 @@ const API_ENDPOINTS = {
 };
 
 const { width: WINDOW_WIDTH } = Dimensions.get('window');
-const CHART_MARGIN_HORIZONTAL = -20;
+const CHART_MARGIN_HORIZONTAL = -16;
 const CHART_WIDTH = WINDOW_WIDTH - CHART_MARGIN_HORIZONTAL * 2;
 
 // ============================================
@@ -63,11 +63,18 @@ interface LeaderboardData {
   competitors: Competitor[];
 }
 
+interface GoalHit {
+  title: string;
+  status: string;
+  target: string;
+}
 interface ProgressSummary {
   overall_progress: number;
   jawline_status: string;
-  goals_hit: string[];
+  goals_hit: GoalHit[];
 }
+
+
 
 interface DashboardData {
   streak_days: number;
@@ -75,6 +82,9 @@ interface DashboardData {
   progress_summary: ProgressSummary;
   leaderboard: LeaderboardData;
   badges: any[];
+  next_badge_in_days: number;
+  consistency_text: string;
+  comparison_text: string;
 }
 
 interface Goal {
@@ -537,7 +547,7 @@ const DailyTrack = () => {
           {/* Overall Progress */}
           <View style={tw`mt-5`}>
             <Text style={tw`text-white text-xl font-bold mb-3`}>
-              Overall Progress: {dashboardData.progress_summary.overall_progress}%
+              Toward Improve Symmetry, Sharper Jawline, Reduce Puffiness: {dashboardData.progress_summary.overall_progress}%
             </Text>
             <View style={tw`bg-gray-800 h-3 rounded-full overflow-hidden`}>
               <View
@@ -547,14 +557,27 @@ const DailyTrack = () => {
                 ]}
               />
             </View>
-            <Text style={tw`text-gray-400 text-sm mt-2`}>
-              {dashboardData.progress_summary.jawline_status}
+            <Text style={tw`text-gray-400 text-sm mt-2 leading-7`}>Next badge at {dashboardData.next_badge_in_days} days</Text>
+            <Text style={tw`text-white text-xl mt-3`}>
+              {dashboardData.consistency_text}
             </Text>
-            <Text style={tw`text-white text-lg mt-3`}>
-              Keep pushing! You're making great progress.
-            </Text>
+            <Text style={tw`text-gray-400 text-sm mt-2`}>{dashboardData.comparison_text}</Text>
           </View>
 
+
+          {/* Achievements */}
+          {dashboardData.progress_summary.goals_hit.map((goalHit: GoalHit, index: number) =>
+            <View style={tw`bg-[#181C22] rounded-2xl p-4 mt-4 flex-row items-center`}>
+              <View style={tw`bg-[#60A5FB] w-10 h-10 rounded-full items-center justify-center mr-3`}>
+                <Ionicons name="flag" size={20} color="black" />
+              </View>
+              <View style={tw`flex-1`}>
+                <Text style={tw`text-white text-xl font-bold`}>{goalHit.title} : {goalHit.status}</Text>
+                <Text style={tw`text-white text-xl`}>({goalHit.target})</Text>
+              </View>
+            </View>
+
+          )}
           {/* Leaderboard */}
           <View style={tw`my-5 bg-[#181C22] rounded-3xl p-5`}>
             <View style={tw`flex-row items-center justify-between mb-4`}>
@@ -584,7 +607,7 @@ const DailyTrack = () => {
           </View>
 
           {/* Bottom Buttons */}
-          <View style={tw`bg-[#000000] pt-20`}>
+          <View style={tw`bg-[#000000] mt-16`}>
             <View style={tw`flex-row gap-4`}>
               <TouchableOpacity
                 onPress={() => navigation.navigate("DailyRoutine")}
@@ -606,9 +629,9 @@ const DailyTrack = () => {
         <TouchableOpacity
           onPress={handleFaceCoachPress}
           style={[
-            tw`absolute bottom-24 right-0 px-5 py-5 rounded-2xl flex-row items-center justify-center`,
+            tw`absolute bottom-20 right-0 px-4 py-4 rounded-2xl flex-row items-center justify-center`,
             {
-              backgroundColor: 'rgba(0, 0, 0, 0.20)',
+              backgroundColor: 'rgba(0,0,0, 0.20',
               borderColor: 'rgba(255, 255, 255, 0.30)',
               borderWidth: 1,
             }
@@ -616,8 +639,8 @@ const DailyTrack = () => {
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons name="message-text-outline" size={20} color="white" />
-          <Text style={tw`text-white text-sm font-semibold mx-1`}>Ask FaceCoach</Text>
-          <FontAwesome5 name="robot" size={18} color="white" />
+          <Text style={tw`text-white text-lg font-semibold mx-1`}>Ask FaceCoach</Text>
+          <FontAwesome5 name="robot" size={20} color="white" />
         </TouchableOpacity>
       </View>
     </SafeAreaView>

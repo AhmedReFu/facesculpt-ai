@@ -8,6 +8,7 @@ import React, { useState } from 'react'
 import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import tw from 'twrnc'
+import { useWorkout } from '../utils/WorkoutProvider'
 
 const API_BASE_URL = IPA_BASE;
 const API_ENDPOINTS = {
@@ -47,7 +48,13 @@ const GoalItem = ({ label, isSelected, onPress }: GoalItemProps) => (
 )
 
 const ChooseGoal = () => {
+
+
     const navigator = useNavigation<ChooseGoalScreenNavigationProp>()
+
+    const {
+        resetWorkout
+    } = useWorkout();
 
     const [selectedGoals, setSelectedGoals] = useState<string[]>([
         'Sharper Jawline',
@@ -99,20 +106,23 @@ const ChooseGoal = () => {
                 return;
             }
 
-            // Prepare form data
-            const formData = new FormData();
-            selectedGoals.forEach((goal, index) => {
-                formData.append('goals', goal);
-            });
+            // Convert selected goals to API format
+            const goalsPayload = {
+                wants_sharper_jawline: selectedGoals.includes('Sharper Jawline'),
+                wants_reduce_puffiness: selectedGoals.includes('Reduce Puffiness'),
+                wants_improve_symmetry: selectedGoals.includes('Improve Symmetry')
+            };
+
+            console.log('Sending goals payload:', goalsPayload);
 
             // Send goals to API
             const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.SET_GOALS}`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'multipart/form-data',
+                    'Content-Type': 'application/json',
                 },
-                body: formData,
+                body: JSON.stringify(goalsPayload),
             });
 
             const result = await response.json();
@@ -138,11 +148,12 @@ const ChooseGoal = () => {
             if (response.ok && result.success) {
                 console.log('Goals set successfully!');
 
-        // Check subscription status
+                // Check subscription status
                 const subscribe = await AsyncStorage.getItem("subscribe");
 
                 if (subscribe === "true") {
                     // User has subscription - go to DailyTrack
+                    resetWorkout();
                     navigator.replace("DailyTrack");
                 } else {
                     // No subscription - go to unlock page

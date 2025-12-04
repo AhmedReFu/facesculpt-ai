@@ -129,7 +129,8 @@ const useWebSocket = (token: string | null) => {
 const getMockSuggestions = (): SuggestedQuestion[] => [
     { id: '1', text: 'Why is my jawline puffy today?' },
     { id: '2', text: 'How often should I do lymph drainage?' },
-    { id: '3', text: 'When should I rescan my face?' }
+    { id: '3', text: 'When should I rescan my face?' },
+    { id: '4', text: 'Best exercises for jawline definition?' }
 ];
 
 // Message Bubble Component
@@ -172,7 +173,7 @@ const SuggestedQuestionButton: React.FC<{
         onPress={() => onPress(question.text)}
         className="bg-transparent border border-gray-600 rounded-full px-4 py-2.5 mr-2"
     >
-        <Text className="text-gray-300 text-sm">{question.text}</Text>
+        <Text className="text-gray-300 text-base">{question.text}</Text>
     </TouchableOpacity>
 );
 
@@ -282,9 +283,10 @@ const FaceCoach: React.FC = () => {
                         <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
                     </TouchableOpacity>
                     <View className="flex-row gap-2 items-center">
-                        <Text className="text-white text-lg font-semibold">Ask Face Coach</Text>
+                        <Text className="text-white text-xl font-semibold">Ask Face Coach</Text>
                         <View className="bg-[#60A5FA] rounded-full p-1.5">
-                            <Ionicons name="chatbubble" size={16} color="#FFFFFF" />
+                            <Ionicons name="chatbubble-ellipses-sharp" size={20} color="#FFFFFF" />
+
                         </View>
                     </View>
                     <View className="w-10" />
