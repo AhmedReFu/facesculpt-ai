@@ -5,6 +5,10 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Animated,
+    Easing,
+    FlatList,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -20,7 +24,6 @@ interface Message {
     text: string;
     isUser: boolean;
     timestamp: Date;
-    isLoading?: boolean;
 }
 
 interface SuggestedQuestion {
@@ -37,95 +40,6 @@ type FaceCoachScreenRouteProp = RouteProp<
     'FaceCoach'
 >;
 
-// WebSocket Hook
-const useWebSocket = (token: string | null) => {
-    const wsRef = useRef<WebSocket | null>(null);
-    const [isConnected, setIsConnected] = useState(false);
-    const [connectionError, setConnectionError] = useState<string | null>(null);
-
-    const connectWebSocket = () => {
-        if (!token) return;
-
-        let cleanBase = IPA_BASE.replace(/^(https?:\/\/)/, '').replace(/\/+$/, '');
-        const wsProtocol = cleanBase.includes('localhost') || cleanBase.includes('127.0.0.1') ||
-            cleanBase.includes('206.162.244.133') || cleanBase.includes('192.168')
-            ? 'ws' : 'wss';
-
-        const WS_URL = `${wsProtocol}://${cleanBase}/ws/chat/?token=${token}`;
-
-        try {
-            if (wsRef.current) {
-                wsRef.current.close();
-            }
-
-            const websocket = new WebSocket(WS_URL);
-            wsRef.current = websocket;
-
-            websocket.onopen = () => {
-                setIsConnected(true);
-                setConnectionError(null);
-            };
-
-            websocket.onerror = () => {
-                setIsConnected(false);
-                setConnectionError('Connection failed');
-            };
-
-            websocket.onclose = () => {
-                setIsConnected(false);
-            };
-        } catch (error) {
-            setConnectionError('Failed to connect');
-        }
-    };
-
-    useEffect(() => {
-        connectWebSocket();
-        return () => {
-            if (wsRef.current) {
-                wsRef.current.close();
-            }
-        };
-    }, [token]);
-
-    const sendMessage = (message: any): boolean => {
-        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-            return false;
-        }
-        try {
-            wsRef.current.send(JSON.stringify({
-                ...message,
-                created_at: new Date().toISOString(),
-                service: 'AT'
-            }));
-            return true;
-        } catch {
-            return false;
-        }
-    };
-
-    const addMessageListener = (handler: (event: MessageEvent) => void) => {
-        if (wsRef.current) {
-            wsRef.current.addEventListener('message', handler);
-        }
-    };
-
-    const removeMessageListener = (handler: (event: MessageEvent) => void) => {
-        if (wsRef.current) {
-            wsRef.current.removeEventListener('message', handler);
-        }
-    };
-
-    return {
-        websocket: wsRef.current,
-        isConnected,
-        connectionError,
-        sendMessage,
-        addMessageListener,
-        removeMessageListener
-    };
-};
-
 const getMockSuggestions = (): SuggestedQuestion[] => [
     { id: '1', text: 'Why is my jawline puffy today?' },
     { id: '2', text: 'How often should I do lymph drainage?' },
@@ -133,148 +47,258 @@ const getMockSuggestions = (): SuggestedQuestion[] => [
     { id: '4', text: 'Best exercises for jawline definition?' }
 ];
 
-// Message Bubble Component
-const MessageBubble: React.FC<{ message: Message }> = ({ message }) => {
-    if (message.isLoading) {
-        return (
-            <View className="mb-3 items-start">
-                <View className="max-w-[80%] bg-[#374151] rounded-2xl rounded-bl-sm px-4 py-3">
-                    <View className="flex-row gap-2">
-                        <ActivityIndicator size="small" color="#60A5FA" />
-                        <Text className="text-gray-400 text-sm">FaceCoach is thinking...</Text>
-                    </View>
-                </View>
-            </View>
-        );
-    }
-
-    return (
-        <View className={`mb-3 ${message.isUser ? 'items-end' : 'items-start'}`}>
-            <View
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.isUser
-                    ? 'bg-[#60A5FA] rounded-br-sm'
-                    : 'bg-[#374151] rounded-bl-sm'
-                    }`}
-            >
-                <Text className="text-white text-[15px] leading-relaxed">
-                    {message.text}
-                </Text>
-            </View>
-        </View>
-    );
-};
-
-// Suggested Question Button
-const SuggestedQuestionButton: React.FC<{
-    question: SuggestedQuestion;
-    onPress: (text: string) => void;
-}> = ({ question, onPress }) => (
-    <TouchableOpacity
-        onPress={() => onPress(question.text)}
-        className="bg-transparent border border-gray-600 rounded-full px-4 py-2.5 mr-2"
-    >
-        <Text className="text-gray-300 text-base">{question.text}</Text>
-    </TouchableOpacity>
-);
-
-// Main Component
 const FaceCoach: React.FC = () => {
     const navigation = useNavigation();
     const route = useRoute<FaceCoachScreenRouteProp>();
     const token = route.params?.token;
 
-    const { websocket, isConnected, sendMessage, addMessageListener, removeMessageListener } =
-        useWebSocket(token);
-
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState('');
-    const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const scrollViewRef = useRef<ScrollView>(null);
+    const [isTyping, setIsTyping] = useState(false);
+    const [isConnected, setIsConnected] = useState(false);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-    // Show welcome message
+    const wsRef = useRef<WebSocket | null>(null);
+    const flatListRef = useRef<FlatList>(null);
+
+    // Animation setup for three dots
+    const dot1 = useRef(new Animated.Value(0)).current;
+    const dot2 = useRef(new Animated.Value(0)).current;
+    const dot3 = useRef(new Animated.Value(0)).current;
+
+    const startTypingAnimation = () => {
+        const createAnimation = (dot: Animated.Value, delay: number) =>
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(dot, {
+                        toValue: -5,
+                        duration: 300,
+                        delay,
+                        easing: Easing.linear,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(dot, {
+                        toValue: 0,
+                        duration: 300,
+                        easing: Easing.linear,
+                        useNativeDriver: true,
+                    }),
+                ])
+            );
+        Animated.parallel([
+            createAnimation(dot1, 0),
+            createAnimation(dot2, 150),
+            createAnimation(dot3, 300),
+        ]).start();
+    };
+
+    const stopTypingAnimation = () => {
+        dot1.stopAnimation();
+        dot2.stopAnimation();
+        dot3.stopAnimation();
+    };
+
     useEffect(() => {
-        if (isConnected) {
-            setMessages([{
-                id: '1',
-                text: "Hi! I'm FaceCoach. Ask me anything about your routine or scans.",
-                isUser: false,
-                timestamp: new Date(),
-            }]);
-            setSuggestedQuestions(getMockSuggestions());
+        if (isTyping) startTypingAnimation();
+        else stopTypingAnimation();
+    }, [isTyping]);
+
+    // Keyboard listeners
+    useEffect(() => {
+        const keyboardWillShowListener = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            (e) => {
+                setKeyboardHeight(e.endCoordinates.height);
+                if (flatListRef.current && messages.length > 0) {
+                    setTimeout(() => {
+                        flatListRef.current?.scrollToEnd({ animated: true });
+                    }, 100);
+                }
+            }
+        );
+
+        const keyboardWillHideListener = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            () => {
+                setKeyboardHeight(0);
+            }
+        );
+
+        return () => {
+            keyboardWillShowListener.remove();
+            keyboardWillHideListener.remove();
+        };
+    }, [messages]);
+
+    // Auto scroll on new messages
+    useEffect(() => {
+        if (flatListRef.current && messages.length > 0) {
+            setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: true });
+            }, 200);
         }
-    }, [isConnected]);
+    }, [messages]);
 
-    // WebSocket message listener
-    useEffect(() => {
-        if (!websocket) return;
+    // WebSocket initialization
+    const initiateWebSocket = (token: string) => {
+        if (!token) {
+            console.log("No token provided");
+            setIsLoadingHistory(false);
+            return;
+        }
 
-        const handleMessage = (event: MessageEvent) => {
+        let cleanBase = IPA_BASE.replace(/^(https?:\/\/)/, '').replace(/\/+$/, '');
+        const wsProtocol = cleanBase.includes('localhost') || cleanBase.includes('127.0.0.1') ||
+            cleanBase.includes('206.162.244.133') || cleanBase.includes('192.168')
+            ? 'ws' : 'wss';
+
+        const WS_URL = `${wsProtocol}://${cleanBase}/ws/chat/?token=${token}`;
+        console.log("Connecting to WebSocket:", WS_URL);
+
+        wsRef.current = new WebSocket(WS_URL);
+
+        wsRef.current.onopen = () => {
+            console.log("✅ FaceCoach WebSocket connected");
+            setIsConnected(true);
+        };
+
+        wsRef.current.onmessage = (e) => {
             try {
-                const data = JSON.parse(event.data);
+                console.log("📨 WebSocket Raw Data:", e.data);
+                const data = JSON.parse(e.data);
+                console.log("📦 Parsed Data:", JSON.stringify(data, null, 2));
 
-                if (data.type === 'message' || data.message || data.response) {
-                    const responseText = data.message || data.response || "I received your message.";
+                // Handle chat history: type="history", messages=[...]
+                if (data.type === "history" && data.messages && Array.isArray(data.messages)) {
+                    console.log(`✅ Received history with ${data.messages.length} messages`);
 
-                    setMessages((prev) =>
-                        prev.filter((msg) => !msg.isLoading).concat({
-                            id: Date.now().toString(),
-                            text: responseText,
-                            isUser: false,
-                            timestamp: new Date(),
-                        })
-                    );
-                    setIsLoading(false);
+                    const historyMessages = data.messages.map((item: any, idx: number) => {
+                        const isUserMessage = item.sender === "USER";
+                        console.log(`Message ${idx}: sender=${item.sender}, isUser=${isUserMessage}`);
+
+                        return {
+                            id: `msg-${item.created_at}-${idx}`,
+                            text: item.message,
+                            isUser: isUserMessage,
+                            timestamp: new Date(item.created_at),
+                        };
+                    });
+
+                    console.log("✅ Setting messages:", historyMessages.length);
+                    setMessages(historyMessages);
+                    setIsLoadingHistory(false);
+                    setIsTyping(false);
+                } else {
+                    console.log("⚠️ Unexpected data format:", data);
                 }
             } catch (error) {
-                console.error('Error parsing message:', error);
+                console.error('❌ Error parsing WebSocket message:', error);
+                console.error('Raw data was:', e.data);
+                setIsTyping(false);
+                setIsLoadingHistory(false);
             }
         };
 
-        addMessageListener(handleMessage);
-        return () => removeMessageListener(handleMessage);
-    }, [websocket]);
-
-    // Auto-scroll
-    useEffect(() => {
-        setTimeout(() => {
-            scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-    }, [messages]);
-
-    const handleSendMessage = async (text: string) => {
-        if (!text.trim() || isLoading || !isConnected) return;
-
-        const userMessage: Message = {
-            id: Date.now().toString(),
-            text: text.trim(),
-            isUser: true,
-            timestamp: new Date(),
+        wsRef.current.onclose = (event) => {
+            console.log("❌ WebSocket disconnected:", event.code, event.reason);
+            setIsConnected(false);
+            setIsLoadingHistory(false);
         };
 
-        setMessages((prev) => [...prev, userMessage]);
-        setInputText('');
-        setIsLoading(true);
-
-        const loadingMessage: Message = {
-            id: `loading-${Date.now()}`,
-            text: '',
-            isUser: false,
-            timestamp: new Date(),
-            isLoading: true,
+        wsRef.current.onerror = (error) => {
+            console.error("❌ WebSocket error:", error);
+            setIsConnected(false);
+            setIsLoadingHistory(false);
         };
-
-        setMessages((prev) => [...prev, loadingMessage]);
-
-        sendMessage({
-            type: 'message',
-            message: text.trim()
-        });
     };
 
+    useEffect(() => {
+        if (token) {
+            initiateWebSocket(token);
+        } else {
+            console.log("⚠️ No token available");
+            setIsLoadingHistory(false);
+        }
+
+        return () => {
+            if (wsRef.current) {
+                console.log("🔌 Closing WebSocket connection");
+                wsRef.current.close();
+            }
+        };
+    }, [token]);
+
+    const sendMessage = () => {
+        if (wsRef.current?.readyState === WebSocket.OPEN && inputText.trim()) {
+            console.log("📤 Sending message:", inputText.trim());
+            setInputText('');
+            setIsTyping(true);
+
+            const payload = JSON.stringify({
+                message: inputText.trim(),
+            });
+
+            wsRef.current.send(payload);
+        } else {
+            console.log("⚠️ Cannot send - WebSocket not open or empty message");
+        }
+    };
+
+    const handleSuggestedQuestion = (text: string) => {
+        if (wsRef.current?.readyState === WebSocket.OPEN && text.trim()) {
+            console.log("📤 Sending suggested question:", text);
+            setIsTyping(true);
+
+            const payload = JSON.stringify({
+                message: text.trim(),
+            });
+
+            wsRef.current.send(payload);
+        }
+    };
+
+    const renderMessage = ({ item }: { item: Message }) => (
+        <View className={`mb-3 ${item.isUser ? 'items-end' : 'items-start'}`}>
+            <View
+                className={`max-w-[80%] rounded-2xl px-4 py-3 ${item.isUser
+                    ? 'bg-[#60A5FA] rounded-br-sm'
+                    : 'bg-[#374151] rounded-bl-sm'
+                    }`}
+            >
+                <Text className="text-white text-[15px] leading-relaxed">
+                    {item.text}
+                </Text>
+            </View>
+        </View>
+    );
+
+    const renderTypingIndicator = () => (
+        <View className="mb-3 items-start">
+            <View className="max-w-[80%] bg-[#374151] rounded-2xl rounded-bl-sm px-4 py-3 flex-row space-x-1">
+                <Animated.View
+                    style={{ transform: [{ translateY: dot1 }] }}
+                    className="w-2 h-2 bg-gray-400 rounded-full mx-1"
+                />
+                <Animated.View
+                    style={{ transform: [{ translateY: dot2 }] }}
+                    className="w-2 h-2 bg-gray-400 rounded-full mx-1"
+                />
+                <Animated.View
+                    style={{ transform: [{ translateY: dot3 }] }}
+                    className="w-2 h-2 bg-gray-400 rounded-full mx-1"
+                />
+            </View>
+        </View>
+    );
+
     return (
-        <View className="flex-1 bg-[#0D0F14]">
-            <SafeAreaView className="flex-1" edges={['top']}>
+        <KeyboardAvoidingView
+            className="flex-1"
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        >
+            <SafeAreaView className="flex-1 bg-[#0D0F14]" edges={['top']}>
                 <StatusBar style="light" />
 
                 {/* Header */}
@@ -286,83 +310,100 @@ const FaceCoach: React.FC = () => {
                         <Text className="text-white text-xl font-semibold">Ask Face Coach</Text>
                         <View className="bg-[#60A5FA] rounded-full p-1.5">
                             <Ionicons name="chatbubble-ellipses-sharp" size={20} color="#FFFFFF" />
-
                         </View>
                     </View>
                     <View className="w-10" />
                 </View>
 
-                {/* Suggested Questions */}
-                {suggestedQuestions.length > 0 && (
+                {/* Suggested Questions - Always show when not loading */}
+                {!isLoadingHistory && (
                     <View className="py-3 border-b border-gray-800">
                         <ScrollView
                             horizontal
                             showsHorizontalScrollIndicator={false}
                             contentContainerStyle={{ paddingHorizontal: 16 }}
                         >
-                            {suggestedQuestions.map((question) => (
-                                <SuggestedQuestionButton
+                            {getMockSuggestions().map((question) => (
+                                <TouchableOpacity
                                     key={question.id}
-                                    question={question}
-                                    onPress={handleSendMessage}
-                                />
+                                    onPress={() => handleSuggestedQuestion(question.text)}
+                                    className="bg-transparent border border-gray-600 rounded-full px-4 py-2.5 mr-2"
+                                >
+                                    <Text className="text-gray-300 text-base">{question.text}</Text>
+                                </TouchableOpacity>
                             ))}
                         </ScrollView>
                     </View>
                 )}
 
-                {/* Messages */}
-                <ScrollView
-                    ref={scrollViewRef}
-                    className="flex-1"
-                    contentContainerStyle={{
-                        paddingHorizontal: 16,
-                        paddingVertical: 16,
-                    }}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {messages.map((message) => (
-                        <MessageBubble key={message.id} message={message} />
-                    ))}
-                </ScrollView>
-
-                {/* Input Area - Sticks to keyboard */}
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    keyboardVerticalOffset={0}
-                >
-                    <View className="bg-[#0D0F14] px-4 py-3 border-t border-gray-800 mb-4">
-                        <View className="flex-row items-center bg-[#1F2937] rounded-full px-4 py-2 border border-gray-700">
-                            <TextInput
-                                className="flex-1 text-white text-base py-2"
-                                value={inputText}
-                                onChangeText={setInputText}
-                                placeholder="Type your question..."
-                                placeholderTextColor="#6B7280"
-                                multiline
-                                maxLength={500}
-                                editable={isConnected && !isLoading}
-                            />
-                            <TouchableOpacity
-                                onPress={() => handleSendMessage(inputText)}
-                                disabled={!inputText.trim() || isLoading || !isConnected}
-                                className={`ml-2 rounded-full p-2.5 ${!inputText.trim() || isLoading || !isConnected
-                                        ? 'bg-gray-600'
-                                        : 'bg-[#60A5FA]'
-                                    }`}
-                            >
-                                {isLoading ? (
-                                    <ActivityIndicator size="small" color="#FFFFFF" />
-                                ) : (
-                                    <Ionicons name="send" size={18} color="#FFFFFF" />
-                                )}
-                            </TouchableOpacity>
+                {/* Loading History State */}
+                {isLoadingHistory ? (
+                    <View className="flex-1 items-center justify-center">
+                        <ActivityIndicator size="large" color="#60A5FA" />
+                        <Text className="text-gray-400 mt-3 text-base">Loading conversation...</Text>
+                    </View>
+                ) : messages.length === 0 ? (
+                    /* Empty State - Show default welcome message */
+                    <View className="flex-1 px-4 pt-4">
+                        <View className="mb-3 items-start">
+                            <View className="max-w-[80%] bg-[#374151] rounded-2xl rounded-bl-sm px-4 py-3">
+                                <Text className="text-white text-[15px] leading-relaxed">
+                                    Hi! I'm FaceCoach. Ask me anything about your routine or scans.
+                                </Text>
+                            </View>
                         </View>
                     </View>
-                </KeyboardAvoidingView>
+                ) : (
+                    /* Messages List */
+                    <FlatList
+                        data={isTyping ? [...messages, { id: 'typing', text: '', isUser: false, timestamp: new Date() }] : messages}
+                        ref={flatListRef}
+                        renderItem={({ item }) =>
+                            item.id === 'typing' ? renderTypingIndicator() : renderMessage({ item })
+                        }
+                        keyExtractor={(item) => item.id}
+                        className="flex-1"
+                                showsVerticalScrollIndicator={false}
+                                contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 16 }}
+                                keyboardShouldPersistTaps="handled"
+                        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                    />
+                )}
+
+                {/* Input Area */}
+                <View
+                    className="bg-[#0D0F14] px-4 py-3 border-t border-gray-800 mb-8"
+                    style={{ paddingBottom: Platform.OS === 'android' ? keyboardHeight : 15 }}
+                >
+                    <View className="flex-row items-center bg-[#1F2937] rounded-full px-4 py-2 border border-gray-700">
+                        <TextInput
+                            className="flex-1 text-white text-base py-2"
+                            value={inputText}
+                            onChangeText={setInputText}
+                            placeholder="Type your question..."
+                            placeholderTextColor="#6B7280"
+                            multiline
+                            maxLength={500}
+                            editable={isConnected && !isTyping}
+                        />
+                        <TouchableOpacity
+                            onPress={sendMessage}
+                            disabled={!inputText.trim() || isTyping || !isConnected}
+                            className={`ml-2 rounded-full p-2.5 ${!inputText.trim() || isTyping || !isConnected
+                                ? 'bg-gray-600'
+                                : 'bg-[#60A5FA]'
+                                }`}
+                        >
+                            {isTyping ? (
+                                <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                                <Ionicons name="send" size={18} color="#FFFFFF" />
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </SafeAreaView>
-        </View>
+        </KeyboardAvoidingView>
     );
 };
 

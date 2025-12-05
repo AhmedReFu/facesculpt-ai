@@ -12,4 +12,5 @@ declare module "@env" {
   export const DAILY_TRACK: string;
   export const WORKOUT_DONE: string;
   export const OTP_AUTH: string;
+  export const FORGOT_PASSWORD: string;
 }

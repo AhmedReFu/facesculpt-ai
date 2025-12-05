@@ -31,7 +31,7 @@ const API_ENDPOINTS = {
 type RootStackParamList = {
     DailyTrack: undefined;
     ResetPassword: undefined;
-    OtpAuth: undefined | { phone_number: string };
+    OtpAuth: undefined | { phone_number: string } | { name: string } | { password: string };
     FaceScan: undefined;
 };
 
@@ -41,7 +41,7 @@ const AuthScreen = () => {
     const navigator = useNavigation<AuthScreenNavigationProp>();
     const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
     const [showPassword, setShowPassword] = useState(false);
-    const [rememberMe, setRememberMe] = useState(true);
+    const [rememberMe, setRememberMe] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -72,6 +72,7 @@ const AuthScreen = () => {
 
     // ============ API Sign In Handler ============
     const handleSignIn = async () => {
+
         if (!number || !password) {
             ToastAndroid.showWithGravity(
                 'Please enter phone number and password.',
@@ -128,7 +129,7 @@ const AuthScreen = () => {
                 await AsyncStorage.setItem('token', data.data.token);
                 console.log('Token saved:', data.data.token);
                 await AsyncStorage.setItem('refresh_token', data.data.refresh_token);
-
+                await AsyncStorage.setItem("subscribe", "true")
                 await AsyncStorage.setItem('isLoggedIn', 'true');
                 await AsyncStorage.setItem('user', JSON.stringify({
                     phone_number: number,
@@ -269,6 +270,8 @@ const AuthScreen = () => {
                 setTimeout(() => {
                     navigator.navigate('OtpAuth', {
                         phone_number: number,
+                        name: name,
+                        password: password
                     });
                 }, 500);
 

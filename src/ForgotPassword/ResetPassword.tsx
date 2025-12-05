@@ -1,9 +1,9 @@
+import { FORGOT_PASSWORD, IPA_BASE } from '@env';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useState } from 'react';
 import {
-    Alert,
     Image,
     KeyboardAvoidingView,
     Platform,
@@ -11,11 +11,17 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    ToastAndroid,
     TouchableOpacity,
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Images } from '../constants';
+
+const API_BASE_URL = IPA_BASE;
+const API_ENDPOINTS = {
+    FORGOT_PASSWORD: FORGOT_PASSWORD,
+};
 
 type RootStackParamList = {
     Otp: { phoneNumber: string };
@@ -28,40 +34,71 @@ const ResetPassword = () => {
     const navigator = useNavigation<ResetPasswordScreenNavigationProp>();
     const [phoneNumber, setPhoneNumber] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const allNumberRegex = /^\+[1-9]\d{1,14}$/;
+
 
     const handleContinue = async () => {
-        if (!phoneNumber.trim()) {
-            Alert.alert('Error', 'Please enter your phone number');
+        if (!phoneNumber) {
+            ToastAndroid.showWithGravity(
+                'Please enter your phone number.',
+                ToastAndroid.SHORT,
+                ToastAndroid.CENTER,
+            );
+            return;
+        }
+
+        if (!allNumberRegex.test(phoneNumber)) {
+            ToastAndroid.showWithGravity(
+                'Please enter a valid phone number with country code (e.g., +19844864234).',
+                ToastAndroid.SHORT,
+                ToastAndroid.CENTER,
+            );
             return;
         }
 
         // Simple check - just make sure there's some input
-        if (phoneNumber.trim().length < 5) {
-            Alert.alert('Error', 'Please enter a valid phone number');
+        if (phoneNumber.trim().length < 10) {
+            ToastAndroid.showWithGravity(
+                'Please enter a valid phone number',
+                ToastAndroid.SHORT,
+                ToastAndroid.CENTER,);
             return;
         }
 
         setIsLoading(true);
 
         try {
-            // Simulate API call to send verification code
-            await new Promise(resolve => setTimeout(resolve, 1500));
 
             // Here you would call your actual SMS service
-            console.log('Sending verification code to:', phoneNumber);
 
-            Alert.alert(
-                'Verification Code Sent',
-                `We've sent a verification code to ${phoneNumber}`,
-                [
-                    {
-                        text: 'OK',
-                        onPress: () => navigator.navigate('Otp', { phoneNumber })
-                    }
-                ]
-            );
+            const otpPayload = {
+                phone_number: phoneNumber,
+
+            };
+
+            console.log('Sending OTP verification:', otpPayload);
+
+            // Send OTP verification to API
+            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.FORGOT_PASSWORD}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(otpPayload),
+            });
+
+            if (response.ok) {
+                ToastAndroid.showWithGravity('Verification code sent', ToastAndroid.SHORT,
+                    ToastAndroid.CENTER,);
+                navigator.navigate('Otp', { phoneNumber: phoneNumber });
+            } else {
+                ToastAndroid.showWithGravity('Failed to send verification code', ToastAndroid.SHORT,
+                    ToastAndroid.CENTER,);
+            }
         } catch (error) {
-            Alert.alert('Error', 'Failed to send verification code. Please try again.');
+            ToastAndroid.showWithGravity('Failed to send verification code. Please try again.', ToastAndroid.SHORT,
+                ToastAndroid.CENTER,);
+
         } finally {
             setIsLoading(false);
         }

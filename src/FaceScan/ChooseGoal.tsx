@@ -53,7 +53,8 @@ const ChooseGoal = () => {
     const navigator = useNavigation<ChooseGoalScreenNavigationProp>()
 
     const {
-        resetWorkout
+        resetWorkout,
+        fetchWorkoutPlan
     } = useWorkout();
 
     const [selectedGoals, setSelectedGoals] = useState<string[]>([
@@ -85,13 +86,11 @@ const ChooseGoal = () => {
             Alert.alert('No Goals Selected', 'Please select at least one goal');
             return;
         }
-
         try {
             setLoading(true);
-
             // Get access token
             const accessToken = await AsyncStorage.getItem('token');
-
+            const subscribe = await AsyncStorage.getItem("subscribe");
             if (!accessToken) {
                 Alert.alert(
                     'Authentication Required',
@@ -105,16 +104,13 @@ const ChooseGoal = () => {
                 );
                 return;
             }
-
             // Convert selected goals to API format
             const goalsPayload = {
                 wants_sharper_jawline: selectedGoals.includes('Sharper Jawline'),
                 wants_reduce_puffiness: selectedGoals.includes('Reduce Puffiness'),
                 wants_improve_symmetry: selectedGoals.includes('Improve Symmetry')
             };
-
             console.log('Sending goals payload:', goalsPayload);
-
             // Send goals to API
             const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.SET_GOALS}`, {
                 method: 'POST',
@@ -124,10 +120,8 @@ const ChooseGoal = () => {
                 },
                 body: JSON.stringify(goalsPayload),
             });
-
             const result = await response.json();
             console.log('Set Goals Response:', result);
-
             // Handle 401 - Token expired
             if (response.status === 401) {
                 await AsyncStorage.removeItem('token');
@@ -143,27 +137,24 @@ const ChooseGoal = () => {
                 );
                 return;
             }
-
             // Check if goals were set successfully
             if (response.ok && result.success) {
                 console.log('Goals set successfully!');
-
                 // Check subscription status
-                const subscribe = await AsyncStorage.getItem("subscribe");
-
                 if (subscribe === "true") {
                     // User has subscription - go to DailyTrack
                     resetWorkout();
                     navigator.replace("DailyTrack");
+                    fetchWorkoutPlan()
                 } else {
                     // No subscription - go to unlock page
-                    navigator.replace("UnlockFacialGym");
+                    navigator.navigate("UnlockFacialGym");
+                    fetchWorkoutPlan();
                 }
             } else {
                 // API returned error
                 throw new Error(result.message || 'Failed to set goals');
             }
-
         } catch (error) {
             console.error('Error setting goals:', error);
             Alert.alert(

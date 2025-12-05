@@ -567,7 +567,7 @@ const DailyTrack = () => {
 
           {/* Achievements */}
           {dashboardData.progress_summary.goals_hit.map((goalHit: GoalHit, index: number) =>
-            <View style={tw`bg-[#181C22] rounded-2xl p-4 mt-4 flex-row items-center`}>
+            <View key={index} style={tw`bg-[#181C22] rounded-2xl p-4 mt-4 flex-row items-center`}>
               <View style={tw`bg-[#60A5FB] w-10 h-10 rounded-full items-center justify-center mr-3`}>
                 <Ionicons name="flag" size={20} color="black" />
               </View>

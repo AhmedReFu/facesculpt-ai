@@ -18,7 +18,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Images } from '../constants';
 
 const API_BASE_URL = IPA_BASE;
-console.log(IPA_BASE);
 const API_ENDPOINTS = {
     OTP_AUTH: OTP_AUTH,
 };
@@ -189,6 +188,8 @@ const OtpAuth = () => {
                 inputsRef.current[0]?.focus();
             }, 100);
             // TODO: Implement actual resend OTP API call here
+
+
             Alert.alert('Code Resent', 'A new verification code has been sent.');
         }
     };

@@ -8,8 +8,9 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
+      "icon": "./assets/logo.png",
       "supportsTablet": true,
-      "bundleIdentifier": "com.AhmedReFU.facesculptai",
+      "bundleIdentifier": "com.AhmedReFu.facesculptai",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Allow camera access to scan your face"
@@ -18,7 +19,7 @@
     "android": {
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.AhmedReFU.facesculptai",
+      "package": "com.AhmedReFu.facesculptai",
       "permissions": ["android.permission.CAMERA"]
     },
     "web": {

@@ -4,9 +4,8 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
-import Purchases from 'react-native-purchases';
+import React, { useState } from 'react';
+import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface PlanProps {
@@ -17,17 +16,6 @@ interface PlanProps {
   badge?: string
   isSelected: boolean
   onSelect: () => void
-}
-
-interface RevenueCatPackage {
-  identifier: string;
-  product: {
-    title: string;
-    description: string;
-    price: number;
-    priceString: string;
-    currencyCode: string;
-  };
 }
 
 const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanProps) => (
@@ -81,205 +69,11 @@ const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanP
 
 const UnlockFacialGym = () => {
   const navigator = useNavigation()
-  const [selectedPlan, setSelectedPlan] = useState<string>('$rc_monthly')
-  const [packages, setPackages] = useState<RevenueCatPackage[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isPurchasing, setIsPurchasing] = useState(false)
-  const [customerInfo, setCustomerInfo] = useState<any>(null)
+  const [selectedPlan, setSelectedPlan] = useState<string>('monthly')
 
-  // Fetch available packages and customer info
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true)
-
-        const customerInfo = await Purchases.getCustomerInfo()
-        setCustomerInfo(customerInfo)
-
-        console.log('Customer Info:', JSON.stringify(customerInfo, null, 2))
-
-        const activeEntitlements = customerInfo.entitlements.active
-        console.log('Active entitlements:', Object.keys(activeEntitlements))
-
-        if (activeEntitlements['FaceSclup․AI Pro'] || activeEntitlements['six_month'] || activeEntitlements['Pro']) {
-          console.log('User already has active subscription')
-          await AsyncStorage.setItem("subscribe", "true")
-          navigator.navigate("DailyTrack")
-          return
-        }
-
-        const offerings = await Purchases.getOfferings()
-        console.log('Available Offerings:', JSON.stringify(offerings, null, 2))
-
-        if (offerings.current) {
-          const availablePackages = offerings.current.availablePackages
-          setPackages(availablePackages)
-
-          if (availablePackages.length > 0) {
-            setSelectedPlan(availablePackages[1].identifier)
-          }
-        }
-
-      } catch (error) {
-        console.error('Error fetching RevenueCat data:', error)
-
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
-
-  const handleSelectPlan = (planId: string) => {
-    setSelectedPlan(planId)
-    console.log('Selected plan:', planId)
-  }
-
-  const handleSubscribe = async () => {
-    try {
-      setIsPurchasing(true)
-
-      // Find the selected package
-      const selectedPackage = packages.find(pkg => pkg.identifier === selectedPlan)
-
-      if (!selectedPackage) {
-        Alert.alert('Error', 'Selected plan not found. Using test purchase flow.')
-        // Even if package not found, proceed with test flow
-        await simulateTestPurchase()
-        return
-      }
-
-      console.log('Purchasing package:', selectedPackage.identifier)
-
-      // Make the purchase - this will trigger RevenueCat's test purchase screen
-      const { customerInfo } = await Purchases.purchasePackage(selectedPackage as any)
-
-      console.log('Purchase response:', JSON.stringify(customerInfo, null, 2))
-
-      // Check if purchase was successful - FIXED
-      await handlePurchaseResult(customerInfo)
-
-    } catch (error: any) {
-      console.error('Purchase error:', error)
-      await handlePurchaseError(error)
-    } finally {
-      setIsPurchasing(false)
-    }
-  }
-
-  const simulateTestPurchase = async () => {
-    // For testing when packages aren't loaded
-    console.log('Simulating test purchase flow')
-    await AsyncStorage.setItem("subscribe", "true")
-    navigator.navigate("DailyTrack")
-    Alert.alert(
-      'Test Mode',
-      'Purchase simulated successfully! In production, this would connect to RevenueCat.',
-      [{ text: 'OK', onPress: () => navigator.navigate("DailyTrack") }]
-    )
-  }
-
-  const handlePurchaseResult = async (customerInfo: any) => {
-    // Check if user now has premium entitlement - FIXED
-    const activeEntitlements = customerInfo.entitlements.active
-
-    if (activeEntitlements['FaceSclup․AI Pro'] || activeEntitlements['six_month'] || activeEntitlements['Pro']) {
-      await AsyncStorage.setItem("subscribe", "true")
-      Alert.alert(
-        'Success!',
-        'Your subscription has been activated. Welcome to FaceSculpt AI Premium!',
-        [{ text: 'Get Started', onPress: () => navigator.navigate("DailyTrack") }]
-      )
-    } else {
-      // Check for specific product identifier
-      const activeSubscriptions = customerInfo.activeSubscriptions
-      if (activeSubscriptions && activeSubscriptions.length > 0) {
-        await AsyncStorage.setItem("subscribe", "true")
-        Alert.alert(
-          'Success!',
-          'Your subscription has been activated!',
-          [{ text: 'Get Started', onPress: () => navigator.navigate("DailyTrack") }]
-        )
-      } else {
-        Alert.alert(
-          'Purchase Completed',
-          'Thank you for your purchase! Setting up your subscription...',
-          [{ text: 'OK', onPress: () => checkSubscriptionStatus() }]
-        )
-      }
-    }
-  }
-
-  const handlePurchaseError = async (error: any) => {
-    // User cancelled purchase
-    if (error.userCancelled) {
-      console.log('User cancelled purchase')
-      return
-    }
-
-    // Purchase failed
-    Alert.alert(
-      'Purchase Failed',
-      error.message || 'An error occurred during purchase. Please try again.'
-    )
-  }
-
-  const checkSubscriptionStatus = async () => {
-    try {
-      const currentCustomerInfo = await Purchases.getCustomerInfo()
-      console.log('Checking subscription status:', JSON.stringify(currentCustomerInfo, null, 2))
-
-      const activeEntitlements = currentCustomerInfo.entitlements.active
-
-      // Check all possible entitlement names
-      if (activeEntitlements['FaceSclup․AI Pro'] || activeEntitlements['premium'] || activeEntitlements['Pro']) {
-        console.log("Subscription active - navigating to DailyTrack")
-        await AsyncStorage.setItem("subscribe", "true")
-        navigator.navigate("DailyTrack")
-      } else if (currentCustomerInfo.activeSubscriptions && currentCustomerInfo.activeSubscriptions.length > 0) {
-        console.log("Active subscriptions found:", currentCustomerInfo.activeSubscriptions)
-        await AsyncStorage.setItem("subscribe", "true")
-        navigator.navigate("DailyTrack")
-      } else {
-        Alert.alert('Subscription Pending', 'Your subscription is being processed. Please wait a moment and try again.')
-      }
-    } catch (error) {
-      console.error('Error checking subscription status:', error)
-    }
-  }
-
-  const handleRestorePurchases = async () => {
-    try {
-      setIsLoading(true)
-      const restoreInfo = await Purchases.restorePurchases()
-      console.log('Restore info:', JSON.stringify(restoreInfo, null, 2))
-
-      const activeEntitlements = restoreInfo.entitlements.active
-
-      if (activeEntitlements['FaceSclup․AI Pro'] || activeEntitlements['premium'] || activeEntitlements['Pro']) {
-        await AsyncStorage.setItem("subscribe", "true")
-        Alert.alert('Success', 'Your purchases have been restored!')
-        navigator.navigate("DailyTrack")
-      } else if (restoreInfo.activeSubscriptions && restoreInfo.activeSubscriptions.length > 0) {
-        await AsyncStorage.setItem("subscribe", "true")
-        Alert.alert('Success', 'Your purchases have been restored!')
-        navigator.navigate("DailyTrack")
-      } else {
-        Alert.alert('No Active Subscription', 'No active subscription found to restore.')
-      }
-    } catch (error) {
-      console.error('Restore error:', error)
-      Alert.alert('Error', 'Failed to restore purchases. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Default plans for testing (matches your test purchase screen)
-  const defaultPlans = [
+  const plans = [
     {
-      id: '$rc_monthly',
+      id: 'monthly',
       title: 'Monthly',
       price: '$9.99/month',
       discount: '$14.99',
@@ -288,39 +82,58 @@ const UnlockFacialGym = () => {
     {
       id: 'sixmonthly',
       title: '6 Month Plan',
-      price: '$49.99/6 months',
+      price: '$69.99/6 months',
       discount: '$89.99',
       badge: 'Popular'
     },
     {
-      id: '$rc_annual',
+      id: 'yearly',
       title: 'Yearly',
-      price: '$79.99/year',
-      discount: '$119.99',
+      price: '$119.99/year',
+      discount: '$179.99',
       badge: ''
     }
   ]
 
-  // Use RevenueCat packages if available, otherwise use default test plans
-  const displayPlans = packages.length > 0
-    ? packages.map(pkg => ({
-      id: pkg.identifier,
-      title: pkg.product.title,
-      price: pkg.product.priceString,
-      discount: pkg.identifier.includes('MONTHLY') ? '' : '',
-      badge: pkg.identifier.includes('six_month') ? 'Most Popular' :
-        pkg.identifier.includes('annual') ? '' : ''
-    }))
-    : defaultPlans
+  const handleSelectPlan = (planId: string) => {
+    setSelectedPlan(planId)
+    console.log('Selected plan:', planId)
+  }
 
-  if (isLoading) {
-    return (
-      <SafeAreaView className="flex-1 bg-[#000000] justify-center items-center">
-        <StatusBar style='light' />
-        <ActivityIndicator size="large" color="#60A5FA" />
-        <Text className="text-white text-lg mt-4">Loading subscription plans...</Text>
-      </SafeAreaView>
-    )
+  const handleSubscribe = async () => {
+    try {
+      // Demo: Simulate successful subscription
+      await AsyncStorage.setItem("subscribe", "true")
+
+      Alert.alert(
+        'Success!',
+        'Your 7-day free trial has started. Welcome to FaceSculpt AI Premium!',
+        [{ text: 'Get Started', onPress: () => navigator.navigate("DailyTrack") }]
+      )
+    } catch (error) {
+      console.error('Error:', error)
+      Alert.alert('Error', 'Something went wrong. Please try again.')
+    }
+  }
+
+  const handleRestorePurchases = async () => {
+    try {
+      // Demo: Check if subscription exists in AsyncStorage
+      const subscribed = await AsyncStorage.getItem("subscribe")
+
+      if (subscribed === "true") {
+        Alert.alert(
+          'Success',
+          'Your purchases have been restored!',
+          [{ text: 'OK', onPress: () => navigator.navigate("DailyTrack") }]
+        )
+      } else {
+        Alert.alert('No Active Subscription', 'No active subscription found to restore.')
+      }
+    } catch (error) {
+      console.error('Restore error:', error)
+      Alert.alert('Error', 'Failed to restore purchases. Please try again.')
+    }
   }
 
   return (
@@ -365,7 +178,7 @@ const UnlockFacialGym = () => {
 
         <View className="mt-6">
           <Text className="text-white text-lg font-bold mb-2">Choose Your Plan:</Text>
-          {displayPlans.map((plan) => (
+          {plans.map((plan) => (
             <PlanItem
               key={plan.id}
               id={plan.id}
@@ -382,35 +195,29 @@ const UnlockFacialGym = () => {
         <View className="my-4">
           <TouchableOpacity
             onPress={handleSubscribe}
-            disabled={isPurchasing}
             activeOpacity={0.8}
             className="bg-[#60A5FA] p-5 rounded-xl flex-row gap-2 items-center justify-center"
           >
-            {isPurchasing ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text className="text-center text-white text-xl font-semibold">
-                Start Free 7-Day Trial
-              </Text>
-            )}
+            <Text className="text-center text-white text-xl font-semibold">
+              Start Free 7-Day Trial
+            </Text>
           </TouchableOpacity>
         </View>
 
         <Text className="text-white text-center text-base mb-4">
-          Try free for 7 days, then {displayPlans.find(p => p.id === selectedPlan)?.price || '$9.99/month'}. Cancel anytime.
+          Try free for 7 days, then {plans.find(p => p.id === selectedPlan)?.price || '$9.99/month'}. Cancel anytime.
         </Text>
 
         <View className="my-4">
           <TouchableOpacity
             onPress={handleRestorePurchases}
-            disabled={isLoading}
             className="py-3"
           >
             <Text className="text-[#60A5FA] text-lg font-medium">
               Restore Purchases
             </Text>
           </TouchableOpacity>
-          <Text className="text-gray-400 text-sm ">
+          <Text className="text-gray-400 text-sm">
             By continuing, you agree to our Terms of Service and Privacy Policy. Subscription automatically renews unless canceled at least 24 hours before the end of the current period.
           </Text>
         </View>

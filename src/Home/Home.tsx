@@ -1,4 +1,3 @@
-import { REVENUE_API } from '@env';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -7,8 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Platform, Text, View } from 'react-native';
-import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import { Alert, Image, Text, View } from 'react-native';
 import CustomButton from '../Components/CustomButton';
 import { Images } from '../constants';
 import { useNavigationReset } from '../lib/useNavigationReset';
@@ -23,39 +21,7 @@ const Home = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isOnline, setIsOnline] = useState(true);
 
-    useEffect(() => {
-        const configureRevenueCat = async () => {
-            try {
-                Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
 
-                // Add validation for API key
-                if (!REVENUE_API || REVENUE_API === '') {
-                    console.warn('RevenueCat API key is not configured');
-                    return;
-                }
-
-                // Configure based on platform
-                const configuration = {
-                    apiKey: REVENUE_API,
-                    // Add appUserID for better tracking (optional)
-                    appUserID: null // Let RevenueCat generate one
-                };
-
-                if (Platform.OS === 'ios') {
-                    await Purchases.configure(configuration);
-                } else if (Platform.OS === 'android') {
-                    await Purchases.configure(configuration);
-                }
-
-                console.log('RevenueCat configured successfully');
-
-            } catch (error) {
-                console.error('RevenueCat configuration failed:', error);
-            }
-        };
-
-        configureRevenueCat();
-    }, []);
 
     useNavigationReset();
 
@@ -89,6 +55,7 @@ const Home = () => {
 
         const handleOfflineMode = async () => {
             try {
+
                 const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
                 const user = await AsyncStorage.getItem("user");
                 const subscribe = await AsyncStorage.getItem("subscribe");
@@ -103,6 +70,7 @@ const Home = () => {
                         }
                     } else {
                         // No cached login data - stay on home screen
+                        navigator.replace("Auth");
                         setIsLoading(false);
                         Alert.alert(
                             "Offline Mode",
