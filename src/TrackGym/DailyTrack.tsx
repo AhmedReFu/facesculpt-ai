@@ -382,6 +382,8 @@ const DailyTrack = () => {
 
   useEffect(() => {
     loadDashboardData();
+
+
   }, []);
 
   const loadDashboardData = async () => {
@@ -391,11 +393,17 @@ const DailyTrack = () => {
 
       // Get access token
       const accessToken = await AsyncStorage.getItem('token');
+      const subscribe = await AsyncStorage.getItem("subscribe");
       const refreshToken = await AsyncStorage.getItem('refresh_token');
       setToken(accessToken);
 
       if (!accessToken) {
         navigation.navigate("Auth");
+        return;
+      }
+
+      if (!subscribe) {
+        navigation.navigate("UnlockFacialGym");
         return;
       }
 

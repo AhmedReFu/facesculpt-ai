@@ -1,4 +1,3 @@
-import { REVENUE_API_ANDROID, REVENUE_API_APPLE } from '@env';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,8 +13,6 @@ import { Images } from '../constants';
 import { useNavigationReset } from '../lib/useNavigationReset';
 import { RootStackParamList } from '../types/navigation';
 
-
-
 type ChooseGoalScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const Home = () => {
@@ -23,53 +20,36 @@ const Home = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isOnline, setIsOnline] = useState(true);
 
-
     useEffect(() => {
-        const configureRevenueCat = async () => {
-            try {
-                Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-                // Add validation for API key
-                if (!REVENUE_API_ANDROID || REVENUE_API_ANDROID === '' || !REVENUE_API_APPLE || REVENUE_API_APPLE === '') {
-                    console.warn('RevenueCat API key is not configured');
-                    return;
-                }
+        Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
 
-                // Configure based on platform
-
-
-                if (Platform.OS === 'android') {
-                    const configuration = {
-                        apiKey: REVENUE_API_APPLE,
-                        // Add appUserID for better tracking (optional)
-                        appUserID: null // Let RevenueCat generate one
-                    };
-                    await Purchases.configure(configuration);
-                } else if (Platform.OS === 'ios') {
-                    const configuration = {
-                        apiKey: REVENUE_API_APPLE,
-                        // Add appUserID for better tracking (optional)
-                        appUserID: null // Let RevenueCat generate one
-                    };
-                    await Purchases.configure(configuration);
-                }
-
-                console.log('RevenueCat configured successfully');
-
-            } catch (error) {
-                console.error('RevenueCat configuration failed:', error);
+        try {
+            if (Platform.OS === 'ios') {
+                Purchases.configure({
+                    apiKey: "goog_pZuivWeWkPuaNMFYnVvexWkfELI"
+                });
+            } else if (Platform.OS === 'android') {
+                Purchases.configure({
+                    apiKey: "goog_pZuivWeWkPuaNMFYnVvexWkfELI"
+                });
             }
-        };
-
-        configureRevenueCat();
+        } catch (error) {
+            console.log("Here is error from this part", error)
+        }
     }, []);
 
     useNavigationReset();
 
     useEffect(() => {
+
+
         const checkAuthAndNavigate = async () => {
             setIsLoading(true);
 
             try {
+                // Configure RevenueCat first (non-blocking)
+
+
                 const netState = await NetInfo.fetch();
                 setIsOnline(netState.isConnected as any);
 
@@ -95,7 +75,6 @@ const Home = () => {
 
         const handleOfflineMode = async () => {
             try {
-
                 const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
                 const user = await AsyncStorage.getItem("user");
                 const subscribe = await AsyncStorage.getItem("subscribe");

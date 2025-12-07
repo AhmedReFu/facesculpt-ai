@@ -209,10 +209,9 @@ const AuthScreen = () => {
 
                 setPassword('');
 
-                ToastAndroid.showWithGravity(
+                ToastAndroid.show(
                     'Sign in successfully ✓',
                     ToastAndroid.SHORT,
-                    ToastAndroid.CENTER,
                 );
 
                 const subscribe = await AsyncStorage.getItem('subscribe');
@@ -321,10 +320,9 @@ const AuthScreen = () => {
                     phone_number: number,
                 }));
 
-                ToastAndroid.showWithGravity(
+                ToastAndroid.show(
                     'Account created successfully! Please verify OTP.',
                     ToastAndroid.SHORT,
-                    ToastAndroid.CENTER,
                 );
 
                 setTimeout(() => {
@@ -391,7 +389,7 @@ const AuthScreen = () => {
                         className="flex-1"
                         contentContainerStyle={{
                             paddingHorizontal: 16,
-                            paddingBottom: Platform.OS === 'android' ? keyboardHeight + 20 : 40,
+                            paddingBottom: Platform.OS === 'android' ? keyboardHeight + 20 : 20,
                         }}
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"

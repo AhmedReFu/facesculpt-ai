@@ -7,7 +7,6 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Purchases from 'react-native-purchases';
 
 interface PlanProps {
   id: string
@@ -71,6 +70,7 @@ const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanP
 const UnlockFacialGym = () => {
   const navigator = useNavigation()
   const [selectedPlan, setSelectedPlan] = useState<string>('monthly')
+
 
   const plans = [
     {

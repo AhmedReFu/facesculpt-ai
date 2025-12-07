@@ -92,6 +92,9 @@ function RootStack() {
   const [showNoInternet, setShowNoInternet] = React.useState(false);
   const [isChecking, setIsChecking] = React.useState(true);
 
+
+
+
   // Check internet connection
   const checkConnection = React.useCallback(async () => {
     try {
