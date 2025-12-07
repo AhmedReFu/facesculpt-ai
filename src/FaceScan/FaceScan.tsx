@@ -1,7 +1,7 @@
 import { IMAGE_UPLOAD, IPA_BASE } from '@env';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { StatusBar } from 'expo-status-bar';
@@ -117,11 +117,7 @@ const FaceScan = () => {
 
                 if (response.ok && result.success) {
                     // Step 3: Navigate to FaceMetrics with the scan data
-                    (navigation as any).navigate('FaceMetrics', {
-                        imageUri: photo.uri,
-                        scanData: result.data.scan_data,
-                        fullResponse: result,
-                    });
+                    (navigation as any).navigate('FaceMetrics');
                 } else {
                     throw new Error(result.message || 'Upload failed');
                 }

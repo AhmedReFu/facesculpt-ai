@@ -169,7 +169,7 @@ const FaceCoach: React.FC = () => {
                 const data = JSON.parse(e.data);
                 console.log("📦 Parsed Data:", JSON.stringify(data, null, 2));
 
-                // Handle chat history: type="history", messages=[...]
+                // Handle initial chat history: type="history", messages=[...]
                 if (data.type === "history" && data.messages && Array.isArray(data.messages)) {
                     console.log(`✅ Received history with ${data.messages.length} messages`);
 
@@ -189,8 +189,41 @@ const FaceCoach: React.FC = () => {
                     setMessages(historyMessages);
                     setIsLoadingHistory(false);
                     setIsTyping(false);
-                } else {
+                }
+                // Handle real-time messages (AI responses)
+                else if (data.sender && data.message) {
+                    console.log("💬 Real-time message received:", data.sender);
+
+                    // Only add AI messages here (user messages already added in sendMessage)
+                    if (data.sender === "AI") {
+                        const newMessage: Message = {
+                            id: `msg-${Date.now()}-${Math.random()}`,
+                            text: data.message,
+                            isUser: false,
+                            timestamp: new Date(data.created_at || new Date()),
+                        };
+
+                        setMessages(prev => [...prev, newMessage]);
+                        setIsTyping(false);
+                    }
+                }
+                // Fallback: try to handle any AI message
+                else if (data.message) {
+                    console.log("📩 Generic AI message received");
+
+                    const newMessage: Message = {
+                        id: `msg-${Date.now()}-${Math.random()}`,
+                        text: data.message,
+                        isUser: false,
+                        timestamp: new Date(),
+                    };
+
+                    setMessages(prev => [...prev, newMessage]);
+                    setIsTyping(false);
+                }
+                else {
                     console.log("⚠️ Unexpected data format:", data);
+                    setIsTyping(false);
                 }
             } catch (error) {
                 console.error('❌ Error parsing WebSocket message:', error);
@@ -231,12 +264,25 @@ const FaceCoach: React.FC = () => {
 
     const sendMessage = () => {
         if (wsRef.current?.readyState === WebSocket.OPEN && inputText.trim()) {
-            console.log("📤 Sending message:", inputText.trim());
+            const messageText = inputText.trim();
+            console.log("📤 Sending message:", messageText);
+
+            // Immediately add user message to UI
+            const userMessage: Message = {
+                id: `msg-${Date.now()}-user`,
+                text: messageText,
+                isUser: true,
+                timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, userMessage]);
+
+            // Clear input and show typing indicator
             setInputText('');
             setIsTyping(true);
 
+            // Send to server
             const payload = JSON.stringify({
-                message: inputText.trim(),
+                message: messageText,
             });
 
             wsRef.current.send(payload);
@@ -248,8 +294,20 @@ const FaceCoach: React.FC = () => {
     const handleSuggestedQuestion = (text: string) => {
         if (wsRef.current?.readyState === WebSocket.OPEN && text.trim()) {
             console.log("📤 Sending suggested question:", text);
+
+            // Immediately add user message to UI
+            const userMessage: Message = {
+                id: `msg-${Date.now()}-user`,
+                text: text,
+                isUser: true,
+                timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, userMessage]);
+
+            // Show typing indicator
             setIsTyping(true);
 
+            // Send to server
             const payload = JSON.stringify({
                 message: text.trim(),
             });
@@ -385,6 +443,7 @@ const FaceCoach: React.FC = () => {
                             multiline
                             maxLength={500}
                             editable={isConnected && !isTyping}
+                            onSubmitEditing={sendMessage}
                         />
                         <TouchableOpacity
                             onPress={sendMessage}

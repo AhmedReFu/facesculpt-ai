@@ -1,12 +1,13 @@
 import { IPA_BASE, LOGIN, REGISTER } from '@env';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Image,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -50,14 +51,67 @@ const AuthScreen = () => {
     const [password, setPassword] = useState('');
 
     const [isReady, setIsReady] = useState(false);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+    // Refs for ScrollView and TextInputs
+    const scrollViewRef = useRef<ScrollView>(null);
+    const nameInputRef = useRef<TextInput>(null);
+    const numberInputRef = useRef<TextInput>(null);
+    const passwordInputRef = useRef<TextInput>(null);
 
     useBackHandler();
 
+    // Initial setup
     useEffect(() => {
         const timer = setTimeout(() => {
             setIsReady(true);
         }, 100);
         return () => clearTimeout(timer);
+    }, []);
+
+    // Load remembered number every time screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            const loadRememberedNumber = async () => {
+                try {
+                    const savedNumber = await AsyncStorage.getItem("rememberedNumber");
+                    console.log('📱 Loaded remembered number:', savedNumber);
+                    if (savedNumber) {
+                        setNumber(savedNumber);
+                        setRememberMe(true);
+                        console.log('✅ Number pre-filled:', savedNumber);
+                    } else {
+                        console.log('ℹ️ No remembered number found');
+                    }
+                } catch (error) {
+                    console.error('❌ Error loading remembered number:', error);
+                }
+            };
+
+            loadRememberedNumber();
+        }, [])
+    );
+
+    // Keyboard listeners for auto-scroll
+    useEffect(() => {
+        const keyboardWillShowListener = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            (e) => {
+                setKeyboardHeight(e.endCoordinates.height);
+            }
+        );
+
+        const keyboardWillHideListener = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            () => {
+                setKeyboardHeight(0);
+            }
+        );
+
+        return () => {
+            keyboardWillShowListener.remove();
+            keyboardWillHideListener.remove();
+        };
     }, []);
 
     if (!isReady) {
@@ -70,9 +124,20 @@ const AuthScreen = () => {
 
     const allNumberRegex = /^\+[1-9]\d{1,14}$/;
 
+    // Scroll to input when focused
+    const scrollToInput = (inputRef: React.RefObject<TextInput | null>) => {
+        setTimeout(() => {
+            inputRef.current?.measure((fx, fy, width, height, px, py) => {
+                scrollViewRef.current?.scrollTo({
+                    y: py - 40, // Offset to show input comfortably above keyboard
+                    animated: true,
+                });
+            });
+        }, 100);
+    };
+
     // ============ API Sign In Handler ============
     const handleSignIn = async () => {
-
         if (!number || !password) {
             ToastAndroid.showWithGravity(
                 'Please enter phone number and password.',
@@ -82,7 +147,6 @@ const AuthScreen = () => {
             return;
         }
 
-        // Validate phone number format
         if (!allNumberRegex.test(number)) {
             ToastAndroid.showWithGravity(
                 'Please enter a valid phone number with country code (e.g., +19844864234).',
@@ -92,7 +156,6 @@ const AuthScreen = () => {
             return;
         }
 
-        // Validate password length
         if (password.length < 6) {
             ToastAndroid.showWithGravity(
                 'Password must be at least 6 characters long.',
@@ -112,7 +175,6 @@ const AuthScreen = () => {
 
             console.log('Login payload:', loginPayload);
 
-            // Call Login API
             const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.LOGIN}`, {
                 method: 'POST',
                 headers: {
@@ -125,7 +187,16 @@ const AuthScreen = () => {
             console.log('Login response:', data);
 
             if (response.ok && data.success) {
-                // Store tokens and user data
+                // Save or remove remembered number based on checkbox
+                console.log('💾 Remember Me status:', rememberMe);
+                if (rememberMe) {
+                    await AsyncStorage.setItem("rememberedNumber", number);
+                    console.log('✅ Number saved:', number);
+                } else {
+                    await AsyncStorage.removeItem("rememberedNumber");
+                    console.log('🗑️ Number removed from storage');
+                }
+
                 await AsyncStorage.setItem('token', data.data.token);
                 console.log('Token saved:', data.data.token);
                 await AsyncStorage.setItem('refresh_token', data.data.refresh_token);
@@ -136,8 +207,6 @@ const AuthScreen = () => {
                     timestamp: data.timestamp,
                 }));
 
-                // Clear inputs
-                setNumber('');
                 setPassword('');
 
                 ToastAndroid.showWithGravity(
@@ -146,7 +215,6 @@ const AuthScreen = () => {
                     ToastAndroid.CENTER,
                 );
 
-                // Navigate based on subscription status
                 const subscribe = await AsyncStorage.getItem('subscribe');
                 console.log('Subscribe status:', subscribe);
 
@@ -159,7 +227,6 @@ const AuthScreen = () => {
                 }, 1000);
 
             } else {
-                // Handle API error response
                 const errorMessage = data.message || 'Invalid phone number or password.';
                 ToastAndroid.showWithGravity(
                     errorMessage,
@@ -190,7 +257,6 @@ const AuthScreen = () => {
             return;
         }
 
-        // Name validation
         if (name.trim().length < 2) {
             ToastAndroid.showWithGravity(
                 'Please enter a valid name (at least 2 characters).',
@@ -200,7 +266,6 @@ const AuthScreen = () => {
             return;
         }
 
-        // Mobile number validation
         if (!allNumberRegex.test(number)) {
             ToastAndroid.showWithGravity(
                 'Please enter a valid phone number with country code (e.g., +19844864234).',
@@ -210,7 +275,6 @@ const AuthScreen = () => {
             return;
         }
 
-        // Password validation
         if (password.length < 6) {
             ToastAndroid.showWithGravity(
                 'Password must be at least 6 characters long.',
@@ -232,7 +296,6 @@ const AuthScreen = () => {
         setIsLoading(true);
 
         try {
-            // Prepare signup payload matching API format
             const signupPayload = {
                 phone_number: number.trim(),
                 name: name.trim(),
@@ -241,7 +304,6 @@ const AuthScreen = () => {
 
             console.log('Signup payload:', signupPayload);
 
-            // Call Register API
             const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.REGISTER}`, {
                 method: 'POST',
                 headers: {
@@ -254,7 +316,6 @@ const AuthScreen = () => {
             console.log('Signup response:', data);
 
             if (response.ok && data.success) {
-                // Store user data temporarily for OTP verification
                 await AsyncStorage.setItem('tempUser', JSON.stringify({
                     name: name.trim(),
                     phone_number: number,
@@ -266,7 +327,6 @@ const AuthScreen = () => {
                     ToastAndroid.CENTER,
                 );
 
-                // Navigate to OTP screen with phone number
                 setTimeout(() => {
                     navigator.navigate('OtpAuth', {
                         phone_number: number,
@@ -275,14 +335,12 @@ const AuthScreen = () => {
                     });
                 }, 500);
 
-                // Clear inputs after navigation
                 setName('');
                 setNumber('');
                 setPassword('');
                 setAgreeTerms(false);
 
             } else {
-                // Handle API error response
                 const errorMessage = data.message || 'Sign up failed. Please try again.';
                 ToastAndroid.showWithGravity(
                     errorMessage,
@@ -306,10 +364,12 @@ const AuthScreen = () => {
         navigator.navigate('ResetPassword');
     };
 
-    // Clear form when switching tabs
     const switchTab = (tab: 'signin' | 'signup') => {
         setActiveTab(tab);
-        setNumber('');
+        // Don't clear number if switching to signin and it's remembered
+        if (tab === 'signup') {
+            setNumber('');
+        }
         setPassword('');
         setName('');
         if (tab === 'signin') {
@@ -319,17 +379,22 @@ const AuthScreen = () => {
 
     return (
         <SafeAreaProvider>
-            <SafeAreaView className="flex-1 bg-[#000000]">
+            <SafeAreaView className="flex-1 bg-[#000000]" edges={['top']}>
                 <StatusBar barStyle="light-content" />
-
                 <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     className="flex-1"
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
                 >
                     <ScrollView
-                        className="flex-1 px-4"
+                        ref={scrollViewRef}
+                        className="flex-1"
+                        contentContainerStyle={{
+                            paddingHorizontal: 16,
+                            paddingBottom: Platform.OS === 'android' ? keyboardHeight + 20 : 40,
+                        }}
                         showsVerticalScrollIndicator={false}
-                        contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-start' }}
+                        keyboardShouldPersistTaps="handled"
                     >
                         {/* Logo */}
                         <View className="items-center my-20">
@@ -344,7 +409,7 @@ const AuthScreen = () => {
                                 onPress={() => switchTab('signin')}
                                 disabled={isLoading}
                             >
-                                <Text className={`text-lg font-bold text-white`}>
+                                <Text className="text-lg font-bold text-white">
                                     Sign In
                                 </Text>
                             </TouchableOpacity>
@@ -354,7 +419,7 @@ const AuthScreen = () => {
                                 onPress={() => switchTab('signup')}
                                 disabled={isLoading}
                             >
-                                <Text className={`text-lg font-bold text-white`}>
+                                <Text className="text-lg font-bold text-white">
                                     Sign Up
                                 </Text>
                             </TouchableOpacity>
@@ -373,12 +438,13 @@ const AuthScreen = () => {
                         </View>
 
                         {/* Form Container */}
-                        <View className="space-y-6">
+                        <View>
                             {/* Name Input - Only for Sign Up */}
                             {activeTab === 'signup' && (
-                                <View className="space-y-3">
-                                    <Text className="text-lg font-semibold text-white">Name</Text>
+                                <View className="mb-4">
+                                    <Text className="text-lg font-semibold text-white mb-3">Name</Text>
                                     <TextInput
+                                        ref={nameInputRef}
                                         className="bg-transparent border-2 border-gray-600 rounded-xl px-4 py-4 text-lg text-white"
                                         placeholder="Enter your name"
                                         placeholderTextColor="#6B7280"
@@ -386,16 +452,18 @@ const AuthScreen = () => {
                                         onChangeText={setName}
                                         autoCapitalize="words"
                                         editable={!isLoading}
+                                        onFocus={() => scrollToInput(nameInputRef)}
                                     />
                                 </View>
                             )}
 
                             {/* Phone Number Input */}
-                            <View className="my-4">
-                                <Text className="text-lg font-semibold text-white">
+                            <View className="mb-4">
+                                <Text className="text-lg font-semibold text-white mb-3">
                                     Phone Number
                                 </Text>
                                 <TextInput
+                                    ref={numberInputRef}
                                     className="bg-transparent border-2 border-gray-600 rounded-xl px-4 py-4 text-lg text-white"
                                     placeholder="e.g., +19844864234 with country code"
                                     placeholderTextColor="#6B7280"
@@ -404,15 +472,17 @@ const AuthScreen = () => {
                                     keyboardType="phone-pad"
                                     autoCapitalize="none"
                                     editable={!isLoading}
+                                    onFocus={() => scrollToInput(numberInputRef)}
                                 />
                             </View>
 
                             {/* Password Input */}
-                            <View className="space-y-6">
-                                <Text className="text-base font-semibold text-white">Password</Text>
+                            <View className="mb-4">
+                                <Text className="text-lg font-semibold text-white mb-3">Password</Text>
                                 <View className="relative">
                                     <TextInput
-                                        className="bg-transparent border-2 border-gray-600 rounded-xl px-4 py-4 text-base text-white pr-12"
+                                        ref={passwordInputRef}
+                                        className="bg-transparent border-2 border-gray-600 rounded-xl px-4 py-4 text-lg text-white pr-12"
                                         placeholder="••••••••"
                                         placeholderTextColor="#6B7280"
                                         value={password}
@@ -421,9 +491,10 @@ const AuthScreen = () => {
                                         autoCapitalize="none"
                                         autoComplete="password"
                                         editable={!isLoading}
+                                        onFocus={() => scrollToInput(passwordInputRef)}
                                     />
                                     <TouchableOpacity
-                                        className="absolute right-4 top-4"
+                                        className="absolute right-4 top-5"
                                         onPress={() => setShowPassword(!showPassword)}
                                         disabled={isLoading}
                                     >
@@ -438,24 +509,24 @@ const AuthScreen = () => {
 
                             {/* Sign In Specific Options */}
                             {activeTab === 'signin' && (
-                                <View className="flex-row justify-between items-start my-4">
+                                <View className="flex-row justify-between items-start mb-6">
                                     <TouchableOpacity
-                                        className="flex-row items-center space-x-3"
+                                        className="flex-row items-center"
                                         onPress={() => setRememberMe(!rememberMe)}
                                         disabled={isLoading}
                                     >
                                         <View
-                                            className={`w-7 h-7 mr-2 border-2 rounded items-center justify-center ${rememberMe ? 'bg-blue-400 border-blue-400' : 'border-gray-600'
+                                            className={`w-6 h-6 mr-2 border-2 rounded items-center justify-center ${rememberMe ? 'bg-blue-400 border-blue-400' : 'border-gray-600'
                                                 }`}
                                         >
                                             {rememberMe && (
-                                                <Ionicons name="checkmark" size={20} color="#fff" />
+                                                <Ionicons name="checkmark" size={18} color="#fff" />
                                             )}
                                         </View>
-                                        <Text className="text-lg text-gray-400">Remember Me</Text>
+                                        <Text className="text-base text-gray-400">Remember Me</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity onPress={handleForgotPassword} disabled={isLoading}>
-                                        <Text className="text-lg text-red-500 font-semibold">
+                                        <Text className="text-base text-red-500 font-semibold">
                                             Forgot Password?
                                         </Text>
                                     </TouchableOpacity>
@@ -465,19 +536,19 @@ const AuthScreen = () => {
                             {/* Sign Up Specific Options */}
                             {activeTab === 'signup' && (
                                 <TouchableOpacity
-                                    className="flex-row items-center my-4"
+                                    className="flex-row items-start mb-6"
                                     onPress={() => setAgreeTerms(!agreeTerms)}
                                     disabled={isLoading}
                                 >
                                     <View
-                                        className={`w-7 h-7 border-2 rounded items-center justify-center mr-2 ${agreeTerms ? 'bg-blue-400 border-blue-400' : 'border-gray-600'
+                                        className={`w-6 h-6 border-2 rounded items-center justify-center mr-2 mt-0.5 ${agreeTerms ? 'bg-blue-400 border-blue-400' : 'border-gray-600'
                                             }`}
                                     >
                                         {agreeTerms && (
-                                            <Ionicons name="checkmark" size={20} color="#fff" />
+                                            <Ionicons name="checkmark" size={18} color="#fff" />
                                         )}
                                     </View>
-                                    <Text className="text-md text-gray-400 font-semibold">
+                                    <Text className="text-sm text-gray-400 flex-1 leading-5">
                                         I agree to the Terms & Conditions and Privacy Policy
                                     </Text>
                                 </TouchableOpacity>
@@ -485,7 +556,7 @@ const AuthScreen = () => {
 
                             {/* Submit Button */}
                             <TouchableOpacity
-                                className={`py-5 rounded-xl items-center mt-2 ${isLoading || (activeTab === 'signin' ? !isSignInValid : !isSignUpValid)
+                                className={`py-5 rounded-xl items-center mb-8 ${isLoading || (activeTab === 'signin' ? !isSignInValid : !isSignUpValid)
                                     ? 'bg-gray-700 opacity-60'
                                     : 'bg-blue-400'
                                     }`}
@@ -502,9 +573,6 @@ const AuthScreen = () => {
                                 )}
                             </TouchableOpacity>
                         </View>
-
-                        {/* Bottom Spacer */}
-                        <View className="h-8" />
                     </ScrollView>
                 </KeyboardAvoidingView>
             </SafeAreaView>

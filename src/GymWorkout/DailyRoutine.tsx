@@ -1,4 +1,4 @@
-// screens/DailyRoutine.tsx - OPTIMIZED VERSION
+// screens/DailyRoutine.tsx - UPDATED
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -41,7 +41,6 @@ const DailyRoutine = () => {
     };
 
     const handleBackPress = async () => {
-        // await AsyncStorage.removeItem("subscribe");
         navigation.goBack();
     };
 
@@ -50,7 +49,6 @@ const DailyRoutine = () => {
     const completedExercises = exercises.filter(ex => ex.completed).length;
     const progressPercentage = exercises.length > 0 ? (completedExercises / exercises.length) * 100 : 0;
 
-    // Loading State
     if (loading) {
         return (
             <View className="flex-1 bg-[#000000] justify-center items-center">
@@ -60,7 +58,6 @@ const DailyRoutine = () => {
         );
     }
 
-    // No exercises state
     if (exercises.length === 0) {
         return (
             <View className="flex-1 bg-[#000000] px-4">
@@ -115,7 +112,6 @@ const DailyRoutine = () => {
                     Personalized from your latest scan.
                 </Text>
 
-                {/* Progress Bar */}
                 <View className="bg-[#1D2229] rounded-full h-2 mt-4 mb-6">
                     <View
                         className="bg-[#60A5FB] h-2 rounded-full"
@@ -123,7 +119,6 @@ const DailyRoutine = () => {
                     />
                 </View>
 
-                {/* Completion Badge */}
                 {allCompleted && (
                     <View className="bg-[#1a3a2d] border border-[#4ade80] rounded-xl p-4 mb-4 flex-row items-center">
                         <Ionicons name="checkmark-circle" size={24} color="#4ade80" />
@@ -137,7 +132,6 @@ const DailyRoutine = () => {
                     className="flex-1"
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* Info Card */}
                     <View className="flex-row bg-[#1D2229] rounded-xl p-4 my-3">
                         <MaterialIcons name="auto-awesome" size={28} color="#60A5FB" className="mt-1" />
                         <View className="flex-1 ml-3">
@@ -147,7 +141,6 @@ const DailyRoutine = () => {
                         </View>
                     </View>
 
-                    {/* Exercise List */}
                     {exercises.map((exercise, index) => (
                         <TouchableOpacity
                             key={exercise.id}
@@ -183,8 +176,8 @@ const DailyRoutine = () => {
                                         `}>
                                             {exercise.name}
                                         </Text>
-                                        <Text className="text-[#9CA3AF] text-lg mt-1">
-                                            {exercise.duration} {exercise.completed ? '✓' : ''}
+                                        <Text className="text-[#9CA3AF] text-base mt-1">
+                                            {exercise.displayText}   {exercise.sets} sets {exercise.completed ? '✓' : ''}
                                         </Text>
                                     </View>
                                 </View>
