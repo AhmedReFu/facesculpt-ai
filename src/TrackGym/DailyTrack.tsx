@@ -391,6 +391,7 @@ const DailyTrack = () => {
 
       // Get access token
       const accessToken = await AsyncStorage.getItem('token');
+      const refreshToken = await AsyncStorage.getItem('refresh_token');
       setToken(accessToken);
 
       if (!accessToken) {
@@ -414,7 +415,7 @@ const DailyTrack = () => {
       });
 
       const result = await response.json();
-      console.log('Dashboard API Response:', result);
+      // console.log('Dashboard API Response:', result);
 
       // Handle 401 - Token expired
       if (response.status === 401) {
@@ -521,8 +522,24 @@ const DailyTrack = () => {
 
       <ScrollView style={tw`flex-1`} contentContainerStyle={{ paddingBottom: 4 }} showsVerticalScrollIndicator={false}>
         <View style={tw`pt-2`}>
+          {/* Action Buttons */}
+          <View style={tw`bg-[#000000] my -4`}>
+            <View style={tw`flex-row gap-4`}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("DailyRoutine")}
+                style={tw`flex-1 bg-[#60A5FB] py-5 rounded-2xl`}>
+                <Text style={tw`text-white font-bold text-center text-base`}>Start Today's Session</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("FaceScan")}
+                style={tw`flex-1 bg-[#1C1E26] border border-white/20 py-5 rounded-2xl`}>
+                <Text style={tw`text-white font-bold text-center text-base`}>Check-in Scan</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* Header */}
-          <Text style={tw`text-white text-2xl font-bold mb-4`}>{dashboardData.badges}!</Text>
+          <Text style={tw`text-white text-2xl font-bold my-4`}>{dashboardData.badges}!</Text>
 
           {/* Streak Badge */}
           <View style={tw`bg-[#1E2532] p-3 rounded-full flex-row items-center self-start`}>
@@ -531,6 +548,8 @@ const DailyTrack = () => {
               Streak: {dashboardData.streak_days} days
             </Text>
           </View>
+
+
 
           {/* Goal Progress Card */}
           <View style={tw`mt-5 bg-[#181C22] rounded-3xl p-5`}>
@@ -578,8 +597,9 @@ const DailyTrack = () => {
             </View>
 
           )}
+
           {/* Leaderboard */}
-          <View style={tw`my-5 bg-[#181C22] rounded-3xl p-5`}>
+          <View style={tw`my-5 bg-[#181C22] rounded-3xl p-5 mb-20`}>
             <View style={tw`flex-row items-center justify-between mb-4`}>
               <View style={tw`flex-row items-center`}>
                 <FontAwesome6 name="chart-simple" size={24} color="#60A5FB" />
@@ -605,22 +625,6 @@ const DailyTrack = () => {
               <LeaderboardEntry key={entry.rank} entry={entry} />
             ))}
           </View>
-
-          {/* Bottom Buttons */}
-          <View style={tw`bg-[#000000] mt-16`}>
-            <View style={tw`flex-row gap-4`}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate("DailyRoutine")}
-                style={tw`flex-1 bg-[#60A5FB] py-5 rounded-2xl`}>
-                <Text style={tw`text-white font-bold text-center text-base`}>Start Today's Session</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => navigation.navigate("FaceScan")}
-                style={tw`flex-1 bg-[#1C1E26] border border-white/20 py-5 rounded-2xl`}>
-                <Text style={tw`text-white font-bold text-center text-base`}>Check-in Scan</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
       </ScrollView>
 
@@ -629,11 +633,11 @@ const DailyTrack = () => {
         <TouchableOpacity
           onPress={handleFaceCoachPress}
           style={[
-            tw`absolute bottom-20 right-0 px-4 py-4 rounded-2xl flex-row items-center justify-center`,
+            tw`absolute bottom-4 right-0 px-4 py-3 rounded-2xl flex-row items-center justify-center`,
             {
-              backgroundColor: 'rgba(0,0,0, 0.20',
+              backgroundColor: '#000000',
               borderColor: 'rgba(255, 255, 255, 0.30)',
-              borderWidth: 1,
+              borderWidth: 2
             }
           ]}
           activeOpacity={0.8}

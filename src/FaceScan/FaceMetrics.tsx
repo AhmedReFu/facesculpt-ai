@@ -1,17 +1,25 @@
+import { IMAGE_UPLOAD, IPA_BASE } from '@env';
 import { Ionicons } from '@expo/vector-icons';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from "twrnc";
 import CustomButton from '../Components/CustomButton';
 
+const API_BASE_URL = IPA_BASE;
+const API_ENDPOINTS = {
+    IMAGE_UPLOAD: IMAGE_UPLOAD,
+};
+
 type RootStackParamList = {
     DailyTrack: undefined;
     ChooseGoal: undefined;
+    Auth: undefined;
 };
 
 type FaceMetricsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -19,6 +27,8 @@ type FaceMetricsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 interface ScanData {
     id: number;
     image: string;
+    status: string;
+    error_message: string;
     jawline_angle: number;
     symmetry_score: number;
     puffiness_index: number;
@@ -32,13 +42,72 @@ interface RouteParams {
 }
 
 const FaceMetrics = () => {
-    const navigator = useNavigation<FaceMetricsScreenNavigationProp>();
-    const route = useRoute();
-    const params = route.params as RouteParams;
+    const navigation = useNavigation<FaceMetricsScreenNavigationProp>();
+    const [scanData, setScanData] = useState<ScanData>();
 
     // Extract scan data from route params
+    useEffect(() => {
+        getImageData();
+    }, [])
 
-    const scanData = params?.scanData;
+    const getImageData = async () => {
+        try {
+
+
+            // Get access token from AsyncStorage
+            const accessToken = await AsyncStorage.getItem('token');
+
+            if (!accessToken) {
+                Alert.alert(
+                    'Authentication Required',
+                    'Please log in to continue',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => (navigation as any).replace('Login')
+                        }
+                    ]
+                );
+                return;
+            }
+
+            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.IMAGE_UPLOAD}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'multipart/form-data',
+                },
+
+            });
+
+            const result = await response.json();
+            console.log('Dashboard API Response:', result);
+            // Handle 401 - Token expired
+            if (response.status === 401) {
+                await AsyncStorage.removeItem('token');
+                Alert.alert(
+                    'Session Expired',
+                    'Please log in again',
+                    [{ text: 'OK', onPress: () => navigation.navigate('Auth') }]
+                );
+                return;
+            }
+
+            if (response.ok && result.success) {
+                const apiData: ScanData = result.data;
+                setScanData(apiData);
+
+
+
+            } else {
+                throw new Error(result.message || 'Failed to load dashboard');
+            }
+
+        } catch (error) {
+
+        }
+    }
+
 
     // Use scan data or default values
     const jawlineAngle = scanData?.jawline_angle || 0;
@@ -74,7 +143,7 @@ const FaceMetrics = () => {
                     <View style={tw`flex-row justify-between`}>
                         <Text style={tw`text-white text-3xl font-bold`}>Face Metrics</Text>
                         <TouchableOpacity
-                            onPress={() => navigator.replace("DailyTrack")}
+                            onPress={() => navigation.replace("DailyTrack")}
                         >
                             <Ionicons name="close" size={34} color="white" />
                         </TouchableOpacity>

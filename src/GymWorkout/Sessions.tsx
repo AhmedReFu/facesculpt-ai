@@ -1,4 +1,4 @@
-// screens/Sessions.tsx
+// screens/Sessions.tsx - UPDATED
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { CommonActions, RouteProp, useNavigation, useRoute } from '@react-navigation/native';
@@ -32,7 +32,7 @@ const Sessions = () => {
     const exercise = exercises.find(ex => ex.id === exerciseId) || getCurrentExercise();
 
     // Timer states for duration-based exercises
-    const [timeLeft, setTimeLeft] = useState(exercise?.durationInSeconds || 10);
+    const [timeLeft, setTimeLeft] = useState(exercise?.duration || 0);
     const [isRunning, setIsRunning] = useState(false);
     const [isCompleted, setIsCompleted] = useState(exercise?.completed || false);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -42,15 +42,15 @@ const Sessions = () => {
     useEffect(() => {
         if (exercise) {
             setIsCompleted(exercise.completed);
-            if (!exercise.reps && !exercise.completed) {
-                setTimeLeft(exercise.durationInSeconds);
+            if (!exercise.isRepBased && !exercise.completed) {
+                setTimeLeft(exercise.duration);
             }
         }
     }, [exercise]);
 
     // Timer effect for duration-based exercises
     useEffect(() => {
-        if (!exercise?.reps && isRunning && timeLeft > 0 && !isCompleted) {
+        if (!exercise?.isRepBased && isRunning && timeLeft > 0 && !isCompleted) {
             intervalRef.current = setInterval(() => {
                 setTimeLeft((prev) => {
                     if (prev <= 1) {
@@ -71,15 +71,15 @@ const Sessions = () => {
                 clearInterval(intervalRef.current);
             }
         };
-    }, [isRunning, timeLeft, exercise?.reps, isCompleted]);
+    }, [isRunning, timeLeft, exercise?.isRepBased, isCompleted]);
 
     // Handle auto-complete when timer reaches 0
     useEffect(() => {
-        if (timeLeft === 0 && !isCompleted && !exercise?.reps && isRunning) {
+        if (timeLeft === 0 && !isCompleted && !exercise?.isRepBased && isRunning) {
             setIsRunning(false);
             handleAutoComplete();
         }
-    }, [timeLeft, isCompleted, exercise?.reps, isRunning]);
+    }, [timeLeft, isCompleted, exercise?.isRepBased, isRunning]);
 
     const handleAutoComplete = () => {
         if (exercise && !exercise.completed) {
@@ -91,11 +91,11 @@ const Sessions = () => {
     const handleStartPause = () => {
         if (isProcessing) return;
 
-        if (exercise?.reps) {
+        if (exercise?.isRepBased) {
             handleNextExercise();
         } else {
             if (timeLeft === 0) {
-                setTimeLeft(exercise?.durationInSeconds || 10);
+                setTimeLeft(exercise?.duration || 0);
                 setIsCompleted(false);
             }
             setIsRunning(!isRunning);
@@ -104,7 +104,7 @@ const Sessions = () => {
 
     const handleReset = () => {
         setIsRunning(false);
-        setTimeLeft(exercise?.durationInSeconds || 10);
+        setTimeLeft(exercise?.duration || 0);
         setIsCompleted(false);
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
@@ -138,7 +138,6 @@ const Sessions = () => {
                         ],
                     })
                 );
-
             } else {
                 moveToNextExercise();
                 const nextExercise = getCurrentExercise();
@@ -210,14 +209,13 @@ const Sessions = () => {
         );
     }
 
-    const isDurationBased = !exercise.reps;
+    const isDurationBased = !exercise.isRepBased;
     const showCompletedState = isCompleted || exercise.completed;
 
     return (
-        <View className="flex-1 bg-[#000000]">
+        <View className="flex-1 bg-[#000000] px-4">
             <StatusBar style='light' />
 
-            {/* Header */}
             <View className="pt-12 pb-4 bg-[#000000]">
                 <View className="flex-row items-center py-4">
                     <TouchableOpacity
@@ -234,20 +232,17 @@ const Sessions = () => {
             </View>
 
             <ScrollView
-                className="flex-1 px-4 bg-[#000000]"
+                className="flex-1  bg-[#000000]"
                 showsVerticalScrollIndicator={false}
             >
-                {/* Exercise Title */}
                 <Text className="text-white text-2xl font-bold mb-3">
                     {exercise.name}
                 </Text>
 
-                {/* Description */}
                 <Text className="text-[#9CA3AF] text-base mb-6 leading-6">
                     {exercise.description}
                 </Text>
 
-                {/* How to do it */}
                 <Text className="text-white text-base font-semibold mb-3">
                     How to do it
                 </Text>
@@ -257,8 +252,6 @@ const Sessions = () => {
                         <InstructionItem key={index} text={instruction} />
                     ))}
                 </View>
-
-                {/* DIFFERENT DISPLAYS BASED ON EXERCISE TYPE */}
 
                 {/* Duration-based Exercise Display (with Timer) */}
                 {isDurationBased && (
@@ -279,23 +272,26 @@ const Sessions = () => {
                             {showCompletedState ? 'Done!' : `${timeLeft}s`}
                         </Text>
 
-                        <Text className="text-[#9CA3AF] text-lg mb-4">
+                        <Text className="text-[#9CA3AF] text-base mb-2">
                             {showCompletedState ? 'Completed!' : timeLeft === 0 ? 'Completed!' : isRunning ? 'Running...' : 'Ready to start'}
                         </Text>
 
-                        {/* Reset Button - Only show if not completed */}
-                        {!showCompletedState && (isRunning || timeLeft !== exercise.durationInSeconds) && (
+                        <Text className="text-[#60A5FB] text-xl">
+                            {exercise.sets} sets
+                        </Text>
+
+                        {!showCompletedState && (isRunning || timeLeft !== exercise.duration) && (
                             <TouchableOpacity
                                 onPress={handleReset}
                                 className="mt-2"
                             >
-                                <Text className="text-[#60A5FB] text-sm">Reset</Text>
+                                <Text className="text-[#60A5FB] text-base">Reset</Text>
                             </TouchableOpacity>
                         )}
                     </View>
                 )}
 
-                {/* Reps-based Exercise Display (Simple) */}
+                {/* Reps-based Exercise Display */}
                 {!isDurationBased && (
                     <View className="bg-[#252b33] rounded-3xl p-8 items-center mb-6">
                         <View className="rounded-full mb-4">
@@ -307,14 +303,18 @@ const Sessions = () => {
                         </View>
 
                         <Text className={`
-                            text-white text-lg font-bold mb-2
+                            text-white text-2xl font-bold mb-2
                             ${showCompletedState ? 'text-green-400' : ''}
                         `}>
-                            {exercise.duration}
+                            {exercise.reps} reps
                         </Text>
 
-                        <Text className="text-[#9CA3AF] text-lg mb-4">
-                            {showCompletedState ? 'Completed!' : 'Complete all reps'}
+                        <Text className="text-[#9CA3AF] text-base mb-2">
+                            {showCompletedState ? 'Completed!' : 'Complete all reps to finish sets'}
+                        </Text>
+
+                        <Text className="text-[#60A5FB] text-lg">
+                            {exercise.sets} sets
                         </Text>
                     </View>
                 )}
@@ -322,13 +322,9 @@ const Sessions = () => {
                 <View className="h-32" />
             </ScrollView>
 
-            {/* BOTTOM NAVIGATION - DIFFERENT FOR EACH TYPE */}
-            <View className="px-6 pb-8 pt-4 bg-[#000000]">
-
-                {/* Duration-based Exercise Buttons */}
+            <View className=" pb-8 pt-4 bg-[#000000]">
                 {isDurationBased && (
                     <>
-                        {/* Prev and Running Buttons */}
                         <View className="flex-row gap-3 mb-3">
                             <TouchableOpacity
                                 onPress={handlePrevious}
@@ -367,7 +363,6 @@ const Sessions = () => {
                             )}
                         </View>
 
-                        {/* Mark Complete Button */}
                         <TouchableOpacity
                             onPress={showCompletedState ? handleBackToRoutine : handleMarkComplete}
                             className={`
@@ -397,10 +392,8 @@ const Sessions = () => {
                     </>
                 )}
 
-                {/* Reps-based Exercise Buttons */}
                 {!isDurationBased && (
                     <>
-                        {/* Prev and Next Buttons */}
                         <View className="flex-row gap-3 mb-3">
                             <TouchableOpacity
                                 onPress={handlePrevious}
@@ -412,30 +405,17 @@ const Sessions = () => {
                                 <Text className="text-white font-semibold text-base">Prev</Text>
                             </TouchableOpacity>
 
-                            {!showCompletedState ? (
-                                <TouchableOpacity
-                                    onPress={handleNextExercise}
-                                    className="flex-1 bg-[#60A5FB] py-4 rounded-2xl flex-row items-center justify-center"
-                                    activeOpacity={0.7}
-                                    disabled={isProcessing}
-                                >
-                                    <Text className="text-white font-semibold text-base">Next</Text>
-                                    <Ionicons name="chevron-forward" size={20} color="white" className="ml-1" />
-                                </TouchableOpacity>
-                            ) : (
-                                <TouchableOpacity
-                                    onPress={handleNextExercise}
-                                        className="flex-1 bg-[#60A5FB] py-4 rounded-2xl flex-row items-center justify-center"
-                                    activeOpacity={0.7}
-                                        disabled={isProcessing}
-                                >
-                                        <Text className="text-white font-semibold text-base">Next Exercise</Text>
-                                        <Ionicons name="chevron-forward" size={20} color="white" className="ml-1" />
-                                </TouchableOpacity>
-                            )}
+                            <TouchableOpacity
+                                onPress={handleNextExercise}
+                                className="flex-1 bg-[#60A5FB] py-4 rounded-2xl flex-row items-center justify-center"
+                                activeOpacity={0.7}
+                                disabled={isProcessing}
+                            >
+                                <Text className="text-white font-semibold text-base">Next</Text>
+                                <Ionicons name="chevron-forward" size={20} color="white" className="ml-1" />
+                            </TouchableOpacity>
                         </View>
 
-                        {/* Mark Complete Button */}
                         <TouchableOpacity
                             onPress={showCompletedState ? handleBackToRoutine : handleMarkComplete}
                             className={`
@@ -465,7 +445,6 @@ const Sessions = () => {
                     </>
                 )}
             </View>
-
         </View>
     );
 };

@@ -7,6 +7,7 @@ import {
     Image,
     KeyboardAvoidingView,
     Platform,
+    ScrollView,
     StatusBar,
     StyleSheet,
     Text,
@@ -111,75 +112,78 @@ const ResetPassword = () => {
     return (
         <SafeAreaView style={styles.container} className='px-4'>
             <StatusBar barStyle="light-content" backgroundColor="#000000" />
-
+            {/* Back Button */}
+            <TouchableOpacity
+                onPress={() => navigator.navigate("Auth")}
+                style={styles.backButton}
+            >
+                <Ionicons name="arrow-back" size={28} color="#fff" />
+            </TouchableOpacity>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.keyboardAvoidingView}
             >
-                {/* Back Button */}
-                <TouchableOpacity
-                    onPress={() => navigator.navigate("Auth")}
-                    style={styles.backButton}
-                >
-                    <Ionicons name="arrow-back" size={28} color="#fff" />
-                </TouchableOpacity>
+                <ScrollView>
 
-                {/* Logo */}
-                <View style={styles.logoContainer}>
-                    {/* <Text style={styles.logo}>Logo</Text> */}
-                    <Image source={Images.Icon} resizeMode="contain" />
-                </View>
 
-                {/* Header Section */}
-                <View style={styles.headerContainer}>
-                    <Text style={styles.title}>Reset Password</Text>
-                    <Text style={styles.subtitle}>
-                        Enter your phone number, we will send a verification code to your phone number.
-                    </Text>
-                </View>
 
-                {/* Form Section */}
-                <View style={styles.formContainer}>
-                    {/* Phone Number Input */}
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Phone Number</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="e.g., +19844864234 with country code"
-                            placeholderTextColor="#6B7280"
-                            keyboardType="default"
-                            autoCapitalize="none"
-                            autoComplete="tel"
-                            autoCorrect={false}
-                            value={phoneNumber}
-                            onChangeText={setPhoneNumber}
-                            editable={!isLoading}
-                        />
+                    {/* Logo */}
+                    <View style={styles.logoContainer}>
+                        {/* <Text style={styles.logo}>Logo</Text> */}
+                        <Image source={Images.Icon} resizeMode="contain" />
                     </View>
 
-                    {/* Continue Button */}
-                    <TouchableOpacity
-                        style={[
-                            styles.continueButton,
-                            (!isFormValid || isLoading) && styles.continueButtonDisabled
-                        ]}
-                        onPress={handleContinue}
-                        disabled={!isFormValid || isLoading}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={styles.continueButtonText}>
-                            {isLoading ? 'Sending...' : 'Continue'}
+                    {/* Header Section */}
+                    <View style={styles.headerContainer}>
+                        <Text style={styles.title}>Reset Password</Text>
+                        <Text style={styles.subtitle}>
+                            Enter your phone number, we will send a verification code to your phone number.
                         </Text>
-                    </TouchableOpacity>
-                </View>
+                    </View>
 
-                {/* Additional Help Text */}
-                <View style={styles.helpContainer}>
-                    <Text style={styles.helpText}>
-                        Can't access your phone?{' '}
-                        <Text style={styles.helpLink}>Contact support</Text>
-                    </Text>
-                </View>
+                    {/* Form Section */}
+                    <View style={styles.formContainer}>
+                        {/* Phone Number Input */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Phone Number</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g., +19844864234 with country code"
+                                placeholderTextColor="#6B7280"
+                                keyboardType="default"
+                                autoCapitalize="none"
+                                autoComplete="tel"
+                                autoCorrect={false}
+                                value={phoneNumber}
+                                onChangeText={setPhoneNumber}
+                                editable={!isLoading}
+                            />
+                        </View>
+
+                        {/* Continue Button */}
+                        <TouchableOpacity
+                            style={[
+                                styles.continueButton,
+                                (!isFormValid || isLoading) && styles.continueButtonDisabled
+                            ]}
+                            onPress={handleContinue}
+                            disabled={!isFormValid || isLoading}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.continueButtonText}>
+                                {isLoading ? 'Sending...' : 'Continue'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Additional Help Text */}
+                    <View style={styles.helpContainer}>
+                        <Text style={styles.helpText}>
+                            Can't access your phone?{' '}
+                            <Text style={styles.helpLink}>Contact support</Text>
+                        </Text>
+                    </View>
+                </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
