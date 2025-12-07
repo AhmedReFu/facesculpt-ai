@@ -19,7 +19,6 @@ const Home = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isOnline, setIsOnline] = useState(true);
 
-
     useNavigationReset();
 
     useEffect(() => {
