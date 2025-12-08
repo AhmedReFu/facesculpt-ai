@@ -7,6 +7,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Alert, Image, Text, View } from 'react-native';
+import Purchases from 'react-native-purchases';
 import CustomButton from '../Components/CustomButton';
 import { Images } from '../constants';
 import { useNavigationReset } from '../lib/useNavigationReset';
@@ -18,6 +19,22 @@ const Home = () => {
     const navigator = useNavigation<ChooseGoalScreenNavigationProp>()
     const [isLoading, setIsLoading] = useState(true);
     const [isOnline, setIsOnline] = useState(true);
+
+    useEffect(() => {
+        const configureRevenueCat = async () => {
+
+            try {
+                const getOfferings = await Purchases.getOfferings();
+                console.log("New", getOfferings.all.premium.availablePackages.filter(pkg => pkg.packageType === "MONTHLY"));
+                const customerInfo = await Purchases.getCustomerInfo();
+                // console.log("New", JSON.stringify(customerInfo));
+            } catch (e) {
+                // Error fetching customer info
+            }
+        }
+        configureRevenueCat();
+    }, []);
+
 
     useNavigationReset();
 

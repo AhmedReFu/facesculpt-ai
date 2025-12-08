@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as React from 'react';
-import { Alert, BackHandler, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, BackHandler, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import "./global.css";
 
+import Purchases from "react-native-purchases";
 import ChooseGoal from './src/FaceScan/ChooseGoal';
 import FaceMetrics from './src/FaceScan/FaceMetrics';
 import FaceScan from './src/FaceScan/FaceScan';
@@ -95,8 +96,15 @@ function RootStack() {
 
 
 
+
   // Check internet connection
   const checkConnection = React.useCallback(async () => {
+    if (Platform.OS === 'android') {
+      Purchases.configure({ apiKey: "goog_pZuivWeWkPuaNMFYnVvexWkfELI" })
+    }
+    else if (Platform.OS === 'ios') {
+      Purchases.configure({ apiKey: "appl_SGOUsugAvdJhvzWJZhOwbmNOKrG" })
+    }
     try {
       setIsChecking(true);
       const state = await NetInfo.fetch();
