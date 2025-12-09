@@ -6,57 +6,47 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Alert, Image, Text, View } from 'react-native';
-import Purchases from 'react-native-purchases';
+import { Image, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomButton from '../Components/CustomButton';
 import { Images } from '../constants';
+import { Toast, useToast } from '../hooks/useToost';
 import { useNavigationReset } from '../lib/useNavigationReset';
 import { RootStackParamList } from '../types/navigation';
 
 type ChooseGoalScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const Home = () => {
-    const navigator = useNavigation<ChooseGoalScreenNavigationProp>()
+    const toast = useToast();
+    const navigator = useNavigation<ChooseGoalScreenNavigationProp>();
     const [isLoading, setIsLoading] = useState(true);
     const [isOnline, setIsOnline] = useState(true);
-
-    useEffect(() => {
-        const configureRevenueCat = async () => {
-
-            try {
-                const getOfferings = await Purchases.getOfferings();
-                console.log("New", getOfferings.all.premium.availablePackages.filter(pkg => pkg.packageType === "MONTHLY"));
-                const customerInfo = await Purchases.getCustomerInfo();
-                // console.log("New", JSON.stringify(customerInfo));
-            } catch (e) {
-                // Error fetching customer info
-            }
-        }
-        configureRevenueCat();
-    }, []);
-
 
     useNavigationReset();
 
     useEffect(() => {
-
         const checkAuthAndNavigate = async () => {
             setIsLoading(true);
 
             try {
-                // Configure RevenueCat first (non-blocking)
                 const netState = await NetInfo.fetch();
-                setIsOnline(netState.isConnected as any);
+                setIsOnline(netState.isConnected ?? true);
+
                 if (!netState.isConnected) {
-                    // Offline mode - try to use cached data
                     await handleOfflineMode();
                     return;
                 }
-                // Online mode - check authentication and subscription
+
                 await handleOnlineMode();
             } catch (error) {
                 console.error("Error checking auth:", error);
-                // Fallback to auth screen on error
+                toast.show({
+                    message: 'Error checking authentication',
+                    type: 'error',
+                    style: 'top',
+                    duration: 3000
+                });
+
                 setTimeout(() => {
                     navigator.navigate("Auth");
                 }, 1000);
@@ -64,6 +54,7 @@ const Home = () => {
                 setIsLoading(false);
             }
         };
+
         const handleOfflineMode = async () => {
             try {
                 const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
@@ -72,21 +63,20 @@ const Home = () => {
 
                 setTimeout(() => {
                     if (isLoggedIn === "true" && user) {
-                        // User was logged in - navigate to appropriate screen
                         if (subscribe === "true") {
                             navigator.replace("DailyTrack");
                         } else {
                             navigator.replace("FaceScan");
                         }
                     } else {
-                        // No cached login data - stay on home screen
                         navigator.replace("Auth");
                         setIsLoading(false);
-                        Alert.alert(
-                            "Offline Mode",
-                            "You're currently offline. Some features may be limited.",
-                            [{ text: "OK" }]
-                        );
+                        toast.show({
+                            message: "You're currently offline. Some features may be limited.",
+                            type: 'warning',
+                            style: 'center',
+                            buttons: [{ text: 'OK', action: 'dismiss' }]
+                        });
                     }
                 }, 2000);
             } catch (error) {
@@ -100,6 +90,7 @@ const Home = () => {
                 const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
                 const user = await AsyncStorage.getItem("user");
                 const subscribe = await AsyncStorage.getItem("subscribe");
+
                 setTimeout(() => {
                     if (isLoggedIn === "true" && user) {
                         if (subscribe === "true") {
@@ -118,53 +109,100 @@ const Home = () => {
                 }, 1000);
             }
         };
+
         checkAuthAndNavigate();
     }, []);
-    // Handle manual start button press
+
     const handleStartPress = () => {
         navigator.navigate("Auth");
     };
+
+    // Loading Screen
     if (isLoading) {
         return (
-            <View className="flex-1 bg-[#000000] justify-center items-center px-4">
+            <SafeAreaView className="flex-1 bg-[#000000] justify-center items-center px-4">
                 <StatusBar style='light' />
                 <View className="h-16 w-16 bg-[#202F41] rounded-lg items-center justify-center my-4">
                     <MaterialIcons name="face" size={30} color="#548ED7" />
                 </View>
-                <Text className="text-5xl my-4 text-white text-center">Welcome to FaceSculpt AI</Text>
+                <Text className="text-5xl my-4 text-white text-center">
+                    Welcome to FaceSculpt AI
+                </Text>
                 <Text className="text-xl text-white text-center mb-8">
                     {isOnline ? "Checking your account..." : "Offline Mode - Using cached data"}
                 </Text>
                 <Image source={Images.Icon} className='w-48 h-96' resizeMode='contain' />
-            </View>
+
+                <Toast
+                    style={toast.style}
+                    visible={toast.visible}
+                    message={toast.message}
+                    type={toast.type}
+                    fadeAnim={toast.fadeAnim}
+                    buttons={toast.buttons}
+                    onHide={toast.hide}
+                />
+            </SafeAreaView>
         );
     }
+
+    // Main Screen
     return (
-        <View className="flex-1 bg-[#000000] px-4">
+        <SafeAreaView className="flex-1 bg-[#000000]">
             <StatusBar style='light' />
-            {/* Offline Indicator */}
-            {!isOnline && (
-                <View className="bg-yellow-500 p-3 rounded-lg mt-4">
-                    <Text className="text-black text-center font-bold">
-                        You are currently offline. Some features may be limited.
+
+            <View className="flex-1 px-4">
+                {/* Offline Indicator */}
+                {!isOnline && (
+                    <View className="bg-yellow-500 p-3 rounded-lg mt-4">
+                        <Text className="text-black text-center font-bold">
+                            You are currently offline. Some features may be limited.
+                        </Text>
+                    </View>
+                )}
+
+                {/* Main Content */}
+                <View className="mt-14 flex-1">
+                    <View className="h-16 w-16 bg-[#202F41] rounded-lg items-center justify-center my-4">
+                        <MaterialIcons name="face" size={30} color="#548ED7" />
+                    </View>
+                    <Text className="text-5xl my-4 text-white">
+                        Welcome to FaceSculpt AI
+                    </Text>
+                    <Text className="text-xl text-white">
+                        Scan your face to get started
+                    </Text>
+                    <Image
+                        source={Images.Icon}
+                        className='mt-20 w-48 h-96 self-center'
+                        resizeMode='contain'
+                    />
+                </View>
+
+                {/* Button */}
+                <CustomButton name="Start Face Scan" onPress={handleStartPress} />
+
+                {/* Security Info */}
+                <View className="flex-row my-4 items-center">
+                    <EvilIcons name="lock" size={28} color="white" />
+                    <Text className="text-white text-sm font-bold ml-2">
+                        Our App Protected by High Quality Security
                     </Text>
                 </View>
-            )}
-            <View className="mt-14 flex-1">
-                <View className="h-16 w-16 bg-[#202F41] rounded-lg items-center justify-center my-4">
-                    <MaterialIcons name="face" size={30} color="#548ED7" />
-                </View>
-                <Text className="text-5xl my-4 text-white">Welcome to FaceSculpt AI</Text>
-                <Text className="text-xl text-white">Scan your face to get started</Text>
-                <Image source={Images.Icon} className='mt-20 w-48 h-96 self-center' resizeMode='contain' />
             </View>
-            <CustomButton name="Start Face Scan" onPress={handleStartPress} />
-            <View className="flex-row my-4 items-center">
-                <EvilIcons name="lock" size={28} color="white" />
-                <Text className="text-white text-sm font-bold">Our App Protected by High Quality Security</Text>
-            </View>
-        </View>
+
+            {/* Toast Component */}
+            <Toast
+                style={toast.style}
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                fadeAnim={toast.fadeAnim}
+                buttons={toast.buttons}
+                onHide={toast.hide}
+            />
+        </SafeAreaView>
     );
-}
+};
 
 export default Home;

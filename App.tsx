@@ -2,11 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as React from 'react';
-import { Alert, BackHandler, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BackHandler, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import "./global.css";
 
-import Purchases from "react-native-purchases";
 import ChooseGoal from './src/FaceScan/ChooseGoal';
 import FaceMetrics from './src/FaceScan/FaceMetrics';
 import FaceScan from './src/FaceScan/FaceScan';
@@ -20,6 +19,7 @@ import Sessions from './src/GymWorkout/Sessions';
 import AuthScreen from './src/Home/AuthScreen';
 import Home from './src/Home/Home';
 import OtpAuth from './src/Home/OtpAuth';
+import { useToast } from './src/hooks/useToost';
 import FaceCoach from './src/Messages/FaceCoach';
 import DailyTrack from './src/TrackGym/DailyTrack';
 import AppNavigationContainer from './src/utils/useNavigationCleaner';
@@ -84,11 +84,13 @@ const NoInternetScreen = ({ onRetry }: { onRetry: () => void }) => {
           </TouchableOpacity>
         </View>
       </View>
+
     </View>
   );
 };
 
 function RootStack() {
+  const toast = useToast();
   const [isConnected, setIsConnected] = React.useState<boolean | null>(null);
   const [showNoInternet, setShowNoInternet] = React.useState(false);
   const [isChecking, setIsChecking] = React.useState(true);
@@ -99,12 +101,14 @@ function RootStack() {
 
   // Check internet connection
   const checkConnection = React.useCallback(async () => {
-    if (Platform.OS === 'android') {
-      Purchases.configure({ apiKey: "goog_pZuivWeWkPuaNMFYnVvexWkfELI" })
-    }
-    else if (Platform.OS === 'ios') {
-      Purchases.configure({ apiKey: "appl_SGOUsugAvdJhvzWJZhOwbmNOKrG" })
-    }
+    // if (Platform.OS === 'android') {
+    //   Purchases.configure({ apiKey: "goog_pZuivWeWkPuaNMFYnVvexWkfELI" })
+    // }
+    // else if (Platform.OS === 'ios') {
+    //   Purchases.configure({ apiKey: "appl_SGOUsugAvdJhvzWJZhOwbmNOKrG" })
+    // }
+
+
     try {
       setIsChecking(true);
       const state = await NetInfo.fetch();
@@ -136,20 +140,25 @@ function RootStack() {
 
       if (!connected) {
         setShowNoInternet(true);
-      // Show alert when connection is lost during use
-        Alert.alert(
-          'Connection Lost',
-          'Your internet connection was lost. Please reconnect to continue using the app.',
-          [{ text: 'OK' }]
-        );
+        // Show alert when connection is lost during use
+
+
+        toast.show({
+          message: 'Connection Lost Your internet connection was lost. Please reconnect to continue using the app.',
+          type: 'warning',
+          style: 'center',
+          buttons: [{ text: 'OK', action: 'dismiss' }]
+        });
+
       } else if (showNoInternet) {
         // Connection restored
         setShowNoInternet(false);
-        Alert.alert(
-          'Connection Restored',
-          'Your internet connection has been restored.',
-          [{ text: 'OK' }]
-        );
+        toast.show({
+          message: 'Connection Restored Your internet connection has been restored.',
+          type: 'success',
+          style: 'center',
+          buttons: [{ text: 'OK', action: 'dismiss' }]
+        });
       }
     });
 

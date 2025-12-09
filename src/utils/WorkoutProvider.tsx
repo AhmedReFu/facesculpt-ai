@@ -127,6 +127,7 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
         } catch (error) {
             console.error('Failed to fetch workout plan:', error);
             Alert.alert('Error', 'Failed to load workout plan. Please try again.');
+
         } finally {
             setLoading(false);
         }

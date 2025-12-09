@@ -5,21 +5,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from "twrnc";
 import CustomButton from '../Components/CustomButton';
+import { Toast, useToast } from '../hooks/useToost';
 
 const API_BASE_URL = IPA_BASE;
 const API_ENDPOINTS = {
     IMAGE_UPLOAD: IMAGE_UPLOAD,
 };
 
+const MAX_RETRY_ATTEMPTS = 10; // Maximum retry attempts for processing status
+const RETRY_DELAY = 3000;
+
 type RootStackParamList = {
     DailyTrack: undefined;
     ChooseGoal: undefined;
     Auth: undefined;
+    FaceScan: undefined;
 };
 
 type FaceMetricsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -42,34 +47,53 @@ interface RouteParams {
 }
 
 const FaceMetrics = () => {
+    const toast = useToast();
     const navigation = useNavigation<FaceMetricsScreenNavigationProp>();
     const [scanData, setScanData] = useState<ScanData>();
+    const [isLoading, setIsLoading] = useState(true);
+    const [retryCount, setRetryCount] = useState(0);
+    const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // Extract scan data from route params
     useEffect(() => {
+
         getImageData();
+        return () => {
+            if (retryTimeoutRef.current) {
+                clearTimeout(retryTimeoutRef.current);
+            }
+        };
     }, [])
+
+
 
     const getImageData = async () => {
         try {
 
-
+            setIsLoading(true);
             // Get access token from AsyncStorage
             const accessToken = await AsyncStorage.getItem('token');
 
             if (!accessToken) {
-                Alert.alert(
-                    'Authentication Required',
-                    'Please log in to continue',
-                    [
-                        {
-                            text: 'OK',
-                            onPress: () => (navigation as any).replace('Login')
-                        }
-                    ]
-                );
+                toast.show("Authentication Required" + "Please log in to continue", "warning", null, [
+                    { text: 'OK', action: 'custom', onPress: () => (navigation as any).replace('Login') }
+                ])
+
+                // Alert.alert(
+                //     'Authentication Required',
+                //     'Please log in to continue',
+                //     [
+                //         {
+                //             text: 'OK',
+                //             onPress: () => (navigation as any).replace('Login')
+                //         }
+                //     ]
+                // );
                 return;
             }
+
+
 
             const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.IMAGE_UPLOAD}`, {
                 method: 'GET',
@@ -80,27 +104,82 @@ const FaceMetrics = () => {
 
             });
 
+
+
             const result = await response.json();
-            console.log('Dashboard API Response:', result);
+            // console.log(response)
+            console.log('FaceMetrics Data Got:', result);
+            console.log(result.data.status);
+            if (result.data.status === "PROCESSING") {
+
+                if (retryCount < MAX_RETRY_ATTEMPTS) {
+                    // Retry after 3 seconds
+                    retryTimeoutRef.current = setTimeout(() => {
+                        setRetryCount(prev => prev + 1);
+                        getImageData();
+                    }, RETRY_DELAY);
+                } else {
+                    toast.show({
+                        message: result.data.error_message + "Please capture again.",
+                        type: 'error',
+                        style: 'center',
+                        buttons: [
+                            {
+                                text: 'Try Again',
+                                action: 'custom',
+                                onPress: () => {
+                                    setRetryCount(0);
+                                    getImageData();
+                                }
+                            }
+                        ]
+                    });
+                }
+                return;
+            }
+
+            if (result.data.status === "FAILED") {
+                setIsLoading(false);
+
+                toast.show({
+                    message: result.data.error_message + " Please capture again.",
+                    type: 'error',
+                    style: 'center',
+                    buttons: [
+                        {
+                            text: 'OK',
+                            action: 'custom',
+                            onPress: () => (navigation as any).navigate('FaceScan')
+                        }
+                    ]
+                });
+                return;
+            }
+
+
             // Handle 401 - Token expired
             if (response.status === 401) {
+                setIsLoading(false);
+                setRetryCount(0);
                 await AsyncStorage.removeItem('token');
-                Alert.alert(
-                    'Session Expired',
-                    'Please log in again',
-                    [{ text: 'OK', onPress: () => navigation.navigate('Auth') }]
-                );
+                // Alert.alert(
+                //     'Session Expired',
+                //     'Please log in again',
+                //     [{ text: 'OK', onPress: () => navigation.navigate('Auth') }]
+                // );
+                toast.show('Session Expired' + 'Please log in again', "error", null, [
+                    { text: 'OK', action: 'custom', onPress: () => (navigation as any).navigate('Auth') }
+                ])
                 return;
             }
 
             if (response.ok && result.success) {
+                setIsLoading(false);
+                setRetryCount(0);
                 const apiData: ScanData = result.data;
                 setScanData(apiData);
-
-
-
             } else {
-                throw new Error(result.message || 'Failed to load dashboard');
+                throw new Error(result.message || 'Failed to load FaceMetrics Data');
             }
 
         } catch (error) {
@@ -134,6 +213,15 @@ const FaceMetrics = () => {
 
         return `AI suggests working on ${suggestions.join(' and ')}.`;
     };
+
+    if (isLoading) {
+        return (
+            <View style={tw`flex-1 bg-[#0D0F14] items-center justify-center`}>
+                <ActivityIndicator size="large" color="#60A5FB" />
+                <Text style={tw`text-white text-base mt-4`}>Loading your progress...</Text>
+            </View>
+        );
+    }
 
     return (
         <SafeAreaView style={tw`flex-1 bg-[#000000] px-4`}>
@@ -225,6 +313,15 @@ const FaceMetrics = () => {
             <View style={tw`my-6`}>
                 <CustomButton name="Set Goals" route="ChooseGoal" />
             </View>
+            <Toast
+                style={toast.style}
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                fadeAnim={toast.fadeAnim}
+                buttons={toast.buttons}
+                onHide={toast.hide}
+            />
         </SafeAreaView>
     );
 }

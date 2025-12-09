@@ -1,10 +1,10 @@
-// screens/Sessions.tsx - UPDATED
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { CommonActions, RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
-import { ScrollView, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Toast, useToast } from '../hooks/useToost';
 import { RootStackParamList } from '../types/navigation';
 import { useWorkout } from '../utils/WorkoutProvider';
 
@@ -24,6 +24,7 @@ const InstructionItem = ({ text }: InstructionItemProps) => (
 );
 
 const Sessions = () => {
+    const toast = useToast();
     const navigation = useNavigation();
     const route = useRoute<SessionsScreenRouteProp>();
     const { exercises, completeExercise, moveToNextExercise, getCurrentExercise, isWorkoutCompleted } = useWorkout();
@@ -118,11 +119,13 @@ const Sessions = () => {
         completeExercise(exercise.id);
         setIsCompleted(true);
 
-        ToastAndroid.showWithGravity(
-            `Successfully Complete ${exercise.name}.`,
-            ToastAndroid.SHORT,
-            ToastAndroid.CENTER,
-        );
+        toast.show({
+            message: `Successfully completed ${exercise.name} ✓`,
+            type: 'success',
+            style: 'top',
+            duration: 2000
+        });
+
         setIsRunning(false);
 
         const workoutCompleted = isWorkoutCompleted;
@@ -232,7 +235,7 @@ const Sessions = () => {
             </View>
 
             <ScrollView
-                className="flex-1  bg-[#000000]"
+                className="flex-1 bg-[#000000]"
                 showsVerticalScrollIndicator={false}
             >
                 <Text className="text-white text-2xl font-bold mb-3">
@@ -322,7 +325,7 @@ const Sessions = () => {
                 <View className="h-32" />
             </ScrollView>
 
-            <View className=" pb-8 pt-4 bg-[#000000]">
+            <View className="pb-8 pt-4 bg-[#000000]">
                 {isDurationBased && (
                     <>
                         <View className="flex-row gap-3 mb-3">
@@ -445,6 +448,17 @@ const Sessions = () => {
                     </>
                 )}
             </View>
+
+            {/* Toast Component */}
+            <Toast
+                style={toast.style}
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                fadeAnim={toast.fadeAnim}
+                buttons={toast.buttons}
+                onHide={toast.hide}
+            />
         </View>
     );
 };

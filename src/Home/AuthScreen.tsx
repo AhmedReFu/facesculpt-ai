@@ -14,12 +14,12 @@ import {
     StatusBar,
     Text,
     TextInput,
-    ToastAndroid,
     TouchableOpacity,
     View
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Images } from '../constants';
+import { Toast, useToast } from '../hooks/useToost';
 import { useBackHandler } from '../lib/useBackHandler';
 
 const API_BASE_URL = IPA_BASE;
@@ -39,6 +39,7 @@ type RootStackParamList = {
 type AuthScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const AuthScreen = () => {
+    const toast = useToast();
     const navigator = useNavigation<AuthScreenNavigationProp>();
     const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
     const [showPassword, setShowPassword] = useState(false);
@@ -129,7 +130,7 @@ const AuthScreen = () => {
         setTimeout(() => {
             inputRef.current?.measure((fx, fy, width, height, px, py) => {
                 scrollViewRef.current?.scrollTo({
-                    y: py - 40, // Offset to show input comfortably above keyboard
+                    y: py - 40,
                     animated: true,
                 });
             });
@@ -139,29 +140,29 @@ const AuthScreen = () => {
     // ============ API Sign In Handler ============
     const handleSignIn = async () => {
         if (!number || !password) {
-            ToastAndroid.showWithGravity(
-                'Please enter phone number and password.',
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,
-            );
+            toast.show({
+                message: 'Please enter phone number and password.',
+                type: 'warning',
+                style: 'top'
+            });
             return;
         }
 
         if (!allNumberRegex.test(number)) {
-            ToastAndroid.showWithGravity(
-                'Please enter a valid phone number with country code (e.g., +19844864234).',
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,
-            );
+            toast.show({
+                message: 'Please enter a valid phone number with country code (e.g., +19844864234).',
+                type: 'warning',
+                style: 'top'
+            });
             return;
         }
 
         if (password.length < 6) {
-            ToastAndroid.showWithGravity(
-                'Password must be at least 6 characters long.',
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,
-            );
+            toast.show({
+                message: 'Password must be at least 6 characters long.',
+                type: 'warning',
+                style: 'top'
+            });
             return;
         }
 
@@ -187,7 +188,6 @@ const AuthScreen = () => {
             console.log('Login response:', data);
 
             if (response.ok && data.success) {
-                // Save or remove remembered number based on checkbox
                 console.log('💾 Remember Me status:', rememberMe);
                 if (rememberMe) {
                     await AsyncStorage.setItem("rememberedNumber", number);
@@ -209,10 +209,12 @@ const AuthScreen = () => {
 
                 setPassword('');
 
-                ToastAndroid.show(
-                    'Sign in successfully ✓',
-                    ToastAndroid.SHORT,
-                );
+                toast.show({
+                    message: 'Sign in successfully ✓',
+                    type: 'success',
+                    style: 'top',
+                    duration: 2000
+                });
 
                 const subscribe = await AsyncStorage.getItem('subscribe');
                 console.log('Subscribe status:', subscribe);
@@ -227,19 +229,21 @@ const AuthScreen = () => {
 
             } else {
                 const errorMessage = data.message || 'Invalid phone number or password.';
-                ToastAndroid.showWithGravity(
-                    errorMessage,
-                    ToastAndroid.LONG,
-                    ToastAndroid.CENTER,
-                );
+                toast.show({
+                    message: errorMessage,
+                    type: 'error',
+                    style: 'center',
+                    buttons: [{ text: 'OK', action: 'dismiss' }]
+                });
             }
         } catch (error) {
             console.error('Sign-in error:', error);
-            ToastAndroid.showWithGravity(
-                'Network error. Please check your connection and try again.',
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,
-            );
+            toast.show({
+                message: 'Network error. Please check your connection and try again.',
+                type: 'error',
+                style: 'center',
+                buttons: [{ text: 'OK', action: 'dismiss' }]
+            });
         } finally {
             setIsLoading(false);
         }
@@ -248,47 +252,47 @@ const AuthScreen = () => {
     // ============ API Sign Up Handler ============
     const handleSignUp = async () => {
         if (!name || !number || !password) {
-            ToastAndroid.showWithGravity(
-                'Please fill in all fields.',
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,
-            );
+            toast.show({
+                message: 'Please fill in all fields.',
+                type: 'warning',
+                style: 'top'
+            });
             return;
         }
 
         if (name.trim().length < 2) {
-            ToastAndroid.showWithGravity(
-                'Please enter a valid name (at least 2 characters).',
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,
-            );
+            toast.show({
+                message: 'Please enter a valid name (at least 2 characters).',
+                type: 'warning',
+                style: 'top'
+            });
             return;
         }
 
         if (!allNumberRegex.test(number)) {
-            ToastAndroid.showWithGravity(
-                'Please enter a valid phone number with country code (e.g., +19844864234).',
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,
-            );
+            toast.show({
+                message: 'Please enter a valid phone number with country code (e.g., +19844864234).',
+                type: 'warning',
+                style: 'top'
+            });
             return;
         }
 
         if (password.length < 6) {
-            ToastAndroid.showWithGravity(
-                'Password must be at least 6 characters long.',
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,
-            );
+            toast.show({
+                message: 'Password must be at least 6 characters long.',
+                type: 'warning',
+                style: 'top'
+            });
             return;
         }
 
         if (!agreeTerms) {
-            ToastAndroid.showWithGravity(
-                'Please agree to Terms & Conditions.',
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,
-            );
+            toast.show({
+                message: 'Please agree to Terms & Conditions.',
+                type: 'warning',
+                style: 'top'
+            });
             return;
         }
 
@@ -320,10 +324,12 @@ const AuthScreen = () => {
                     phone_number: number,
                 }));
 
-                ToastAndroid.show(
-                    'Account created successfully! Please verify OTP.',
-                    ToastAndroid.SHORT,
-                );
+                toast.show({
+                    message: 'Account created successfully! Please verify OTP.',
+                    type: 'success',
+                    style: 'top',
+                    duration: 2000
+                });
 
                 setTimeout(() => {
                     navigator.navigate('OtpAuth', {
@@ -340,19 +346,21 @@ const AuthScreen = () => {
 
             } else {
                 const errorMessage = data.message || 'Sign up failed. Please try again.';
-                ToastAndroid.showWithGravity(
-                    errorMessage,
-                    ToastAndroid.LONG,
-                    ToastAndroid.CENTER,
-                );
+                toast.show({
+                    message: errorMessage,
+                    type: 'error',
+                    style: 'center',
+                    buttons: [{ text: 'OK', action: 'dismiss' }]
+                });
             }
         } catch (error) {
             console.error('Sign-up error:', error);
-            ToastAndroid.showWithGravity(
-                'Network error. Please check your connection and try again.',
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,
-            );
+            toast.show({
+                message: 'Network error. Please check your connection and try again.',
+                type: 'error',
+                style: 'center',
+                buttons: [{ text: 'OK', action: 'dismiss' }]
+            });
         } finally {
             setIsLoading(false);
         }
@@ -364,7 +372,6 @@ const AuthScreen = () => {
 
     const switchTab = (tab: 'signin' | 'signup') => {
         setActiveTab(tab);
-        // Don't clear number if switching to signin and it's remembered
         if (tab === 'signup') {
             setNumber('');
         }
@@ -573,6 +580,17 @@ const AuthScreen = () => {
                         </View>
                     </ScrollView>
                 </KeyboardAvoidingView>
+
+                {/* Toast Component */}
+                <Toast
+                    style={toast.style}
+                    visible={toast.visible}
+                    message={toast.message}
+                    type={toast.type}
+                    fadeAnim={toast.fadeAnim}
+                    buttons={toast.buttons}
+                    onHide={toast.hide}
+                />
             </SafeAreaView>
         </SafeAreaProvider>
     );

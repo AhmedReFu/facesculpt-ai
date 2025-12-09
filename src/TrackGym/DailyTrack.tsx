@@ -12,13 +12,13 @@ import {
   LayoutChangeEvent,
   ScrollView,
   Text,
-  ToastAndroid,
   TouchableOpacity,
   View
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from 'twrnc';
+import { Toast, useToast } from '../hooks/useToost';
 import { useBackHandler } from '../lib/useBackHandler';
 
 const API_BASE_URL = IPA_BASE;
@@ -68,13 +68,12 @@ interface GoalHit {
   status: string;
   target: string;
 }
+
 interface ProgressSummary {
   overall_progress: number;
   jawline_status: string;
   goals_hit: GoalHit[];
 }
-
-
 
 interface DashboardData {
   streak_days: number;
@@ -108,8 +107,15 @@ interface LeaderboardEntry {
 }
 
 // ============================
-// Utility: generate last N day labels
+// UTILITY FUNCTIONS
 // ============================
+const safeToFixed = (value: any, decimals: number = 1): string => {
+  if (value === null || value === undefined || isNaN(value)) {
+    return '--';
+  }
+  return Number(value).toFixed(decimals);
+};
+
 const generateLastNDates = (n: number): string[] => {
   const arr: string[] = [];
   for (let i = n - 1; i >= 0; i--) {
@@ -121,13 +127,23 @@ const generateLastNDates = (n: number): string[] => {
   return arr;
 };
 
-// ============================
-// Transform API data to chart format
-// ============================
 const transformGraphData = (graphData: ScanData[]): Goal[] => {
-  const jawlineData = graphData.map(item => item.jawline_angle);
-  const symmetryData = graphData.map(item => item.symmetry_score);
-  const puffinessData = graphData.map(item => item.puffiness_index);
+  if (!Array.isArray(graphData) || graphData.length === 0) {
+    return getDefaultGoals();
+  }
+
+  const safeMapValues = (data: ScanData[], key: keyof ScanData): number[] => {
+    return data
+      .map(item => {
+        const value = item[key];
+        return typeof value === 'number' && !isNaN(value) ? value : null;
+      })
+      .filter((v): v is number => v !== null);
+  };
+
+  const jawlineData = safeMapValues(graphData, 'jawline_angle');
+  const symmetryData = safeMapValues(graphData, 'symmetry_score');
+  const puffinessData = safeMapValues(graphData, 'puffiness_index');
 
   const latestScan = graphData[graphData.length - 1];
 
@@ -136,43 +152,82 @@ const transformGraphData = (graphData: ScanData[]): Goal[] => {
       id: 'jawline',
       name: 'Jawline',
       icon: '#D69544',
-      current: latestScan?.jawline_angle || 0,
-      target: 132, // Default target, can be dynamic
+      current: latestScan?.jawline_angle ?? 0,
+      target: 132,
       unit: '°',
-      changePercent: 50, // Calculate based on data
-      chartData: jawlineData,
+      changePercent: 50,
+      chartData: jawlineData.length > 0 ? jawlineData : [0],
     },
     {
       id: 'symmetry',
       name: 'Symmetry',
       icon: '#519659',
-      current: latestScan?.symmetry_score || 0,
+      current: latestScan?.symmetry_score ?? 0,
       target: 97,
       unit: '%',
       changePercent: 50,
-      chartData: symmetryData,
+      chartData: symmetryData.length > 0 ? symmetryData : [0],
     },
     {
       id: 'depuff',
       name: 'Depuff Progress',
       icon: '#60A5FB',
-      current: latestScan?.puffiness_index || 0,
+      current: latestScan?.puffiness_index ?? 0,
       target: 0.3,
       unit: '',
       changePercent: 50,
-      chartData: puffinessData,
+      chartData: puffinessData.length > 0 ? puffinessData : [0],
+    },
+  ];
+};
+
+const getDefaultGoals = (): Goal[] => {
+  return [
+    {
+      id: 'jawline',
+      name: 'Jawline',
+      icon: '#D69544',
+      current: 0,
+      target: 132,
+      unit: '°',
+      changePercent: 0,
+      chartData: [0],
+    },
+    {
+      id: 'symmetry',
+      name: 'Symmetry',
+      icon: '#519659',
+      current: 0,
+      target: 97,
+      unit: '%',
+      changePercent: 0,
+      chartData: [0],
+    },
+    {
+      id: 'depuff',
+      name: 'Depuff Progress',
+      icon: '#60A5FB',
+      current: 0,
+      target: 0.3,
+      unit: '',
+      changePercent: 0,
+      chartData: [0],
     },
   ];
 };
 
 const transformLeaderboard = (apiLeaderboard: LeaderboardData): LeaderboardEntry[] => {
-  return apiLeaderboard.competitors.map((competitor, index) => {
-    const trendValue = parseInt(competitor.trend.replace('+', ''));
+  if (!apiLeaderboard || !Array.isArray(apiLeaderboard.competitors)) {
+    return [];
+  }
+
+  return apiLeaderboard.competitors.map((competitor) => {
+    const trendValue = parseInt(competitor.trend.replace('+', '')) || 0;
     return {
-      rank: parseInt(competitor.rank.replace('#', '')),
-      name: competitor.name,
+      rank: parseInt(competitor.rank.replace('#', '')) || 0,
+      name: competitor.name || 'Unknown',
       change: trendValue,
-      score: competitor.score,
+      score: competitor.score || 0,
       isUser: competitor.name === 'You',
       trend: trendValue > 0 ? 'up' : trendValue < 0 ? 'down' : 'neutral'
     };
@@ -193,8 +248,12 @@ const GoalChart = ({ goal }: GoalChartProps) => {
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [containerHeight, setContainerHeight] = useState(150);
 
-  const pointsCount = Array.isArray(goal.chartData) ? goal.chartData.length : 0;
-  const xLabels = generateLastNDates(pointsCount || 7);
+  const safeChartData = Array.isArray(goal.chartData) && goal.chartData.length > 0
+    ? goal.chartData.map(v => typeof v === 'number' && !isNaN(v) ? v : 0)
+    : [0];
+
+  const pointsCount = safeChartData.length;
+  const xLabels = generateLastNDates(pointsCount);
 
   useEffect(() => {
     return () => {
@@ -260,6 +319,9 @@ const GoalChart = ({ goal }: GoalChartProps) => {
     hideTimeoutRef.current = setTimeout(() => setSelectedIndex(null), 1000);
   };
 
+  const currentValue = goal.current ?? 0;
+  const displayCurrent = safeToFixed(currentValue, goal.unit === '' ? 2 : 1);
+
   return (
     <View style={tw`mb-5`}>
       <View style={tw`flex-row items-center mb-1`}>
@@ -267,7 +329,7 @@ const GoalChart = ({ goal }: GoalChartProps) => {
           <MaterialIcons name="show-chart" size={24} color={goal.icon} />
         </Text>
         <Text style={tw`text-white text-lg font-normal`}>
-          {goal.name} ({goal.unit}) - {goal.current.toFixed(1)}
+          {goal.name} ({goal.unit}) - {displayCurrent}
           {goal.unit} → {goal.target}
           {goal.unit} goal
         </Text>
@@ -285,7 +347,7 @@ const GoalChart = ({ goal }: GoalChartProps) => {
         <LineChart
           data={{
             labels: xLabels,
-            datasets: [{ data: goal.chartData.map((v: any) => Number(v)), strokeWidth: 2 }],
+            datasets: [{ data: safeChartData, strokeWidth: 2 }],
           }}
           width={CHART_WIDTH}
           height={containerHeight}
@@ -301,7 +363,7 @@ const GoalChart = ({ goal }: GoalChartProps) => {
           style={{ marginLeft: 0 }}
         />
 
-        {selectedIndex !== null && selectedIndex >= 0 && (
+        {selectedIndex !== null && selectedIndex >= 0 && selectedIndex < safeChartData.length && (
           <View
             style={{
               position: 'absolute',
@@ -318,7 +380,7 @@ const GoalChart = ({ goal }: GoalChartProps) => {
           >
             <Text style={{ color: '#9CA3AF', fontSize: 12 }}>{xLabels[selectedIndex]}</Text>
             <Text style={{ color: '#60A5FB', fontWeight: '700', fontSize: 14 }}>
-              {goal.chartData[selectedIndex].toFixed(goal.unit === '' ? 2 : 1)}
+              {safeToFixed(safeChartData[selectedIndex], goal.unit === '' ? 2 : 1)}
               {goal.unit}
             </Text>
           </View>
@@ -371,6 +433,8 @@ const LeaderboardEntry = ({ entry }: LeaderboardEntryProps) => {
 // MAIN COMPONENT
 // ============================================
 const DailyTrack = () => {
+  const toast = useToast();
+
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -379,11 +443,11 @@ const DailyTrack = () => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isSubscribed, setIsSubscribed] = useState<string | null>(null)
 
   useEffect(() => {
+
     loadDashboardData();
-
-
   }, []);
 
   const loadDashboardData = async () => {
@@ -391,10 +455,9 @@ const DailyTrack = () => {
       setLoading(true);
       setError(null);
 
-      // Get access token
       const accessToken = await AsyncStorage.getItem('token');
       const subscribe = await AsyncStorage.getItem("subscribe");
-      const refreshToken = await AsyncStorage.getItem('refresh_token');
+      setIsSubscribed(subscribe)
       setToken(accessToken);
 
       if (!accessToken) {
@@ -407,13 +470,11 @@ const DailyTrack = () => {
         return;
       }
 
-      // Check network
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
         throw new Error('No internet connection');
       }
 
-      // Fetch dashboard data from API
       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DAILY_TRACK}`, {
         method: 'GET',
         headers: {
@@ -423,9 +484,7 @@ const DailyTrack = () => {
       });
 
       const result = await response.json();
-      // console.log('Dashboard API Response:', result);
 
-      // Handle 401 - Token expired
       if (response.status === 401) {
         await AsyncStorage.removeItem('token');
         Alert.alert(
@@ -433,6 +492,7 @@ const DailyTrack = () => {
           'Please log in again',
           [{ text: 'OK', onPress: () => navigation.navigate('Auth') }]
         );
+
         return;
       }
 
@@ -440,11 +500,9 @@ const DailyTrack = () => {
         const apiData: DashboardData = result.data;
         setDashboardData(apiData);
 
-        // Transform graph data to goals
-        const transformedGoals = transformGraphData(apiData.graph_data);
+        const transformedGoals = transformGraphData(apiData.graph_data || []);
         setGoals(transformedGoals);
 
-        // Transform leaderboard
         const transformedLeaderboard = transformLeaderboard(apiData.leaderboard);
         setLeaderboardEntries(transformedLeaderboard);
 
@@ -461,16 +519,21 @@ const DailyTrack = () => {
   };
 
   const handleUser = async () => {
+
+    toast.show({
+      message: 'Logout successfully',
+      type: 'warning',
+      style: 'top',
+      duration: 2000
+    });
     await AsyncStorage.removeItem("isLoggedIn");
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("user");
 
-    ToastAndroid.showWithGravity(
-      'Logout Successfully',
-      ToastAndroid.SHORT,
-      ToastAndroid.CENTER,
-    );
-    navigation.navigate("Auth");
+
+    setTimeout(() => {
+      navigation.navigate("Auth");
+    }, 1000);
   };
 
   useBackHandler();
@@ -490,7 +553,6 @@ const DailyTrack = () => {
     navigation.navigate('FaceCoach', { token });
   };
 
-  // Loading State
   if (loading) {
     return (
       <View style={tw`flex-1 bg-[#0D0F14] items-center justify-center`}>
@@ -500,7 +562,6 @@ const DailyTrack = () => {
     );
   }
 
-  // Error State
   if (error || !dashboardData) {
     return (
       <View style={tw`flex-1 bg-[#0D0F14] items-center justify-center px-6`}>
@@ -513,8 +574,6 @@ const DailyTrack = () => {
       </View>
     );
   }
-
-
 
   return (
     <SafeAreaView style={tw`flex-1 bg-[#000000] px-4`}>
@@ -530,8 +589,7 @@ const DailyTrack = () => {
 
       <ScrollView style={tw`flex-1`} contentContainerStyle={{ paddingBottom: 4 }} showsVerticalScrollIndicator={false}>
         <View style={tw`pt-2`}>
-          {/* Action Buttons */}
-          <View style={tw`bg-[#000000] my -4`}>
+          <View style={tw`bg-[#000000] my-4`}>
             <View style={tw`flex-row gap-4`}>
               <TouchableOpacity
                 onPress={() => navigation.navigate("DailyRoutine")}
@@ -546,67 +604,69 @@ const DailyTrack = () => {
             </View>
           </View>
 
-          {/* Header */}
-          <Text style={tw`text-white text-2xl font-bold my-4`}>{dashboardData.badges}!</Text>
+          <Text style={tw`text-white text-2xl font-bold my-4`}>{dashboardData.badges && 'Day 0 Complete '}!</Text>
 
-          {/* Streak Badge */}
           <View style={tw`bg-[#1E2532] p-3 rounded-full flex-row items-center self-start`}>
             <MaterialIcons name="local-fire-department" size={24} color="#60A5FB" />
             <Text style={tw`text-white text-lg font-normal ml-2`}>
-              Streak: {dashboardData.streak_days} days
+              Streak: {dashboardData.streak_days || 0} days
             </Text>
           </View>
 
-
-
-          {/* Goal Progress Card */}
           <View style={tw`mt-5 bg-[#181C22] rounded-3xl p-5`}>
             <View style={tw`flex-row items-center mb-2`}>
               <Ionicons name="flag" size={24} color="#60A5FB" />
               <Text style={tw`text-white text-lg font-semibold ml-2`}>Goal Progress</Text>
             </View>
 
-            {goals.map((goal: Goal) => (
-              <GoalChart key={goal.id} goal={goal} />
-            ))}
+            {goals.length > 0 ? (
+              goals.map((goal: Goal) => (
+                <GoalChart key={goal.id} goal={goal} />
+              ))
+            ) : (
+              <View style={tw`py-8 items-center`}>
+                <Ionicons name="stats-chart-outline" size={48} color="#374151" />
+                <Text style={tw`text-gray-400 text-base mt-3`}>No chart data available yet</Text>
+                <Text style={tw`text-gray-500 text-sm mt-1`}>Complete a face scan to see your progress</Text>
+              </View>
+            )}
           </View>
 
-          {/* Overall Progress */}
           <View style={tw`mt-5`}>
             <Text style={tw`text-white text-xl font-bold mb-3`}>
-              Toward Improve Symmetry, Sharper Jawline, Reduce Puffiness: {dashboardData.progress_summary.overall_progress}%
+              Toward Improve Symmetry, Sharper Jawline, Reduce Puffiness: {dashboardData.progress_summary?.overall_progress || 0}%
             </Text>
             <View style={tw`bg-gray-800 h-3 rounded-full overflow-hidden`}>
               <View
                 style={[
                   tw`bg-[#60A5FB] h-full rounded-full`,
-                  { width: `${dashboardData.progress_summary.overall_progress}%` }
+                  { width: `${dashboardData.progress_summary?.overall_progress || 0}%` }
                 ]}
               />
             </View>
-            <Text style={tw`text-gray-400 text-sm mt-2 leading-7`}>Next badge at {dashboardData.next_badge_in_days} days</Text>
-            <Text style={tw`text-white text-xl mt-3`}>
-              {dashboardData.consistency_text}
+            <Text style={tw`text-gray-400 text-sm mt-2 leading-7`}>
+              Next badge at {dashboardData.next_badge_in_days || 0} days
             </Text>
-            <Text style={tw`text-gray-400 text-sm mt-2`}>{dashboardData.comparison_text}</Text>
+            <Text style={tw`text-white text-xl mt-3`}>
+              {dashboardData.consistency_text || ''}
+            </Text>
+            <Text style={tw`text-gray-400 text-sm mt-2`}>
+              {dashboardData.comparison_text || ''}
+            </Text>
           </View>
 
-
-          {/* Achievements */}
-          {dashboardData.progress_summary.goals_hit.map((goalHit: GoalHit, index: number) =>
+          {dashboardData.progress_summary?.goals_hit?.map((goalHit: GoalHit, index: number) => (
             <View key={index} style={tw`bg-[#181C22] rounded-2xl p-4 mt-4 flex-row items-center`}>
               <View style={tw`bg-[#60A5FB] w-10 h-10 rounded-full items-center justify-center mr-3`}>
                 <Ionicons name="flag" size={20} color="black" />
               </View>
               <View style={tw`flex-1`}>
-                <Text style={tw`text-white text-xl font-bold`}>{goalHit.title} : {goalHit.status}</Text>
+                <Text style={tw`text-white text-xl font-bold`}>{goalHit.title}: {goalHit.status}</Text>
                 <Text style={tw`text-white text-xl`}>({goalHit.target})</Text>
               </View>
             </View>
+          ))}
 
-          )}
-
-          {/* Leaderboard */}
           <View style={tw`my-5 bg-[#181C22] rounded-3xl p-5 mb-20`}>
             <View style={tw`flex-row items-center justify-between mb-4`}>
               <View style={tw`flex-row items-center`}>
@@ -618,14 +678,14 @@ const DailyTrack = () => {
             <View style={tw`flex-row items-center justify-between py-2`}>
               <Text style={tw`text-gray-400 text-xl`}>Your Rank</Text>
               <Text style={tw`text-white font-bold text-xl`}>
-                {dashboardData.leaderboard.your_rank}
+                {dashboardData.leaderboard?.your_rank || '--'}
               </Text>
             </View>
 
             <View style={tw`flex-row justify-between py-2 mb-4`}>
               <Text style={tw`text-gray-400 text-base`}>Your Score</Text>
               <Text style={tw`text-white font-bold text-xl`}>
-                {dashboardData.leaderboard.your_score}
+                {dashboardData.leaderboard?.your_score || 0}
               </Text>
             </View>
 
@@ -636,7 +696,6 @@ const DailyTrack = () => {
         </View>
       </ScrollView>
 
-      {/* FaceCoach Button */}
       <View>
         <TouchableOpacity
           onPress={handleFaceCoachPress}
@@ -655,6 +714,15 @@ const DailyTrack = () => {
           <FontAwesome5 name="robot" size={20} color="white" />
         </TouchableOpacity>
       </View>
+      <Toast
+        style={toast.style}
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        fadeAnim={toast.fadeAnim}
+        buttons={toast.buttons}
+        onHide={toast.hide}
+      />
     </SafeAreaView>
   );
 };

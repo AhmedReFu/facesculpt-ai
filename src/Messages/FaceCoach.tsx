@@ -47,6 +47,55 @@ const getMockSuggestions = (): SuggestedQuestion[] => [
     { id: '4', text: 'Best exercises for jawline definition?' }
 ];
 
+// Parse markdown formatting
+const parseMarkdownText = (text: string) => {
+    const parts: Array<{ text: string; bold?: boolean }> = [];
+    let currentText = '';
+    let isBold = false;
+    let i = 0;
+
+    while (i < text.length) {
+        // Check for bold (**text**)
+        if (text[i] === '*' && text[i + 1] === '*') {
+            if (currentText) {
+                parts.push({ text: currentText, bold: isBold });
+                currentText = '';
+            }
+            isBold = !isBold;
+            i += 2;
+            continue;
+        }
+        currentText += text[i];
+        i++;
+    }
+
+    if (currentText) {
+        parts.push({ text: currentText, bold: isBold });
+    }
+
+    return parts;
+};
+
+// Component to render formatted text
+const FormattedText = ({ text }: { text: string }) => {
+    const parts = parseMarkdownText(text);
+
+    return (
+        <Text className="text-white text-[15px] leading-relaxed">
+            {parts.map((part, index) => (
+                <Text
+                    key={index}
+                    style={{
+                        fontWeight: part.bold ? 'bold' : 'normal',
+                    }}
+                >
+                    {part.text}
+                </Text>
+            ))}
+        </Text>
+    );
+};
+
 const FaceCoach: React.FC = () => {
     const navigation = useNavigation();
     const route = useRoute<FaceCoachScreenRouteProp>();
@@ -169,7 +218,7 @@ const FaceCoach: React.FC = () => {
                 const data = JSON.parse(e.data);
                 console.log("📦 Parsed Data:", JSON.stringify(data, null, 2));
 
-                // Handle initial chat history: type="history", messages=[...]
+                // Handle initial chat history
                 if (data.type === "history" && data.messages && Array.isArray(data.messages)) {
                     console.log(`✅ Received history with ${data.messages.length} messages`);
 
@@ -190,11 +239,10 @@ const FaceCoach: React.FC = () => {
                     setIsLoadingHistory(false);
                     setIsTyping(false);
                 }
-                // Handle real-time messages (AI responses)
+                    // Handle real-time messages
                 else if (data.sender && data.message) {
                     console.log("💬 Real-time message received:", data.sender);
 
-                    // Only add AI messages here (user messages already added in sendMessage)
                     if (data.sender === "AI") {
                         const newMessage: Message = {
                             id: `msg-${Date.now()}-${Math.random()}`,
@@ -205,9 +253,17 @@ const FaceCoach: React.FC = () => {
 
                         setMessages(prev => [...prev, newMessage]);
                         setIsTyping(false);
+                    } else {
+                        const newMessage: Message = {
+                            id: `msg-${Date.now()}-${Math.random()}`,
+                            text: data.message,
+                            isUser: false,
+                            timestamp: new Date(data.created_at || new Date()),
+                        };
+
+                        setMessages(prev => [...prev, newMessage]);
                     }
                 }
-                // Fallback: try to handle any AI message
                 else if (data.message) {
                     console.log("📩 Generic AI message received");
 
@@ -267,7 +323,6 @@ const FaceCoach: React.FC = () => {
             const messageText = inputText.trim();
             console.log("📤 Sending message:", messageText);
 
-            // Immediately add user message to UI
             const userMessage: Message = {
                 id: `msg-${Date.now()}-user`,
                 text: messageText,
@@ -276,11 +331,9 @@ const FaceCoach: React.FC = () => {
             };
             setMessages(prev => [...prev, userMessage]);
 
-            // Clear input and show typing indicator
             setInputText('');
             setIsTyping(true);
 
-            // Send to server
             const payload = JSON.stringify({
                 message: messageText,
             });
@@ -295,7 +348,6 @@ const FaceCoach: React.FC = () => {
         if (wsRef.current?.readyState === WebSocket.OPEN && text.trim()) {
             console.log("📤 Sending suggested question:", text);
 
-            // Immediately add user message to UI
             const userMessage: Message = {
                 id: `msg-${Date.now()}-user`,
                 text: text,
@@ -304,10 +356,8 @@ const FaceCoach: React.FC = () => {
             };
             setMessages(prev => [...prev, userMessage]);
 
-            // Show typing indicator
             setIsTyping(true);
 
-            // Send to server
             const payload = JSON.stringify({
                 message: text.trim(),
             });
@@ -324,9 +374,13 @@ const FaceCoach: React.FC = () => {
                     : 'bg-[#374151] rounded-bl-sm'
                     }`}
             >
-                <Text className="text-white text-[15px] leading-relaxed">
-                    {item.text}
-                </Text>
+                {item.isUser ? (
+                    <Text className="text-white text-[15px] leading-relaxed">
+                        {item.text}
+                    </Text>
+                ) : (
+                    <FormattedText text={item.text} />
+                )}
             </View>
         </View>
     );
@@ -373,7 +427,7 @@ const FaceCoach: React.FC = () => {
                     <View className="w-10" />
                 </View>
 
-                {/* Suggested Questions - Always show when not loading */}
+                {/* Suggested Questions */}
                 {!isLoadingHistory && (
                     <View className="py-3 border-b border-gray-800">
                         <ScrollView
@@ -401,7 +455,7 @@ const FaceCoach: React.FC = () => {
                         <Text className="text-gray-400 mt-3 text-base">Loading conversation...</Text>
                     </View>
                 ) : messages.length === 0 ? (
-                    /* Empty State - Show default welcome message */
+                        /* Empty State */
                     <View className="flex-1 px-4 pt-4">
                         <View className="mb-3 items-start">
                             <View className="max-w-[80%] bg-[#374151] rounded-2xl rounded-bl-sm px-4 py-3">
