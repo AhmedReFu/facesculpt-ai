@@ -15,6 +15,7 @@ import {
   View
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
+import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from 'twrnc';
 import { Toast, useToast } from '../hooks/useToost';
@@ -498,7 +499,29 @@ const DailyTrack = () => {
       });
 
       const result = await response.json();
+      const customer = await Purchases.getCustomerInfo();
+      console.log(customer.entitlements.active)
+      if (customer.entitlements.active.isSandbox) {
+        await AsyncStorage.setItem("subscribe", "true")
+        console.log("User has active premium subscription");
+        console.log("Premium entitlement:", customer.entitlements.active.premium);
 
+      // Check if subscription is active
+      // if (customer.entitlements.active.premium.isActive) {
+      //   console.log("Premium subscription is active");
+
+        //   // Get subscription expiration date
+        //   const expirationDate = customer.entitlements.active.premium.expirationDate;
+        //   console.log("Expiration date:", expirationDate);
+        // }
+      }
+
+      // // You can also check active subscriptions
+      // if (customer.activeSubscriptions && customer.activeSubscriptions.length > 0) {
+      //   console.log("Active subscriptions:", customer.activeSubscriptions);
+      // }
+
+      // const premium = offerings?.current || offerings?.all?.premium;
       if (response.status === 401) {
         await AsyncStorage.removeItem('token');
         toast.show({
