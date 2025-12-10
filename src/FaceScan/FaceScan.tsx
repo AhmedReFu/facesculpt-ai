@@ -6,9 +6,10 @@ import { useNavigation } from '@react-navigation/native';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { StatusBar } from 'expo-status-bar';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle, Ellipse } from 'react-native-svg';
 import tw from "twrnc";
+import { Toast, useToast } from '../hooks/useToost';
 
 const API_BASE_URL = IPA_BASE;
 const API_ENDPOINTS = {
@@ -18,7 +19,7 @@ const API_ENDPOINTS = {
 const FaceScan = () => {
     const navigation = useNavigation();
     const cameraRef = useRef<CameraView>(null);
-
+    const toast = useToast();
     const [facing, setFacing] = useState<CameraType>('front');
     const [permission, requestPermission] = useCameraPermissions();
     const [uploading, setUploading] = useState(false);
@@ -50,16 +51,18 @@ const FaceScan = () => {
                 const accessToken = await AsyncStorage.getItem('token');
 
                 if (!accessToken) {
-                    Alert.alert(
-                        'Authentication Required',
-                        'Please log in to continue',
-                        [
+                    toast.show({
+                        message: 'Authentication Required. Please log in to continue.',
+                        type: 'warning',
+                        style: 'center',
+                        buttons: [
                             {
                                 text: 'OK',
-                                onPress: () => (navigation as any).replace('Login')
+                                action: 'custom',
+                                onPress: () => (navigation as any).navigate('Auth')
                             }
                         ]
-                    );
+                    });
                     setUploading(false);
                     return;
                 }
@@ -102,34 +105,51 @@ const FaceScan = () => {
                 if (response.status === 401) {
                     // Token expired or invalid
                     await AsyncStorage.removeItem('token');
-                    Alert.alert(
-                        'Session Expired',
-                        'Please log in again',
-                        [
+                    toast.show({
+                        message: 'Session Expired. Please log in again.',
+                        type: 'error',
+                        style: 'center',
+                        buttons: [
                             {
                                 text: 'OK',
-                                onPress: () => (navigation as any).replace('Login')
+                                action: 'custom',
+                                onPress: () => (navigation as any).navigate('Auth')
                             }
                         ]
-                    );
+                    });
+                    setUploading(false);
                     return;
                 }
 
                 if (response.ok && result.success) {
-                    // Step 3: Navigate to FaceMetrics with the scan data
-                    (navigation as any).navigate('FaceMetrics');
+                    // Show success message
+                    toast.show({
+                        message: 'Face scan completed successfully! ✓',
+                        type: 'success',
+                        style: 'top',
+                        duration: 2000
+                    });
+
+                    // Step 3: Navigate to FaceMetrics after showing success
+                    setTimeout(() => {
+                        setUploading(false);
+                        (navigation as any).replace('FaceMetrics');
+                    }, 1000);
+
                 } else {
                     throw new Error(result.message || 'Upload failed');
                 }
 
             } catch (error) {
                 console.error('Error in takePicture:', error);
-                Alert.alert(
-                    'Error',
-                    error instanceof Error ? error.message : 'Failed to process image. Please try again.'
-                );
-            } finally {
                 setUploading(false);
+
+                toast.show({
+                    message: 'Failed to process image. Please try again.',
+                    type: 'error',
+                    style: 'center',
+                    buttons: [{ text: 'OK', action: 'dismiss' }]
+                });
             }
         }
     };
@@ -213,6 +233,17 @@ const FaceScan = () => {
                     </View>
                 )}
             </View>
+
+            {/* Toast Component */}
+            <Toast
+                style={toast.style}
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                fadeAnim={toast.fadeAnim}
+                buttons={toast.buttons}
+                onHide={toast.hide}
+            />
         </View>
     );
 };

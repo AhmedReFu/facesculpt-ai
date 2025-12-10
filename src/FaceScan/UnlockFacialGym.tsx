@@ -5,8 +5,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
+import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Toast, useToast } from '../hooks/useToost';
 
 interface PlanProps {
   id: string
@@ -16,6 +18,15 @@ interface PlanProps {
   badge?: string
   isSelected: boolean
   onSelect: () => void
+}
+type PackageID = "monthly" | "sixmonthly" | "yearly";
+
+interface FormattedPackage {
+  id: PackageID;
+  title: string;
+  price: string;
+  discount: string;
+  badge: string;
 }
 
 const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanProps) => (
@@ -68,9 +79,9 @@ const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanP
 )
 
 const UnlockFacialGym = () => {
+  const toast = useToast();
   const navigator = useNavigation()
   const [selectedPlan, setSelectedPlan] = useState<string>('monthly')
-
 
   const plans = [
     {
@@ -96,6 +107,105 @@ const UnlockFacialGym = () => {
     }
   ]
 
+  type PackageID = "monthly" | "sixmonthly" | "yearly";
+
+  interface FormattedPackage {
+    id: PackageID;
+    title: string;
+    price: string;
+    discount: string;
+    badge: string;
+  }
+
+  const getRevenueCatData = async () => {
+    try {
+
+      const stored = await AsyncStorage.getItem('user');
+
+      if (!stored) {
+        console.log("No stored user found");
+        return;
+      }
+
+      const user = JSON.parse(stored);
+
+      const offerings = await Purchases.getOfferings();
+      const premium = offerings?.all?.premium;
+
+      console.log(premium);
+
+      if (!premium) {
+        console.log("No premium offering found");
+        return;
+      }
+
+      // Mapping RevenueCat packageType → our IDs
+      const idMap: Record<string, PackageID> = {
+        MONTHLY: "monthly",
+        SIX_MONTH: "sixmonthly",
+        ANNUAL: "yearly",
+      };
+
+      // UI Titles
+      const titleMap: Record<PackageID, string> = {
+        monthly: "Monthly",
+        sixmonthly: "6 Month Plan",
+        yearly: "Yearly",
+      };
+
+      // Discount (custom)
+      const discountMap: Record<PackageID, string> = {
+        monthly: "BDT 2,500.00",
+        sixmonthly: "BDT 12,000.00",
+        yearly: "BDT 18,000.00",
+      };
+
+      // Badge
+      const badgeMap: Record<PackageID, string> = {
+        monthly: "",
+        sixmonthly: "Popular",
+        yearly: "",
+      };
+
+      const formatted: FormattedPackage[] = premium.availablePackages.map(pkg => {
+        const rcType = pkg.packageType; // MONTHLY | SIX_MONTH | ANNUAL
+        const id = idMap[rcType];      // monthly | sixmonthly | yearly
+
+        const product = pkg.product;
+
+        // Price period
+        const period =
+          id === "monthly"
+            ? "/month"
+            : id === "sixmonthly"
+              ? "/6 months"
+              : "/year";
+
+        return {
+          id,
+          title: titleMap[id],
+          price: `${product.priceString}${period}`,
+          discount: discountMap[id],
+          badge: badgeMap[id],
+        };
+      });
+
+      console.log("FINAL DATA:", formatted);
+
+      if (user) {
+        await Purchases.logIn(user.phone_number);
+        console.log("RevenueCat User Identified:", user.phone_number);
+      }
+      return formatted;
+    } catch (error) {
+      console.error("RevenueCat Error:", error);
+    }
+  };
+
+
+
+  getRevenueCatData();
+
   const handleSelectPlan = (planId: string) => {
     setSelectedPlan(planId)
     console.log('Selected plan:', planId)
@@ -106,14 +216,26 @@ const UnlockFacialGym = () => {
       // Demo: Simulate successful subscription
       await AsyncStorage.setItem("subscribe", "true")
 
-      Alert.alert(
-        'Success!',
-        'Your 7-day free trial has started. Welcome to FaceSculpt AI Premium!',
-        [{ text: 'Get Started', onPress: () => navigator.navigate("DailyTrack") }]
-      )
+      toast.show({
+        message: '🎉 Your 7-day free trial has started. Welcome to FaceSculpt AI Premium!',
+        type: 'success',
+        style: 'center',
+        buttons: [
+          {
+            text: 'Get Started',
+            action: 'custom',
+            onPress: () => navigator.navigate("DailyTrack")
+          }
+        ]
+      });
     } catch (error) {
       console.error('Error:', error)
-      Alert.alert('Error', 'Something went wrong. Please try again.')
+      toast.show({
+        message: 'Something went wrong. Please try again.',
+        type: 'error',
+        style: 'center',
+        buttons: [{ text: 'OK', action: 'dismiss' }]
+      });
     }
   }
 
@@ -123,17 +245,34 @@ const UnlockFacialGym = () => {
       const subscribed = await AsyncStorage.getItem("subscribe")
 
       if (subscribed === "true") {
-        Alert.alert(
-          'Success',
-          'Your purchases have been restored!',
-          [{ text: 'OK', onPress: () => navigator.navigate("DailyTrack") }]
-        )
+        toast.show({
+          message: 'Your purchases have been restored successfully!',
+          type: 'success',
+          style: 'center',
+          buttons: [
+            {
+              text: 'OK',
+              action: 'custom',
+              onPress: () => navigator.navigate("DailyTrack")
+            }
+          ]
+        });
       } else {
-        Alert.alert('No Active Subscription', 'No active subscription found to restore.')
+        toast.show({
+          message: 'No active subscription found to restore.',
+          type: 'warning',
+          style: 'center',
+          buttons: [{ text: 'OK', action: 'dismiss' }]
+        });
       }
     } catch (error) {
       console.error('Restore error:', error)
-      Alert.alert('Error', 'Failed to restore purchases. Please try again.')
+      toast.show({
+        message: 'Failed to restore purchases. Please try again.',
+        type: 'error',
+        style: 'center',
+        buttons: [{ text: 'OK', action: 'dismiss' }]
+      });
     }
   }
 
@@ -214,7 +353,7 @@ const UnlockFacialGym = () => {
             onPress={handleRestorePurchases}
             className="py-3"
           >
-            <Text className="text-[#60A5FA] text-lg font-medium">
+            <Text className="text-[#60A5FB] text-lg font-medium">
               Restore Purchases
             </Text>
           </TouchableOpacity>
@@ -223,6 +362,17 @@ const UnlockFacialGym = () => {
           </Text>
         </View>
       </View>
+
+      {/* Toast Component */}
+      <Toast
+        style={toast.style}
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        fadeAnim={toast.fadeAnim}
+        buttons={toast.buttons}
+        onHide={toast.hide}
+      />
     </SafeAreaView>
   )
 }

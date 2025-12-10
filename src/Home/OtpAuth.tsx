@@ -6,7 +6,6 @@ import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     Image,
     ScrollView,
     Text,
@@ -16,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Images } from '../constants';
+import { Toast, useToast } from '../hooks/useToost';
 
 const API_BASE_URL = IPA_BASE;
 const API_ENDPOINTS = {
@@ -34,6 +34,7 @@ interface RouteParams {
 type OtpScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const OtpAuth = () => {
+    const toast = useToast();
     const navigation = useNavigation<OtpScreenNavigationProp>();
     const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
     const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);
@@ -122,13 +123,27 @@ const OtpAuth = () => {
         const verificationCode = enteredCode || code.join('');
 
         if (verificationCode.length < 6) {
-            Alert.alert('Error', 'Please enter a 6-digit code.');
+            toast.show({
+                message: 'Please enter a complete 6-digit code.',
+                type: 'warning',
+                style: 'top'
+            });
             return;
         }
 
         // Check if phone number is available
         if (!params?.phone_number) {
-            Alert.alert('Error', 'Phone number is missing. Please go back and try again.');
+            toast.show({
+                message: 'Phone number is missing. Please go back and try again.',
+                type: 'error',
+                style: 'center',
+                buttons: [
+                    {
+                        text: 'Go Back',
+                        action: 'back'
+                    }
+                ]
+            });
             return;
         }
 
@@ -166,10 +181,14 @@ const OtpAuth = () => {
 
         } catch (error) {
             console.error('Error verifying OTP:', error);
-            Alert.alert(
-                'Verification Failed',
-                error instanceof Error ? error.message : 'Failed to verify OTP. Please try again.'
-            );
+
+            toast.show({
+                message: error instanceof Error ? error.message : 'Failed to verify OTP. Please try again.',
+                type: 'error',
+                style: 'center',
+                buttons: [{ text: 'OK', action: 'dismiss' }]
+            });
+
             // Clear the code on error
             setCode(['', '', '', '', '', '']);
             setTimeout(() => {
@@ -180,17 +199,37 @@ const OtpAuth = () => {
         }
     };
 
-    const handleResend = () => {
+    const handleResend = async () => {
         if (timer === 0) {
-            setTimer(60);
-            setCode(['', '', '', '', '', '']);
-            setTimeout(() => {
-                inputsRef.current[0]?.focus();
-            }, 100);
-            // TODO: Implement actual resend OTP API call here
+            try {
+                setTimer(60);
+                setCode(['', '', '', '', '', '']);
+                setTimeout(() => {
+                    inputsRef.current[0]?.focus();
+                }, 100);
 
+                // TODO: Implement actual resend OTP API call here
+                // const response = await fetch(...);
 
-            Alert.alert('Code Resent', 'A new verification code has been sent.');
+                toast.show({
+                    message: 'A new verification code has been sent to your phone.',
+                    type: 'success',
+                    style: 'top',
+                    duration: 3000
+                });
+            } catch (error) {
+                toast.show({
+                    message: 'Failed to resend code. Please try again.',
+                    type: 'error',
+                    style: 'top'
+                });
+            }
+        } else {
+            toast.show({
+                message: `Please wait ${timer} seconds before requesting a new code.`,
+                type: 'warning',
+                style: 'top'
+            });
         }
     };
 
@@ -364,6 +403,17 @@ const OtpAuth = () => {
                     </BlurView>
                 )}
             </ScrollView>
+
+            {/* Toast Component */}
+            <Toast
+                style={toast.style}
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                fadeAnim={toast.fadeAnim}
+                buttons={toast.buttons}
+                onHide={toast.hide}
+            />
         </SafeAreaView>
     );
 };

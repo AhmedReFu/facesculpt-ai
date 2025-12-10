@@ -505,7 +505,7 @@ const AuthScreen = () => {
                                     >
                                         <Ionicons
                                             name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                                            size={20}
+                                            size={24}
                                             color="#9CA3AF"
                                         />
                                     </TouchableOpacity>

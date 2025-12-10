@@ -1,22 +1,22 @@
+import { useNavigation } from '@react-navigation/native';
+import { BlurView } from 'expo-blur';
 import React, { useState } from 'react';
 import {
     Animated,
-    Platform,
-    Text,
-    View,
-    StyleSheet,
-    TouchableOpacity,
     BackHandler,
+    Dimensions,
     Modal,
-    Dimensions
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { useNavigation } from '@react-navigation/native';
 
 // Types
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 export type ToastAction = 'dismiss' | 'back' | 'close-app' | 'custom';
-export type ToastStyle = 'top' | 'center'; // top = normal, center = modal style
+export type ToastStyle = 'top' | 'center';
 
 interface ToastButton {
     text: string;
@@ -29,7 +29,7 @@ interface ToastConfig {
     type?: ToastType;
     duration?: number | null;
     buttons?: ToastButton[];
-    style?: ToastStyle; // 'top' or 'center'
+    style?: ToastStyle;
 }
 
 interface ToastHookReturn {
@@ -83,7 +83,6 @@ export const useToast = (): ToastHookReturn => {
         let finalDuration = duration;
         let finalStyle = toastStyle;
 
-        // Handle both object and string parameters
         if (typeof config === 'string') {
             setMessage(config);
             setType(toastType);
@@ -101,16 +100,12 @@ export const useToast = (): ToastHookReturn => {
         setStyle(finalStyle);
         setVisible(true);
 
-        // Fade in
         Animated.timing(fadeAnim, {
             toValue: 1,
             duration: 300,
             useNativeDriver: true,
         }).start();
 
-        // Auto dismiss if:
-        // 1. Duration is set AND
-        // 2. No buttons provided (auto-dismiss) OR style is 'top'
         if (finalDuration && (finalButtons.length === 0 || finalStyle === 'top')) {
             setTimeout(hide, finalDuration);
         }
@@ -189,7 +184,7 @@ export const Toast: React.FC<ToastProps> = ({ visible, message, type, fadeAnim, 
         );
     }
 
-    // Center style (modal with blur)
+    // Center style (modal with blur) - Works on both iOS and Android
     return (
         <Modal
             transparent
@@ -198,13 +193,17 @@ export const Toast: React.FC<ToastProps> = ({ visible, message, type, fadeAnim, 
             onRequestClose={onHide}
         >
             <View style={styles.modalOverlay}>
-                <BlurView intensity={80} style={styles.blurView}>
+                <BlurView
+                    intensity={Platform.OS === 'ios' ? 100 : 100}
+                    tint="dark"
+                    style={styles.blurView}
+                    experimentalBlurMethod="dimezisBlurView" // Better Android blur
+                >
                     <TouchableOpacity
                         style={styles.backdrop}
                         activeOpacity={1}
-                        onPress={() => { }} // Prevent closing on backdrop press
+                        onPress={() => { }}
                     />
-
                     <Animated.View
                         style={[
                             styles.centerContainer,
@@ -280,7 +279,7 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
 
-    // Center style (modal)
+    // Center style (modal with blur)
     modalOverlay: {
         flex: 1,
         justifyContent: 'center',
@@ -290,10 +289,10 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)', // Fallback background
     },
     backdrop: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     centerContainer: {
         width: width - 80,
@@ -337,75 +336,3 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
 });
-
-
-// // 1. TOP STYLE (Normal toast at top)
-// toast.show('Quick message', 'success', 3000, undefined, 'top');
-
-// // 2. CENTER STYLE (Modal with blur - blocks screen)
-// toast.show({
-//     message: 'This is important!',
-//     type: 'warning',
-//     style: 'center', // 👈 This makes it center modal
-//     buttons: [
-//         { text: 'OK', action: 'dismiss' }
-//     ]
-// });
-
-// // 3. Center modal with custom action
-// toast.show({
-//     message: 'Delete all data?',
-//     type: 'error',
-//     style: 'center',
-//     buttons: [
-//         { text: 'Cancel', action: 'dismiss' },
-//         {
-//             text: 'Delete',
-//             action: 'custom',
-//             onPress: () => deleteAllData()
-//         }
-//     ]
-// });
-
-// // 4. Center modal to close app
-// toast.show({
-//     message: 'App needs to restart',
-//     type: 'info',
-//     style: 'center',
-//     buttons: [
-//         { text: 'Close App', action: 'close-app' }
-//     ]
-// });
-
-
-
-/* // ✅ Quick notification (no buttons, auto-dismiss)
-toast.show({
-    message: 'Password must be at least 6 characters.',
-    type: 'warning',
-    style: 'top'
-});
-
-// ✅ Success message (no buttons, auto-dismiss)
-toast.show({
-    message: 'Sign in successfully ✓',
-    type: 'success',
-    style: 'top',
-    duration: 2000
-});
-
-// ✅ Error with button (shows OK button, manual dismiss)
-toast.show({
-    message: 'Invalid phone number or password.',
-    type: 'error',
-    style: 'center',
-    buttons: [{ text: 'OK', action: 'dismiss' }]
-});
-
-// ✅ Network error with button
-toast.show({
-    message: 'Network error. Please check your connection.',
-    type: 'error',
-    style: 'center',
-    buttons: [{ text: 'OK', action: 'dismiss' }]
-}); */

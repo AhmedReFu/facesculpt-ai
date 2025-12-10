@@ -4,6 +4,7 @@ declare module "@env" {
   export const API_TIMEOUT: string;
   export const ENVIRONMENT: string;
   export const LOGIN: string;
+  export const REFRESH_TOKEN: string;
   export const REGISTER: string;
   export const REVENUE_API_ANDROID: string;
   export const REVENUE_API_APPLE: string;
@@ -14,4 +15,7 @@ declare module "@env" {
   export const WORKOUT_DONE: string;
   export const OTP_AUTH: string;
   export const FORGOT_PASSWORD: string;
+  export const LOG_OUT: string;
+  export const RESEND_OTP: string;
+  export const RESET_PASSWORD: string;
 }

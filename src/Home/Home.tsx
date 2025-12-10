@@ -1,3 +1,4 @@
+import { IPA_BASE, REFRESH_TOKEN } from '@env';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +14,11 @@ import { Images } from '../constants';
 import { Toast, useToast } from '../hooks/useToost';
 import { useNavigationReset } from '../lib/useNavigationReset';
 import { RootStackParamList } from '../types/navigation';
+
+const API_BASE_URL = IPA_BASE;
+const API_ENDPOINTS = {
+    REFRESH_TOKEN: REFRESH_TOKEN,
+};
 
 type ChooseGoalScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -88,13 +94,44 @@ const Home = () => {
         const handleOnlineMode = async () => {
             try {
                 const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
+                const token = await AsyncStorage.getItem("token");
+                const refreshToken = AsyncStorage.getItem("refresh_token");
                 const user = await AsyncStorage.getItem("user");
                 const subscribe = await AsyncStorage.getItem("subscribe");
-
+                // if (token) {
+                   
+                // } else {
+                //     const bodyPayLoad = {
+                //         refresh: refreshToken
+                //     }
+                //     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.REFRESH_TOKEN}`, {
+                //         method: 'POST',
+                //         headers: {
+                //             'Content-Type': 'application/json',
+                //         },
+                //         body: JSON.stringify(bodyPayLoad)
+                //     });
+                //     const result = await response.json()
+                //     if (response.ok) {
+                //         await AsyncStorage.setItem('token', result.data.access);
+                //         if (isLoggedIn === "true" && user) {
+                //             if (subscribe === "true") {
+                //                 navigator.navigate("DailyTrack");
+                //             } else {
+                //                 navigator.navigate("FaceScan");
+                //             }
+                //         } else {
+                //             navigator.navigate("Auth");
+                //         }
+                //     } else {
+                //         navigator.navigate("Auth");
+                //     }
+                // }
                 setTimeout(() => {
                     if (isLoggedIn === "true" && user) {
                         if (subscribe === "true") {
-                            navigator.navigate("DailyTrack");
+                             navigator.navigate("DailyTrack");
+                           
                         } else {
                             navigator.navigate("FaceScan");
                         }
@@ -113,9 +150,7 @@ const Home = () => {
         checkAuthAndNavigate();
     }, []);
 
-    const handleStartPress = () => {
-        navigator.navigate("Auth");
-    };
+
 
     // Loading Screen
     if (isLoading) {
@@ -180,7 +215,7 @@ const Home = () => {
                 </View>
 
                 {/* Button */}
-                <CustomButton name="Start Face Scan" onPress={handleStartPress} />
+                <CustomButton name="Start Face Scan" />
 
                 {/* Security Info */}
                 <View className="flex-row my-4 items-center">

@@ -2,7 +2,7 @@
 import { GET_PLAN, IPA_BASE, WORKOUT_DONE } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { useToast } from '../hooks/useToost';
 
 const API_BASE_URL = IPA_BASE;
 const API_ENDPOINTS = {
@@ -54,6 +54,7 @@ const getIconForMetric = (metric: string, index: number): string => {
 };
 
 export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
+    const toast = useToast();
     const [exercises, setExercises] = useState<Exercise[]>([]);
     const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number>(0);
     const [loading, setLoading] = useState<boolean>(true);
@@ -126,7 +127,7 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
             }
         } catch (error) {
             console.error('Failed to fetch workout plan:', error);
-            Alert.alert('Error', 'Failed to load workout plan. Please try again.');
+            toast.show("Error, Failed to load workout plan. Please try again.")
 
         } finally {
             setLoading(false);

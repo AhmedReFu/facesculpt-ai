@@ -5,9 +5,10 @@ import { useNavigation } from '@react-navigation/native'
 import { StackNavigationProp } from '@react-navigation/stack'
 import { StatusBar } from 'expo-status-bar'
 import React, { useState } from 'react'
-import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import tw from 'twrnc'
+import { Toast, useToast } from '../hooks/useToost'
 import { useWorkout } from '../utils/WorkoutProvider'
 
 const API_BASE_URL = IPA_BASE;
@@ -26,7 +27,7 @@ type RootStackParamList = {
     FaceMetrics: undefined;
     DailyTrack: undefined;
     UnlockFacialGym: undefined;
-    Login: undefined;
+    Auth: undefined;
 };
 
 type ChooseGoalScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -43,13 +44,14 @@ const GoalItem = ({ label, isSelected, onPress }: GoalItemProps) => (
         {isSelected && (
             <Ionicons name="checkmark" size={20} color="black" style={tw`mr-2`} />
         )}
-        <Text style={tw` text-base font-medium ${isSelected ? 'text-black' : 'text-white'}`}>{label}</Text>
+        <Text style={tw`text-base font-medium ${isSelected ? 'text-black' : 'text-white'}`}>
+            {label}
+        </Text>
     </TouchableOpacity>
 )
 
 const ChooseGoal = () => {
-
-
+    const toast = useToast();
     const navigator = useNavigation<ChooseGoalScreenNavigationProp>()
 
     const {
@@ -83,34 +85,48 @@ const ChooseGoal = () => {
 
     const handleSetGoals = async () => {
         if (selectedGoals.length === 0) {
-            Alert.alert('No Goals Selected', 'Please select at least one goal');
+            toast.show({
+                message: 'Please select at least one goal to continue.',
+                type: 'warning',
+                style: 'center',
+                buttons: [{ text: 'OK', action: 'dismiss' }]
+            });
             return;
         }
+
         try {
             setLoading(true);
+
             // Get access token
             const accessToken = await AsyncStorage.getItem('token');
             const subscribe = await AsyncStorage.getItem("subscribe");
+
             if (!accessToken) {
-                Alert.alert(
-                    'Authentication Required',
-                    'Please log in to continue',
-                    [
+                setLoading(false);
+                toast.show({
+                    message: 'Authentication Required. Please log in to continue.',
+                    type: 'warning',
+                    style: 'center',
+                    buttons: [
                         {
-                            text: 'OK',
-                            onPress: () => navigator.replace('Login')
+                            text: 'Login',
+                            action: 'custom',
+                            onPress: () => navigator.replace('Auth')
                         }
                     ]
-                );
+                });
                 return;
             }
+
             // Convert selected goals to API format
             const goalsPayload = {
                 wants_sharper_jawline: selectedGoals.includes('Sharper Jawline'),
                 wants_reduce_puffiness: selectedGoals.includes('Reduce Puffiness'),
                 wants_improve_symmetry: selectedGoals.includes('Improve Symmetry')
             };
+
             console.log('Sending goals payload:', goalsPayload);
+
             // Send goals to API
             const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.SET_GOALS}`, {
                 method: 'POST',
@@ -120,47 +136,67 @@ const ChooseGoal = () => {
                 },
                 body: JSON.stringify(goalsPayload),
             });
+
             const result = await response.json();
             console.log('Set Goals Response:', result);
+
             // Handle 401 - Token expired
             if (response.status === 401) {
                 await AsyncStorage.removeItem('token');
-                Alert.alert(
-                    'Session Expired',
-                    'Please log in again',
-                    [
+                setLoading(false);
+                toast.show({
+                    message: 'Session Expired. Please log in again.',
+                    type: 'error',
+                    style: 'center',
+                    buttons: [
                         {
-                            text: 'OK',
-                            onPress: () => navigator.replace('Login')
+                            text: 'Login',
+                            action: 'custom',
+                            onPress: () => navigator.replace('Auth')
                         }
                     ]
-                );
+                });
                 return;
             }
+
             // Check if goals were set successfully
             if (response.ok && result.success) {
-                console.log('Goals set successfully!');
+                console.log('✅ Goals set successfully!');
+
+                toast.show({
+                    message: 'Goals set successfully! ✓',
+                    type: 'success',
+                    style: 'top',
+                    duration: 2000
+                });
+
                 // Check subscription status
-                if (subscribe === "true") {
+                setTimeout(() => {
+                    if (subscribe === "true") {
                     // User has subscription - go to DailyTrack
-                    resetWorkout();
-                    navigator.replace("DailyTrack");
-                    fetchWorkoutPlan()
-                } else {
-                    // No subscription - go to unlock page
-                    navigator.navigate("UnlockFacialGym");
-                    fetchWorkoutPlan();
-                }
+                        console.log('📱 Navigating to DailyTrack...');
+                        resetWorkout();
+                        fetchWorkoutPlan();
+                        navigator.replace("DailyTrack");
+                    } else {
+                        // No subscription - go to unlock page
+                        console.log('🔒 Navigating to UnlockFacialGym...');
+                        fetchWorkoutPlan();
+                        navigator.navigate("UnlockFacialGym");
+                    }
+                }, 1000);
             } else {
                 // API returned error
                 throw new Error(result.message || 'Failed to set goals');
             }
         } catch (error) {
-            console.error('Error setting goals:', error);
-            Alert.alert(
-                'Error',
-                error instanceof Error ? error.message : 'Failed to set goals. Please try again.'
-            );
+            console.error('❌ Error setting goals:', error);
+            toast.show({
+                message: error instanceof Error ? error.message : 'Failed to set goals. Please try again.',
+                type: 'error',
+                style: 'center',
+                buttons: [{ text: 'OK', action: 'dismiss' }]
+            });
         } finally {
             setLoading(false);
         }
@@ -177,7 +213,7 @@ const ChooseGoal = () => {
                         </Text>
                         <TouchableOpacity
                             onPress={() => navigator.replace("FaceMetrics")}
-                            style={tw`mt-1`}
+                            style={tw`mt-1 p-1`}
                             disabled={loading}
                         >
                             <Ionicons name="close" size={32} color="white" />
@@ -187,6 +223,7 @@ const ChooseGoal = () => {
                         All goals selected. Deselect any you don't want — your plan adapts automatically.
                     </Text>
                 </View>
+
                 <View style={tw`flex-row flex-wrap gap-3`}>
                     {goals.map((goal, index) => (
                         <GoalItem
@@ -205,6 +242,8 @@ const ChooseGoal = () => {
                     </Text>
                 </View>
             </View>
+
+            {/* Submit Button */}
             <View style={tw`my-6`}>
                 <TouchableOpacity
                     onPress={handleSetGoals}
@@ -215,7 +254,7 @@ const ChooseGoal = () => {
                 >
                     {loading ? (
                         <>
-                            <ActivityIndicator color="white" />
+                            <ActivityIndicator color="white" size="small" />
                             <Text style={tw`text-center text-white text-xl font-semibold ml-2`}>
                                 Setting Goals...
                             </Text>
@@ -227,6 +266,17 @@ const ChooseGoal = () => {
                     )}
                 </TouchableOpacity>
             </View>
+
+            {/* Toast Component */}
+            <Toast
+                style={toast.style}
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                fadeAnim={toast.fadeAnim}
+                buttons={toast.buttons}
+                onHide={toast.hide}
+            />
         </SafeAreaView>
     )
 }

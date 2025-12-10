@@ -1,4 +1,4 @@
-import { DAILY_TRACK, IPA_BASE } from '@env';
+import { DAILY_TRACK, IPA_BASE, LOG_OUT } from '@env';
 import { Feather, FontAwesome5, FontAwesome6, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from "@react-native-community/netinfo";
@@ -7,7 +7,6 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   LayoutChangeEvent,
   ScrollView,
@@ -24,6 +23,7 @@ import { useBackHandler } from '../lib/useBackHandler';
 const API_BASE_URL = IPA_BASE;
 const API_ENDPOINTS = {
   DAILY_TRACK: DAILY_TRACK,
+  LOG_OUT: LOG_OUT
 };
 
 const { width: WINDOW_WIDTH } = Dimensions.get('window');
@@ -442,6 +442,7 @@ const DailyTrack = () => {
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState<string | null>(null)
 
@@ -456,12 +457,25 @@ const DailyTrack = () => {
       setError(null);
 
       const accessToken = await AsyncStorage.getItem('token');
+      const refreshToken = await AsyncStorage.getItem('refresh_token');
+      setRefreshToken(refreshToken)
       const subscribe = await AsyncStorage.getItem("subscribe");
       setIsSubscribed(subscribe)
       setToken(accessToken);
 
       if (!accessToken) {
-        navigation.navigate("Auth");
+        toast.show({
+          message: 'Authentication Required Please log in to continue',
+          type: 'warning',
+          style: 'center',
+          buttons: [
+            {
+              text: 'OK',
+              action: 'custom',
+              onPress: () => (navigation as any).navigate('Auth')
+            }
+          ]
+        })
         return;
       }
 
@@ -487,12 +501,18 @@ const DailyTrack = () => {
 
       if (response.status === 401) {
         await AsyncStorage.removeItem('token');
-        Alert.alert(
-          'Session Expired',
-          'Please log in again',
-          [{ text: 'OK', onPress: () => navigation.navigate('Auth') }]
-        );
-
+        toast.show({
+          message: 'Session Expired Please log in again',
+          type: 'error',
+          style: 'center',
+          buttons: [
+            {
+              text: 'OK',
+              action: 'custom',
+              onPress: () => (navigation as any).navigate('Auth')
+            }
+          ]
+        })
         return;
       }
 
@@ -507,6 +527,7 @@ const DailyTrack = () => {
         setLeaderboardEntries(transformedLeaderboard);
 
       } else {
+        console.log("error here")
         throw new Error(result.message || 'Failed to load dashboard');
       }
 
@@ -519,35 +540,52 @@ const DailyTrack = () => {
   };
 
   const handleUser = async () => {
-
-    toast.show({
-      message: 'Logout successfully',
-      type: 'warning',
-      style: 'top',
-      duration: 2000
-    });
     await AsyncStorage.removeItem("isLoggedIn");
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("user");
 
 
-    setTimeout(() => {
+    toast.show({
+      message: 'Logout successfully',
+      type: 'warning',
+      style: 'top',
+      duration: 3000
+    });
+
+    const bodyPayLoad = {
+      refresh: refreshToken
+    }
+
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.LOG_OUT}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(bodyPayLoad)
+    });
+    const result = await response.json();
+    if (result.success) {
       navigation.navigate("Auth");
-    }, 1000);
+    }
   };
 
   useBackHandler();
 
   const handleFaceCoachPress = () => {
     if (!token) {
-      Alert.alert(
-        'Authentication Required',
-        'Please login again to access FaceCoach',
-        [
-          { text: 'Login', onPress: () => navigation.navigate("Auth") },
-          { text: 'Cancel', style: 'cancel' }
+      toast.show({
+        message: 'Authentication Required Please login again to access FaceCoach',
+        type: 'warning',
+        style: 'center',
+        buttons: [
+          {
+            text: 'OK',
+            action: 'custom',
+            onPress: () => (navigation as any).navigate('Auth')
+          }
         ]
-      );
+      })
       return;
     }
     navigation.navigate('FaceCoach', { token });

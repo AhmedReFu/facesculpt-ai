@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as React from 'react';
-import { BackHandler, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BackHandler, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Purchases from "react-native-purchases";
 
 import "./global.css";
 
@@ -19,13 +20,32 @@ import Sessions from './src/GymWorkout/Sessions';
 import AuthScreen from './src/Home/AuthScreen';
 import Home from './src/Home/Home';
 import OtpAuth from './src/Home/OtpAuth';
-import { useToast } from './src/hooks/useToost';
+import { Toast, useToast } from './src/hooks/useToost';
 import FaceCoach from './src/Messages/FaceCoach';
 import DailyTrack from './src/TrackGym/DailyTrack';
 import AppNavigationContainer from './src/utils/useNavigationCleaner';
 import { WorkoutProvider } from './src/utils/WorkoutProvider';
 
 const Stack = createStackNavigator();
+
+// Workout Stack - Only these 3 pages use WorkoutProvider
+const WorkoutStack = () => {
+  return (
+    <WorkoutProvider>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          animation: 'none',
+          gestureEnabled: false,
+        }}
+      >
+        <Stack.Screen name="DailyRoutine" component={DailyRoutine} />
+        <Stack.Screen name="Exercise" component={Exercise} />
+        <Stack.Screen name="Sessions" component={Sessions} />
+      </Stack.Navigator>
+    </WorkoutProvider>
+  );
+};
 
 // No Internet Screen Component
 const NoInternetScreen = ({ onRetry }: { onRetry: () => void }) => {
@@ -84,7 +104,6 @@ const NoInternetScreen = ({ onRetry }: { onRetry: () => void }) => {
           </TouchableOpacity>
         </View>
       </View>
-
     </View>
   );
 };
@@ -95,19 +114,14 @@ function RootStack() {
   const [showNoInternet, setShowNoInternet] = React.useState(false);
   const [isChecking, setIsChecking] = React.useState(true);
 
-
-
-
-
   // Check internet connection
   const checkConnection = React.useCallback(async () => {
-    // if (Platform.OS === 'android') {
-    //   Purchases.configure({ apiKey: "goog_pZuivWeWkPuaNMFYnVvexWkfELI" })
-    // }
-    // else if (Platform.OS === 'ios') {
-    //   Purchases.configure({ apiKey: "appl_SGOUsugAvdJhvzWJZhOwbmNOKrG" })
-    // }
-
+    if (Platform.OS === 'android') {
+      Purchases.configure({ apiKey: "goog_pZuivWeWkPuaNMFYnVvexWkfELI" })
+    }
+    else if (Platform.OS === 'ios') {
+      Purchases.configure({ apiKey: "appl_SGOUsugAvdJhvzWJZhOwbmNOKrG" })
+    }
 
     try {
       setIsChecking(true);
@@ -140,24 +154,19 @@ function RootStack() {
 
       if (!connected) {
         setShowNoInternet(true);
-        // Show alert when connection is lost during use
-
-
         toast.show({
-          message: 'Connection Lost Your internet connection was lost. Please reconnect to continue using the app.',
+          message: 'Connection Lost. Your internet connection was lost. Please reconnect to continue using the app.',
           type: 'warning',
           style: 'center',
           buttons: [{ text: 'OK', action: 'dismiss' }]
         });
-
       } else if (showNoInternet) {
-        // Connection restored
         setShowNoInternet(false);
         toast.show({
-          message: 'Connection Restored Your internet connection has been restored.',
+          message: 'Connection Restored. Your internet connection has been restored.',
           type: 'success',
-          style: 'center',
-          buttons: [{ text: 'OK', action: 'dismiss' }]
+          style: 'top',
+          duration: 3000
         });
       }
     });
@@ -186,38 +195,58 @@ function RootStack() {
 
   // Show main app if connected
   return (
-    <WorkoutProvider>
-      <AppNavigationContainer>
-        <Stack.Navigator
-          screenOptions={{
-            headerShown: false,
-            animation: 'none',
-            gestureEnabled: false,
-            gestureDirection: 'horizontal',
-          }}
-          initialRouteName='Home'
-        >
+    <AppNavigationContainer>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          animation: 'none',
+          gestureEnabled: false,
+          gestureDirection: 'horizontal',
+        }}
+        initialRouteName='Home'
+      >
+        <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen name="Auth" component={AuthScreen} />
+        <Stack.Screen name="OtpAuth" component={OtpAuth} />
+        <Stack.Screen name="ResetPassword" component={ResetPassword} />
+        <Stack.Screen name="Otp" component={Otp} />
+        <Stack.Screen name="CreateNewPassword" component={CreateNewPassword} />
+        <Stack.Screen
+          options={{ gestureEnabled: false }}
+          name="DailyTrack"
+          component={DailyTrack}
+        />
+        <Stack.Screen name="FaceCoach" component={FaceCoach} />
 
-          <Stack.Screen name="Home" component={Home} />
-          <Stack.Screen name="Auth" component={AuthScreen} />
-          <Stack.Screen name="OtpAuth" component={OtpAuth} />
-          <Stack.Screen name="ResetPassword" component={ResetPassword} />
-          <Stack.Screen name="Otp" component={Otp} />
-          <Stack.Screen name="CreateNewPassword" component={CreateNewPassword} />
-          <Stack.Screen options={{ gestureEnabled: false }} name="DailyTrack" component={DailyTrack} />
-          <Stack.Screen name="FaceCoach" component={FaceCoach} />
-          <Stack.Screen name="DailyRoutine" component={DailyRoutine} />
-          <Stack.Screen name="Exercise" component={Exercise} />
-          <Stack.Screen name="Sessions" component={Sessions} />
-          <Stack.Screen name="FaceScan" component={FaceScan} />
-          <Stack.Screen name="FaceMetrics" component={FaceMetrics} />
-          <Stack.Screen name="ChooseGoal" component={ChooseGoal} />
-          <Stack.Screen name="UnlockFacialGym" component={UnlockFacialGym} />
+        {/* Workout Stack - WorkoutProvider only applies to these 3 screens */}
+        <Stack.Screen
+          name="WorkoutFlow"
+          component={WorkoutStack}
+          options={{ headerShown: false }}
+        />
 
-        </Stack.Navigator>
-      </AppNavigationContainer>
-    </WorkoutProvider >
+        {/* Individual workout screens for direct navigation */}
+        <Stack.Screen name="DailyRoutine" component={DailyRoutine} />
+        <Stack.Screen name="Exercise" component={Exercise} />
+        <Stack.Screen name="Sessions" component={Sessions} />
 
+        <Stack.Screen name="FaceScan" component={FaceScan} />
+        <Stack.Screen name="FaceMetrics" component={FaceMetrics} />
+        <Stack.Screen name="ChooseGoal" component={ChooseGoal} />
+        <Stack.Screen name="UnlockFacialGym" component={UnlockFacialGym} />
+      </Stack.Navigator>
+
+      {/* Toast Component */}
+      <Toast
+        style={toast.style}
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        fadeAnim={toast.fadeAnim}
+        buttons={toast.buttons}
+        onHide={toast.hide}
+      />
+    </AppNavigationContainer>
   );
 }
 

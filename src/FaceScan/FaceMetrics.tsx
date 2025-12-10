@@ -11,14 +11,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from "twrnc";
 import CustomButton from '../Components/CustomButton';
 import { Toast, useToast } from '../hooks/useToost';
+import { useNavigationReset } from '../lib/useNavigationReset';
 
 const API_BASE_URL = IPA_BASE;
 const API_ENDPOINTS = {
     IMAGE_UPLOAD: IMAGE_UPLOAD,
 };
 
-const MAX_RETRY_ATTEMPTS = 10; // Maximum retry attempts for processing status
-const RETRY_DELAY = 3000;
+const MAX_RETRY_ATTEMPTS = 10;
+const RETRY_DELAY = 5000; // 5 seconds
 
 type RootStackParamList = {
     DailyTrack: undefined;
@@ -40,12 +41,6 @@ interface ScanData {
     created_at: string;
 }
 
-interface RouteParams {
-    imageUri?: string;
-    scanData?: ScanData;
-    fullResponse?: any;
-}
-
 const FaceMetrics = () => {
     const toast = useToast();
     const navigation = useNavigation<FaceMetricsScreenNavigationProp>();
@@ -53,75 +48,95 @@ const FaceMetrics = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [retryCount, setRetryCount] = useState(0);
     const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Extract scan data from route params
     useEffect(() => {
-
         getImageData();
+
         return () => {
             if (retryTimeoutRef.current) {
                 clearTimeout(retryTimeoutRef.current);
             }
         };
-    }, [])
-
-
-
+    }, []);
+    useNavigationReset();
     const getImageData = async () => {
         try {
-
             setIsLoading(true);
+
             // Get access token from AsyncStorage
             const accessToken = await AsyncStorage.getItem('token');
 
             if (!accessToken) {
-                toast.show("Authentication Required" + "Please log in to continue", "warning", null, [
-                    { text: 'OK', action: 'custom', onPress: () => (navigation as any).replace('Login') }
-                ])
-
-                // Alert.alert(
-                //     'Authentication Required',
-                //     'Please log in to continue',
-                //     [
-                //         {
-                //             text: 'OK',
-                //             onPress: () => (navigation as any).replace('Login')
-                //         }
-                //     ]
-                // );
+                setIsLoading(false);
+                toast.show({
+                    message: 'Authentication Required. Please log in to continue.',
+                    type: 'warning',
+                    style: 'center',
+                    buttons: [
+                        {
+                            text: 'OK',
+                            action: 'custom',
+                            onPress: () => navigation.navigate('Auth')
+                        }
+                    ]
+                });
                 return;
             }
-
-
 
             const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.IMAGE_UPLOAD}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'multipart/form-data',
+                    'Content-Type': 'application/json',
                 },
-
             });
 
-
-
             const result = await response.json();
-            // console.log(response)
-            console.log('FaceMetrics Data Got:', result);
-            console.log(result.data.status);
-            if (result.data.status === "PROCESSING") {
+            console.log('FaceMetrics Data:', result);
+
+            // Handle 401 - Token expired
+            if (response.status === 401) {
+                setIsLoading(false);
+                setRetryCount(0);
+                await AsyncStorage.removeItem('token');
+                toast.show({
+                    message: 'Session Expired. Please log in again.',
+                    type: 'error',
+                    style: 'center',
+                    buttons: [
+                        {
+                            text: 'OK',
+                            action: 'custom',
+                            onPress: () => navigation.navigate('Auth')
+                        }
+                    ]
+                });
+                return;
+            }
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Failed to load face metrics data');
+            }
+
+            const status = result.data.status?.toUpperCase();
+
+            // Handle PROCESSING status with retry
+            if (status === 'PROCESSING') {
+                console.log(`⏳ Processing... (Attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`);
 
                 if (retryCount < MAX_RETRY_ATTEMPTS) {
-                    // Retry after 3 seconds
+                    // Retry after delay
                     retryTimeoutRef.current = setTimeout(() => {
                         setRetryCount(prev => prev + 1);
                         getImageData();
                     }, RETRY_DELAY);
                 } else {
+                    // Max retries reached
+                    setIsLoading(false);
+                    setRetryCount(0);
                     toast.show({
-                        message: result.data.error_message + "Please capture again.",
-                        type: 'error',
+                        message: 'Processing is taking longer than expected. Please try scanning again.',
+                        type: 'warning',
                         style: 'center',
                         buttons: [
                             {
@@ -129,64 +144,91 @@ const FaceMetrics = () => {
                                 action: 'custom',
                                 onPress: () => {
                                     setRetryCount(0);
-                                    getImageData();
+                                    navigation.navigate('FaceScan');
                                 }
-                            }
+                            },
+                            { text: 'Cancel', action: 'dismiss' }
                         ]
                     });
                 }
                 return;
             }
 
-            if (result.data.status === "FAILED") {
+            // Handle FAILED status
+            if (status === 'FAILED') {
                 setIsLoading(false);
-
+                setRetryCount(0);
                 toast.show({
-                    message: result.data.error_message + " Please capture again.",
+                    message: `${result.data.error_message || 'Face scan failed'}. Please try again.`,
                     type: 'error',
                     style: 'center',
                     buttons: [
                         {
-                            text: 'OK',
+                            text: 'Scan Again',
                             action: 'custom',
-                            onPress: () => (navigation as any).navigate('FaceScan')
+                            onPress: () => navigation.navigate('FaceScan')
                         }
                     ]
                 });
                 return;
             }
 
+            // Handle SUCCESS status
+            if (status === 'COMPLETED') {
+                // Validate metrics data
+                if (result.data.symmetry_score &&
+                    result.data.puffiness_index &&
+                    result.data.jawline_angle) {
 
-            // Handle 401 - Token expired
-            if (response.status === 401) {
-                setIsLoading(false);
-                setRetryCount(0);
-                await AsyncStorage.removeItem('token');
-                // Alert.alert(
-                //     'Session Expired',
-                //     'Please log in again',
-                //     [{ text: 'OK', onPress: () => navigation.navigate('Auth') }]
-                // );
-                toast.show('Session Expired' + 'Please log in again', "error", null, [
-                    { text: 'OK', action: 'custom', onPress: () => (navigation as any).navigate('Auth') }
-                ])
-                return;
-            }
-
-            if (response.ok && result.success) {
-                setIsLoading(false);
-                setRetryCount(0);
-                const apiData: ScanData = result.data;
-                setScanData(apiData);
-            } else {
-                throw new Error(result.message || 'Failed to load FaceMetrics Data');
+                    setTimeout(() => {
+                        setRetryCount(0);
+                        const apiData: ScanData = result.data;
+                        setScanData(apiData);
+                        setIsLoading(false);
+                        console.log('✅ Face metrics loaded successfully');
+                    }, 3000);
+                } else {
+                    // Missing metrics data
+                    setIsLoading(false);
+                    setRetryCount(0);
+                    setScanData(undefined);
+                    toast.show({
+                        message: 'Unable to analyze face properly. Please ensure good lighting and try again.',
+                        type: 'error',
+                        style: 'center',
+                        buttons: [
+                            {
+                                text: 'Scan Again',
+                                action: 'custom',
+                                onPress: () => navigation.navigate('FaceScan')
+                            }
+                        ]
+                    });
+                }
             }
 
         } catch (error) {
-
+            console.error('❌ Error fetching face metrics:', error);
+            setIsLoading(false);
+            setRetryCount(0);
+            toast.show({
+                message: error instanceof Error ? error.message : 'Failed to load face metrics. Please try again.',
+                type: 'error',
+                style: 'center',
+                buttons: [
+                    {
+                        text: 'Retry',
+                        action: 'custom',
+                        onPress: () => {
+                            setRetryCount(0);
+                            getImageData();
+                        }
+                    },
+                    { text: 'Cancel', action: 'dismiss' }
+                ]
+            });
         }
-    }
-
+    };
 
     // Use scan data or default values
     const jawlineAngle = scanData?.jawline_angle || 0;
@@ -214,12 +256,21 @@ const FaceMetrics = () => {
         return `AI suggests working on ${suggestions.join(' and ')}.`;
     };
 
+    // Loading State
     if (isLoading) {
         return (
-            <View style={tw`flex-1 bg-[#0D0F14] items-center justify-center`}>
+            <SafeAreaView style={tw`flex-1 bg-[#0D0F14] justify-center items-center px-4`}>
+                <StatusBar style='light' />
                 <ActivityIndicator size="large" color="#60A5FB" />
-                <Text style={tw`text-white text-base mt-4`}>Loading your progress...</Text>
-            </View>
+                <Text style={tw`text-white text-xl mt-4`}>
+                    {retryCount > 0 ? 'Processing your face scan...' : 'Analyzing your face data...'}
+                </Text>
+                {retryCount > 0 && (
+                    <Text style={tw`text-[#9CA3AF] text-base mt-2`}>
+                        Attempt {retryCount}/{MAX_RETRY_ATTEMPTS}
+                    </Text>
+                )}
+            </SafeAreaView>
         );
     }
 
@@ -324,6 +375,6 @@ const FaceMetrics = () => {
             />
         </SafeAreaView>
     );
-}
+};
 
-export default FaceMetrics;
+export default FaceMetrics

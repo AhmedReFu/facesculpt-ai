@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
     Image,
     ScrollView,
     StyleSheet,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Images } from '../constants';
+import { Toast, useToast } from '../hooks/useToost';
 
 type RootStackParamList = {
     CreateNewPassword: undefined;
@@ -23,6 +23,7 @@ type RootStackParamList = {
 type OtpScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const Otp = () => {
+    const toast = useToast();
     const navigation = useNavigation<OtpScreenNavigationProp>();
     const [code, setCode] = useState<string[]>(['', '', '', '']);
     const [timer, setTimer] = useState<number>(60);
@@ -32,6 +33,17 @@ const Otp = () => {
     useEffect(() => {
         inputsRef.current = inputsRef.current.slice(0, 4);
     }, []);
+
+    // Timer countdown
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer(prev => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [timer]);
 
     const handleChange = (text: string, index: number) => {
         const numericText = text.replace(/[^0-9]/g, '');
@@ -65,11 +77,25 @@ const Otp = () => {
         const verificationCode = enteredCode || code.join('');
 
         if (verificationCode.length < 4) {
-            Alert.alert('Error', 'Please enter a 4-digit code.');
+            toast.show({
+                message: 'Please enter a complete 4-digit code.',
+                type: 'warning',
+                style: 'top'
+            });
             return;
         }
 
-        navigation.navigate('CreateNewPassword');
+        // Show success and navigate
+        toast.show({
+            message: 'Code verified successfully! ✓',
+            type: 'success',
+            style: 'top',
+            duration: 2000
+        });
+
+        setTimeout(() => {
+            navigation.navigate('CreateNewPassword');
+        }, 1000);
     };
 
     const handleResend = () => {
@@ -79,7 +105,19 @@ const Otp = () => {
             setTimeout(() => {
                 inputsRef.current[0]?.focus();
             }, 100);
-            Alert.alert('Code Resent', 'A new verification code has been sent.');
+
+            toast.show({
+                message: 'A new verification code has been sent to your phone.',
+                type: 'success',
+                style: 'top',
+                duration: 3000
+            });
+        } else {
+            toast.show({
+                message: `Please wait ${timer} seconds before requesting a new code.`,
+                type: 'warning',
+                style: 'top'
+            });
         }
     };
 
@@ -91,102 +129,108 @@ const Otp = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView
-
-                className="flex-1"
-            >
-
-
-            {/* Back Button - Top Left */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={handleBack}
-                    style={styles.backButton}
-                >
-                    <Ionicons name="arrow-back" size={28} color="#fff" />
-                </TouchableOpacity>
-            </View>
-
-            <View style={styles.content}>
-                {/* Logo - Centered */}
-                <Image
-                    source={Images.Icon}
-                    className='self-center mb-20'
-                    resizeMode="contain"
-                />
-
-                {/* Heading */}
-                <Text style={styles.heading}>Verification Code</Text>
-
-                {/* Subtext */}
-                <Text style={styles.subText}>
-                    A code has been sent to your mobile number. Please enter it to continue.
-                </Text>
-
-                {/* OTP Inputs */}
-                <View style={styles.codeContainer}>
-                    {code.map((digit, index) => (
-                        <TextInput
-                            key={index}
-                            placeholder="0"
-                            placeholderTextColor="#6B7280"
-                            ref={(ref) => {
-                                if (ref) {
-                                    inputsRef.current[index] = ref;
-                                }
-                            }}
-                            style={[
-                                styles.codeInput,
-                                digit && styles.codeInputFilled
-                            ]}
-                            keyboardType="number-pad"
-                            maxLength={1}
-                            value={digit}
-                            onChangeText={text => handleChange(text, index)}
-                            onKeyPress={(e) => handleKeyPress(e, index)}
-                            selectTextOnFocus
-                            autoFocus={index === 0}
-                        />
-                    ))}
+            <ScrollView className="flex-1">
+                {/* Back Button - Top Left */}
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        onPress={handleBack}
+                        style={styles.backButton}
+                    >
+                        <Ionicons name="arrow-back" size={28} color="#fff" />
+                    </TouchableOpacity>
                 </View>
 
-                {/* Resend Code Section */}
-                <View style={styles.resendContainer}>
-                    <Text style={styles.resendText}>
-                        Didn't receive the code?{' '}
-                        <Text
-                            style={[
-                                styles.resendLink,
-                                timer !== 0 && styles.resendLinkDisabled
-                            ]}
-                            onPress={handleResend}
-                        >
-                            Resend code
-                        </Text>
+                <View style={styles.content}>
+                    {/* Logo - Centered */}
+                    <Image
+                        source={Images.Icon}
+                        className='self-center mb-20'
+                        resizeMode="contain"
+                    />
+
+                    {/* Heading */}
+                    <Text style={styles.heading}>Verification Code</Text>
+
+                    {/* Subtext */}
+                    <Text style={styles.subText}>
+                        A code has been sent to your mobile number. Please enter it to continue.
                     </Text>
 
-                    {timer !== 0 && (
-                        <Text style={styles.timerText}>
-                            Resend code in 00:{timer < 10 ? `0${timer}` : timer}
-                        </Text>
-                    )}
-                </View>
+                    {/* OTP Inputs */}
+                    <View style={styles.codeContainer}>
+                        {code.map((digit, index) => (
+                            <TextInput
+                                key={index}
+                                placeholder="0"
+                                placeholderTextColor="#6B7280"
+                                ref={(ref) => {
+                                    if (ref) {
+                                        inputsRef.current[index] = ref;
+                                    }
+                                }}
+                                style={[
+                                    styles.codeInput,
+                                    digit && styles.codeInputFilled
+                                ]}
+                                keyboardType="number-pad"
+                                maxLength={1}
+                                value={digit}
+                                onChangeText={text => handleChange(text, index)}
+                                onKeyPress={(e) => handleKeyPress(e, index)}
+                                selectTextOnFocus
+                                autoFocus={index === 0}
+                            />
+                        ))}
+                    </View>
 
-                {/* Continue Button */}
-                <TouchableOpacity
-                    style={[
-                        styles.continueBtn,
-                        isContinueDisabled && styles.continueBtnDisabled
-                    ]}
-                    onPress={() => handleSubmit()}
-                    disabled={isContinueDisabled}
-                >
-                    <Text style={styles.continueText}>
-                        Continue
-                    </Text>
-                </TouchableOpacity>
+                    {/* Resend Code Section */}
+                    <View style={styles.resendContainer}>
+                        <Text style={styles.resendText}>
+                            Didn't receive the code?{' '}
+                            <Text
+                                style={[
+                                    styles.resendLink,
+                                    timer !== 0 && styles.resendLinkDisabled
+                                ]}
+                                onPress={handleResend}
+                            >
+                                Resend code
+                            </Text>
+                        </Text>
+
+                        {timer !== 0 && (
+                            <Text style={styles.timerText}>
+                                Resend code in 00:{timer < 10 ? `0${timer}` : timer}
+                            </Text>
+                        )}
+                    </View>
+
+                    {/* Continue Button */}
+                    <TouchableOpacity
+                        style={[
+                            styles.continueBtn,
+                            isContinueDisabled && styles.continueBtnDisabled
+                        ]}
+                        onPress={() => handleSubmit()}
+                        disabled={isContinueDisabled}
+                    >
+                        <Text style={styles.continueText}>
+                            Continue
+                        </Text>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
+
+            {/* Toast Component */}
+            <Toast
+                style={toast.style}
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                fadeAnim={toast.fadeAnim}
+                buttons={toast.buttons}
+                onHide={toast.hide}
+            />
         </SafeAreaView>
     );
 };
@@ -210,13 +254,12 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         paddingHorizontal: 20,
-        // justifyContent: 'center',
     },
     logo: {
-        width: 80, // Adjust based on your logo size
-        height: 80, // Adjust based on your logo size
+        width: 80,
+        height: 80,
         alignSelf: 'center',
-        marginBottom: 60, // Increased margin to push content down
+        marginBottom: 60,
     },
     heading: {
         fontSize: 30,
