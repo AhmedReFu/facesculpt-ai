@@ -4,9 +4,9 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
-import Purchases from 'react-native-purchases';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import Purchases, { PurchasesPackage } from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Toast, useToast } from '../hooks/useToost';
 
@@ -14,22 +14,22 @@ interface PlanProps {
   id: string
   title: string
   price: string
-  discount?: string
   badge?: string
   isSelected: boolean
   onSelect: () => void
 }
-type PackageID = "monthly" | "sixmonthly" | "yearly";
 
 interface FormattedPackage {
-  id: PackageID;
+  id: string;
   title: string;
-  price: string;
-  discount: string;
+  price: string; // Display price in USD
+  localPrice?: string; // Local price for reference
   badge: string;
+  package: PurchasesPackage; // Store the actual RevenueCat package
+  isTrialAvailable: boolean;
 }
 
-const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanProps) => (
+const PlanItem = ({ title, price, badge, isSelected, onSelect }: PlanProps) => (
   <TouchableOpacity
     onPress={onSelect}
     className={`
@@ -55,16 +55,9 @@ const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanP
               {title}
             </Text>
           </View>
-          <View className="flex-row items-center mt-1">
-            <Text className="text-[#9CA3AF] text-base">
-              {price}
-            </Text>
-            {discount && (
-              <Text className="text-[#9CA3AF] text-sm ml-2 line-through">
-                {discount}
-              </Text>
-            )}
-          </View>
+          <Text className="text-[#9CA3AF] text-base mt-1">
+            {price}
+          </Text>
         </View>
         {badge && (
           <View className="bg-[#60A5FB66] px-3 py-2 rounded-2xl ml-3">
@@ -81,130 +74,265 @@ const PlanItem = ({ title, price, discount, badge, isSelected, onSelect }: PlanP
 const UnlockFacialGym = () => {
   const toast = useToast();
   const navigator = useNavigation()
-  const [selectedPlan, setSelectedPlan] = useState<string>('monthly')
+  const [selectedPlan, setSelectedPlan] = useState<string>('')
+  const [plans, setPlans] = useState<FormattedPackage[]>([])
+  const [loading, setLoading] = useState(true)
+  const [purchasing, setPurchasing] = useState(false)
 
-  const plans = [
-    {
-      id: 'monthly',
-      title: 'Monthly',
-      price: '$9.99/month',
-      discount: '$14.99',
-      badge: ''
+  // Fixed USD prices for display - these should match your RevenueCat USD prices
+  const displayPricesUSD = {
+    monthly: {
+      price: "$14.99/month",
+      title: "Monthly",
+      badge: ""
     },
-    {
-      id: 'sixmonthly',
-      title: '6 Month Plan',
-      price: '$69.99/6 months',
-      discount: '$89.99',
-      badge: 'Popular'
+    sixmonthly: {
+      price: "$69.99/6 months",
+      title: "6 Month Plan",
+      badge: "Popular"
     },
-    {
-      id: 'yearly',
-      title: 'Yearly',
-      price: '$119.99/year',
-      discount: '$179.99',
-      badge: ''
+    yearly: {
+      price: "$119.99/year",
+      title: "Yearly",
+      badge: ""
     }
-  ]
+  };
 
-  type PackageID = "monthly" | "sixmonthly" | "yearly";
+  // Helper function to check if trial is available
+  const checkIfTrialAvailable = (product: any): boolean => {
+    // Method 1: Check introPrice directly
+    if (product.introPrice && product.introPrice.price === 0) {
+      return true;
+    }
 
-  interface FormattedPackage {
-    id: PackageID;
-    title: string;
-    price: string;
-    discount: string;
-    badge: string;
-  }
+    // Method 2: Check subscription options
+    if (product.subscriptionOptions && Array.isArray(product.subscriptionOptions)) {
+      for (const option of product.subscriptionOptions) {
+        // Check if option has any property that indicates free trial
+        // Look for common patterns in RevenueCat data
+        const optionStr = JSON.stringify(option).toLowerCase();
+        if (optionStr.includes('free') || optionStr.includes('trial')) {
+          return true;
+        }
 
+        // Check for specific properties that might indicate trial
+        if (option.introPrice && option.introPrice.price === 0) {
+          return true;
+        }
+
+        // Check for pricing phases if they exist
+        if ((option as any).phases && Array.isArray((option as any).phases)) {
+          const freePhase = (option as any).phases.find((phase: any) => phase.price === 0);
+          if (freePhase) {
+            return true;
+          }
+        }
+      }
+    }
+
+    // Method 3: Check product description
+    if (product.description && product.description.toLowerCase().includes('free trial')) {
+      return true;
+    }
+
+    return false;
+  };
+
+  // Get RevenueCat data and format it for UI
   const getRevenueCatData = async () => {
     try {
+      setLoading(true)
 
+      // Get user from storage for RevenueCat identification
       const stored = await AsyncStorage.getItem('user');
+      const user = stored ? JSON.parse(stored) : null;
 
-      if (!stored) {
-        console.log("No stored user found");
-        return;
+      if (user && user.phone_number) {
+        try {
+          await Purchases.logIn(user.phone_number);
+          console.log("RevenueCat User Identified:", user.phone_number);
+        } catch (loginError) {
+          console.log("RevenueCat login error:", loginError);
+          // Continue without login if it fails
+        }
       }
 
-      const user = JSON.parse(stored);
-
+      // Fetch offerings from RevenueCat
       const offerings = await Purchases.getOfferings();
-      const premium = offerings?.all?.premium;
+      const premium = offerings?.current || offerings?.all?.premium;
 
-      console.log(premium);
+      // console.log("Premium offering:", JSON.stringify(premium, null, 2));
 
-      if (!premium) {
-        console.log("No premium offering found");
+      if (!premium || !premium.availablePackages || premium.availablePackages.length === 0) {
+        console.log("No premium offering or packages found - using demo data");
+
+        // Use demo data with USD prices
+        const demoPlans: FormattedPackage[] = [
+          {
+            id: 'monthly',
+            title: displayPricesUSD.monthly.title,
+            price: displayPricesUSD.monthly.price,
+            badge: displayPricesUSD.monthly.badge,
+            package: null as any,
+            isTrialAvailable: true
+          },
+          {
+            id: 'sixmonthly',
+            title: displayPricesUSD.sixmonthly.title,
+            price: displayPricesUSD.sixmonthly.price,
+            badge: displayPricesUSD.sixmonthly.badge,
+            package: null as any,
+            isTrialAvailable: true
+          },
+          {
+            id: 'yearly',
+            title: displayPricesUSD.yearly.title,
+            price: displayPricesUSD.yearly.price,
+            badge: displayPricesUSD.yearly.badge,
+            package: null as any,
+            isTrialAvailable: true
+          }
+        ];
+        setPlans(demoPlans);
+        setSelectedPlan('sixmonthly'); // Default to popular plan
+        setLoading(false);
         return;
       }
 
       // Mapping RevenueCat packageType → our IDs
-      const idMap: Record<string, PackageID> = {
+      const idMap: Record<string, string> = {
         MONTHLY: "monthly",
         SIX_MONTH: "sixmonthly",
         ANNUAL: "yearly",
+        WEEKLY: "weekly",
+        THREE_MONTH: "threemonthly",
+        TWO_MONTH: "twomonthly"
       };
 
-      // UI Titles
-      const titleMap: Record<PackageID, string> = {
-        monthly: "Monthly",
-        sixmonthly: "6 Month Plan",
-        yearly: "Yearly",
-      };
+      // Format packages for UI
+      const formatted: FormattedPackage[] = [];
 
-      // Discount (custom)
-      const discountMap: Record<PackageID, string> = {
-        monthly: "BDT 2,500.00",
-        sixmonthly: "BDT 12,000.00",
-        yearly: "BDT 18,000.00",
-      };
+      for (const pkg of premium.availablePackages) {
+        const rcType = pkg.packageType;
+        const id = idMap[rcType];
 
-      // Badge
-      const badgeMap: Record<PackageID, string> = {
-        monthly: "",
-        sixmonthly: "Popular",
-        yearly: "",
-      };
-
-      const formatted: FormattedPackage[] = premium.availablePackages.map(pkg => {
-        const rcType = pkg.packageType; // MONTHLY | SIX_MONTH | ANNUAL
-        const id = idMap[rcType];      // monthly | sixmonthly | yearly
+        if (!id || !displayPricesUSD[id as keyof typeof displayPricesUSD]) {
+          console.warn(`Unknown or unsupported package type: ${rcType}`);
+          continue;
+        }
 
         const product = pkg.product;
+        const displayPrice = displayPricesUSD[id as keyof typeof displayPricesUSD];
 
-        // Price period
-        const period =
-          id === "monthly"
-            ? "/month"
-            : id === "sixmonthly"
-              ? "/6 months"
-              : "/year";
+        // Check if free trial is available using helper function
+        const isTrialAvailable = checkIfTrialAvailable(product);
 
-        return {
+        formatted.push({
           id,
-          title: titleMap[id],
-          price: `${product.priceString}${period}`,
-          discount: discountMap[id],
-          badge: badgeMap[id],
-        };
+          title: displayPrice.title,
+          price: displayPrice.price, // Always show USD price
+          localPrice: product.priceString, // Store local price for debugging
+          badge: displayPrice.badge,
+          package: pkg,
+          isTrialAvailable
+        });
+
+        console.log(`Package ${id}:`, {
+          displayPrice: displayPrice.price,
+          localPrice: product.priceString,
+          hasTrial: isTrialAvailable,
+          productId: product.identifier,
+          introPrice: product.introPrice,
+          subscriptionOptions: product.subscriptionOptions
+        });
+      }
+
+      // Sort plans: Popular first, then by order (monthly, sixmonthly, yearly)
+      const sortOrder = { monthly: 1, sixmonthly: 2, yearly: 3 };
+      formatted.sort((a, b) => {
+        // Popular badge first
+        if (a.badge === "Popular" && b.badge !== "Popular") return 1;
+        if (b.badge === "Popular" && a.badge !== "Popular") return 1;
+
+        // Then by predefined order
+        return sortOrder[a.id as keyof typeof sortOrder] - sortOrder[b.id as keyof typeof sortOrder];
       });
 
-      console.log("FINAL DATA:", formatted);
+      console.log("FINAL PLANS DATA:", formatted);
 
-      if (user) {
-        await Purchases.logIn(user.phone_number);
-        console.log("RevenueCat User Identified:", user.phone_number);
-      }
-      return formatted;
-    } catch (error) {
+      setPlans(formatted);
+
+      // Set default selected plan
+      const popularPlan = formatted.find(p => p.badge === "Popular");
+      setSelectedPlan(popularPlan?.id || formatted[0]?.id || "");
+
+    } catch (error: any) {
       console.error("RevenueCat Error:", error);
+
+      // Fallback to USD demo data on error
+      const demoPlans: FormattedPackage[] = [
+        {
+          id: 'monthly',
+          title: displayPricesUSD.monthly.title,
+          price: displayPricesUSD.monthly.price,
+          badge: displayPricesUSD.monthly.badge,
+          package: null as any,
+          isTrialAvailable: true
+        },
+        {
+          id: 'sixmonthly',
+          title: displayPricesUSD.sixmonthly.title,
+          price: displayPricesUSD.sixmonthly.price,
+          badge: displayPricesUSD.sixmonthly.badge,
+          package: null as any,
+          isTrialAvailable: true
+        },
+        {
+          id: 'yearly',
+          title: displayPricesUSD.yearly.title,
+          price: displayPricesUSD.yearly.price,
+          badge: displayPricesUSD.yearly.badge,
+          package: null as any,
+          isTrialAvailable: true
+        }
+      ];
+
+      setPlans(demoPlans);
+      setSelectedPlan('sixmonthly');
+
+      // Show error toast if needed
+      toast.show({
+        message: 'Unable to load subscription plans. Please check your internet connection.',
+        type: 'warning',
+        style: 'center',
+        buttons: [{ text: 'OK', action: 'dismiss' }]
+      });
+
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Load RevenueCat data on component mount
+  useEffect(() => {
+    getRevenueCatData();
 
+    // Optional: Add listener for purchases restored from outside the app
+    const setupPurchaseListeners = () => {
+      Purchases.addCustomerInfoUpdateListener((customerInfo) => {
+        console.log("Customer info updated:", customerInfo);
+        if (customerInfo.entitlements.active?.premium) {
+          console.log("User has active premium subscription");
+        }
+      });
+    };
 
-  getRevenueCatData();
+    setupPurchaseListeners();
+
+    return () => {
+      // Clean up listeners if needed
+    };
+  }, []);
 
   const handleSelectPlan = (planId: string) => {
     setSelectedPlan(planId)
@@ -212,39 +340,173 @@ const UnlockFacialGym = () => {
   }
 
   const handleSubscribe = async () => {
-    try {
-      // Demo: Simulate successful subscription
-      await AsyncStorage.setItem("subscribe", "true")
+    if (purchasing) return;
 
-      toast.show({
-        message: '🎉 Your 7-day free trial has started. Welcome to FaceSculpt AI Premium!',
-        type: 'success',
-        style: 'center',
-        buttons: [
-          {
-            text: 'Get Started',
+    try {
+      setPurchasing(true);
+
+      // Find the selected plan
+      const selectedPlanData = plans.find(p => p.id === selectedPlan);
+
+      if (!selectedPlanData) {
+        toast.show({
+          message: 'Please select a plan first',
+          type: 'error',
+          style: 'center',
+          buttons: [{ text: 'OK', action: 'dismiss' }]
+        });
+        return;
+      }
+
+      // Check if we have a real RevenueCat package
+      if (!selectedPlanData.package) {
+        // Demo mode - simulate purchase
+        console.log('Demo mode: Simulating purchase for', selectedPlan);
+
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        await AsyncStorage.setItem("subscribe", "true");
+        await AsyncStorage.setItem("current_plan", selectedPlan);
+
+        toast.show({
+          message: '🎉 Your 7-day free trial has started. Welcome to FaceSculpt AI Premium!',
+          type: 'success',
+          style: 'center',
+          buttons: [
+            {
+              text: 'Get Started',
+              action: 'custom',
+              onPress: () => navigator.navigate("DailyTrack" as never)
+            }
+          ]
+        });
+        return;
+      }
+
+      // Real purchase with RevenueCat
+      console.log('Purchasing package:', selectedPlanData.package.identifier);
+      console.log('Product details:', JSON.stringify({
+        id: selectedPlanData.package.product.identifier,
+        price: selectedPlanData.package.product.price,
+        currency: selectedPlanData.package.product.currencyCode,
+        priceString: selectedPlanData.package.product.priceString,
+        title: selectedPlanData.package.product.title,
+        introPrice: selectedPlanData.package.product.introPrice,
+        subscriptionOptions: selectedPlanData.package.product.subscriptionOptions
+      }, null, 2));
+
+      // Make the purchase
+      const makePurchaseResult = await Purchases.purchasePackage(
+        selectedPlanData.package,
+        null, // upgradeInfo (optional)
+        null, // googleProductChangeInfo (optional)
+        null  // googleIsPersonalizedPrice (optional)
+      );
+
+      // Check if purchase was successful
+      if (makePurchaseResult.customerInfo.entitlements.active?.premium) {
+        console.log('Purchase successful!', makePurchaseResult.customerInfo);
+
+        // Store subscription info
+        await AsyncStorage.setItem("subscribe", "true");
+        await AsyncStorage.setItem("current_plan", selectedPlan);
+        await AsyncStorage.setItem("revenuecat_customer_info", JSON.stringify(makePurchaseResult.customerInfo));
+
+        toast.show({
+          message: '🎉 Purchase successful! Welcome to FaceSculpt AI Premium!',
+          type: 'success',
+          style: 'center',
+          buttons: [
+            {
+              text: 'Get Started',
+              action: 'custom',
+              onPress: () => navigator.navigate("DailyTrack")
+            }
+          ]
+        });
+      } else {
+        // This shouldn't happen if purchase is successful, but handle it anyway
+        console.log('Purchase completed but no active entitlement');
+        throw new Error('Purchase was not successful');
+      }
+
+    } catch (error: any) {
+      // console.error('Purchase Error:',);
+      console.log(error.code)
+      if (error.code === "ProductAlreadyPurchasedError") {
+        await AsyncStorage.setItem("subscribe", "true")
+        toast.show({
+          message: error,
+          type: "success",
+          style: 'top',
+          buttons: [{
+            text: 'OK',
             action: 'custom',
-            onPress: () => navigator.navigate("DailyTrack")
-          }
-        ]
-      });
-    } catch (error) {
-      console.error('Error:', error)
-      toast.show({
-        message: 'Something went wrong. Please try again.',
-        type: 'error',
-        style: 'center',
-        buttons: [{ text: 'OK', action: 'dismiss' }]
-      });
+            onPress: () => navigator.navigate('DailyTrack')
+          }]
+        });
+      }
+
+      // Check error codes
+      const errorCode = Purchases.PURCHASES_ERROR_CODE;
+
+      if (error.code === errorCode.PURCHASE_CANCELLED_ERROR) {
+        console.log('User cancelled purchase');
+        // Don't show error for cancellation
+      } else if (error.message === 'This product is already active for the user.') {
+        await AsyncStorage.setItem("subscribe", "true")
+        toast.show({
+          message: error.message,
+          type: "success",
+          style: 'top',
+          buttons: [{
+            text: 'OK',
+            action: 'custom',
+            onPress: () => navigator.navigate('DailyTrack')
+          }]
+        });
+      }
+      else if (error.code === errorCode.NETWORK_ERROR) {
+        toast.show({
+          message: 'Network error. Please check your internet connection and try again.',
+          type: 'error',
+          style: 'center',
+          buttons: [{ text: 'OK', action: 'dismiss' }]
+        });
+      } else {
+        toast.show({
+          message: error.message || 'Something went wrong. Please try again.',
+          type: 'error',
+          style: 'center',
+          buttons: [{ text: 'OK', action: 'dismiss' }]
+        });
+      }
+    } finally {
+      setPurchasing(false);
     }
   }
 
   const handleRestorePurchases = async () => {
     try {
-      // Demo: Check if subscription exists in AsyncStorage
-      const subscribed = await AsyncStorage.getItem("subscribe")
+      setLoading(true);
+      const stored = await AsyncStorage.getItem('user');
+      const user = stored ? JSON.parse(stored) : null;
 
-      if (subscribed === "true") {
+      await Purchases.logIn(user.phone_number);
+      console.log("RevenueCat User Identified:", user.phone_number);
+
+      // Restore purchases through RevenueCat
+      const customerInfo = await Purchases.restorePurchases();
+      console.log("Find", customerInfo)
+
+      if (customerInfo.entitlements.active?.premium) {
+        console.log('Restore successful:', customerInfo);
+
+        // Store updated customer info
+        await AsyncStorage.setItem("subscribe", "true");
+        await AsyncStorage.setItem("revenuecat_customer_info", JSON.stringify(customerInfo));
+
         toast.show({
           message: 'Your purchases have been restored successfully!',
           type: 'success',
@@ -253,7 +515,7 @@ const UnlockFacialGym = () => {
             {
               text: 'OK',
               action: 'custom',
-              onPress: () => navigator.navigate("DailyTrack")
+              onPress: () => navigator.navigate("DailyTrack" as never)
             }
           ]
         });
@@ -266,14 +528,54 @@ const UnlockFacialGym = () => {
         });
       }
     } catch (error) {
-      console.error('Restore error:', error)
+      console.error('Restore error:', error);
       toast.show({
         message: 'Failed to restore purchases. Please try again.',
         type: 'error',
         style: 'center',
         buttons: [{ text: 'OK', action: 'dismiss' }]
       });
+    } finally {
+      setLoading(false);
     }
+  }
+
+  // Get trial text based on selected plan
+  const getTrialText = () => {
+    if (!selectedPlan) return '';
+
+    const selectedPlanData = plans.find(p => p.id === selectedPlan);
+    if (!selectedPlanData) return '';
+
+    const hasTrial = selectedPlanData.isTrialAvailable;
+    const priceText = selectedPlanData.price;
+
+    if (hasTrial) {
+      return `Try free for 7 days, then ${priceText}. Cancel anytime.`;
+    } else {
+      return `Subscribe for ${priceText}. Cancel anytime.`;
+    }
+  }
+
+  // Get button text based on trial availability
+  const getButtonText = () => {
+    if (!selectedPlan) return "Subscribe Now";
+
+    const selectedPlanData = plans.find(p => p.id === selectedPlan);
+    if (!selectedPlanData) return "Subscribe Now";
+
+    return selectedPlanData.isTrialAvailable
+      ? "Start Free 7-Day Trial"
+      : "Subscribe Now";
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-[#000000] items-center justify-center">
+        <ActivityIndicator size="large" color="#60A5FA" />
+        <Text className="text-white mt-4">Loading plans...</Text>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -324,7 +626,6 @@ const UnlockFacialGym = () => {
               id={plan.id}
               title={plan.title}
               price={plan.price}
-              discount={plan.discount}
               badge={plan.badge}
               isSelected={selectedPlan === plan.id}
               onSelect={() => handleSelectPlan(plan.id)}
@@ -336,29 +637,52 @@ const UnlockFacialGym = () => {
           <TouchableOpacity
             onPress={handleSubscribe}
             activeOpacity={0.8}
-            className="bg-[#60A5FA] p-5 rounded-xl flex-row gap-2 items-center justify-center"
+            disabled={purchasing || !selectedPlan}
+            className={`p-5 rounded-xl flex-row gap-2 items-center justify-center ${purchasing || !selectedPlan ? 'bg-gray-600' : 'bg-[#60A5FA]'
+              }`}
           >
-            <Text className="text-center text-white text-xl font-semibold">
-              Start Free 7-Day Trial
-            </Text>
+            {purchasing ? (
+              <>
+                <ActivityIndicator size="small" color="white" />
+                <Text className="text-center text-white text-xl font-semibold ml-2">
+                  Processing...
+                </Text>
+              </>
+            ) : (
+                <Text className="text-center text-white text-xl font-semibold">
+                  {getButtonText()}
+                </Text>
+            )}
           </TouchableOpacity>
         </View>
 
-        <Text className="text-white text-center text-base mb-4">
-          Try free for 7 days, then {plans.find(p => p.id === selectedPlan)?.price || '$9.99/month'}. Cancel anytime.
-        </Text>
+        {selectedPlan && (
+          <Text className="text-white text-center text-base mb-4">
+            {getTrialText()}
+          </Text>
+        )}
+
+        {/* Optional: Add a note about currency conversion */}
+        <View className="mb-4 px-3 py-2 bg-gray-800 rounded-lg">
+          <Text className="text-gray-300 text-xs text-center">
+            💡 Prices shown in USD. Actual charge will be in your local currency.
+            You'll see the final amount in the App Store/Play Store confirmation.
+          </Text>
+        </View>
 
         <View className="my-4">
           <TouchableOpacity
             onPress={handleRestorePurchases}
             className="py-3"
+            disabled={loading}
           >
-            <Text className="text-[#60A5FB] text-lg font-medium">
+            <Text className={`text-lg font-medium ${loading ? 'text-gray-500' : 'text-[#60A5FB]'}`}>
               Restore Purchases
             </Text>
           </TouchableOpacity>
           <Text className="text-gray-400 text-sm">
-            By continuing, you agree to our Terms of Service and Privacy Policy. Subscription automatically renews unless canceled at least 24 hours before the end of the current period.
+            By continuing, you agree to our Terms of Service and Privacy Policy.
+            Subscription automatically renews unless canceled at least 24 hours before the end of the current period.
           </Text>
         </View>
       </View>

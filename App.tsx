@@ -20,11 +20,12 @@ import Sessions from './src/GymWorkout/Sessions';
 import AuthScreen from './src/Home/AuthScreen';
 import Home from './src/Home/Home';
 import OtpAuth from './src/Home/OtpAuth';
-import { useToast } from './src/hooks/useToost';
+import { Toast, useToast } from './src/hooks/useToost';
 import FaceCoach from './src/Messages/FaceCoach';
 import DailyTrack from './src/TrackGym/DailyTrack';
 import AppNavigationContainer from './src/utils/useNavigationCleaner';
 import { WorkoutProvider } from './src/utils/WorkoutProvider';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Stack = createStackNavigator();
 
@@ -85,7 +86,6 @@ const NoInternetScreen = ({ onRetry }: { onRetry: () => void }) => {
           </TouchableOpacity>
         </View>
       </View>
-
     </View>
   );
 };
@@ -96,10 +96,6 @@ function RootStack() {
   const [showNoInternet, setShowNoInternet] = React.useState(false);
   const [isChecking, setIsChecking] = React.useState(true);
 
-
-
-
-
   // Check internet connection
   const checkConnection = React.useCallback(async () => {
     if (Platform.OS === 'android') {
@@ -108,7 +104,6 @@ function RootStack() {
     else if (Platform.OS === 'ios') {
       Purchases.configure({ apiKey: "appl_SGOUsugAvdJhvzWJZhOwbmNOKrG" })
     }
-
 
     try {
       setIsChecking(true);
@@ -141,24 +136,19 @@ function RootStack() {
 
       if (!connected) {
         setShowNoInternet(true);
-        // Show alert when connection is lost during use
-
-
         toast.show({
-          message: 'Connection Lost Your internet connection was lost. Please reconnect to continue using the app.',
+          message: 'Connection Lost. Your internet connection was lost. Please reconnect to continue using the app.',
           type: 'warning',
           style: 'center',
           buttons: [{ text: 'OK', action: 'dismiss' }]
         });
-
       } else if (showNoInternet) {
-        // Connection restored
         setShowNoInternet(false);
         toast.show({
-          message: 'Connection Restored Your internet connection has been restored.',
+          message: 'Connection Restored. Your internet connection has been restored.',
           type: 'success',
-          style: 'center',
-          buttons: [{ text: 'OK', action: 'dismiss' }]
+          style: 'top',
+          duration: 3000
         });
       }
     });
@@ -187,6 +177,7 @@ function RootStack() {
 
   // Show main app if connected
   return (
+    // Single WorkoutProvider wraps the entire navigation
     <WorkoutProvider>
       <AppNavigationContainer>
         <Stack.Navigator
@@ -198,27 +189,42 @@ function RootStack() {
           }}
           initialRouteName='Home'
         >
-
           <Stack.Screen name="Home" component={Home} />
           <Stack.Screen name="Auth" component={AuthScreen} />
           <Stack.Screen name="OtpAuth" component={OtpAuth} />
           <Stack.Screen name="ResetPassword" component={ResetPassword} />
           <Stack.Screen name="Otp" component={Otp} />
           <Stack.Screen name="CreateNewPassword" component={CreateNewPassword} />
-          <Stack.Screen options={{ gestureEnabled: false }} name="DailyTrack" component={DailyTrack} />
+          <Stack.Screen
+            options={{ gestureEnabled: false }}
+            name="DailyTrack"
+            component={DailyTrack}
+          />
           <Stack.Screen name="FaceCoach" component={FaceCoach} />
+
+          {/* Workout screens - all share the same WorkoutProvider */}
           <Stack.Screen name="DailyRoutine" component={DailyRoutine} />
           <Stack.Screen name="Exercise" component={Exercise} />
           <Stack.Screen name="Sessions" component={Sessions} />
+
           <Stack.Screen name="FaceScan" component={FaceScan} />
           <Stack.Screen name="FaceMetrics" component={FaceMetrics} />
           <Stack.Screen name="ChooseGoal" component={ChooseGoal} />
           <Stack.Screen name="UnlockFacialGym" component={UnlockFacialGym} />
-
         </Stack.Navigator>
-      </AppNavigationContainer>
-    </WorkoutProvider >
 
+        {/* Toast Component */}
+        <Toast
+          style={toast.style}
+          visible={toast.visible}
+          message={toast.message}
+          type={toast.type}
+          fadeAnim={toast.fadeAnim}
+          buttons={toast.buttons}
+          onHide={toast.hide}
+        />
+      </AppNavigationContainer>
+    </WorkoutProvider>
   );
 }
 

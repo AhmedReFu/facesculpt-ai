@@ -42,6 +42,7 @@ const DailyRoutine = () => {
     };
 
     const handleBackPress = async () => {
+
         await AsyncStorage.removeItem("subscribe")
         navigation.navigate("DailyTrack");
     };

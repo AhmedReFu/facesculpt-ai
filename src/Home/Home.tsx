@@ -130,8 +130,7 @@ const Home = () => {
                 setTimeout(() => {
                     if (isLoggedIn === "true" && user) {
                         if (subscribe === "true") {
-                             navigator.navigate("DailyTrack");
-                           
+                            navigator.navigate("DailyTrack");    
                         } else {
                             navigator.navigate("FaceScan");
                         }

@@ -18,16 +18,8 @@
       }
     },
     "preview": {
-      "distribution": "internal",
-      "env": {
-        "ENVIRONMENT": "preview"
-      },
       "android": {
         "buildType": "apk"
-      },
-      "ios": {
-        "simulator": false,
-        "enterpriseProvisioning": "universal"
       }
     },
     "production": {
