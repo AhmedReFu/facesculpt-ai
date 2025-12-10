@@ -194,7 +194,7 @@ export const Toast: React.FC<ToastProps> = ({ visible, message, type, fadeAnim, 
         >
             <View style={styles.modalOverlay}>
                 <BlurView
-                    intensity={Platform.OS === 'ios' ? 100 : 100}
+                    intensity={Platform.OS === 'ios' ? 100 : 40}
                     tint="dark"
                     style={styles.blurView}
                     experimentalBlurMethod="dimezisBlurView" // Better Android blur
