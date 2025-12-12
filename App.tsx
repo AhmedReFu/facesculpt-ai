@@ -8,6 +8,7 @@ import Purchases from "react-native-purchases";
 import "./global.css";
 
 import ChooseGoal from './src/FaceScan/ChooseGoal';
+import FaceCapture from './src/FaceScan/FaceCapture';
 import FaceMetrics from './src/FaceScan/FaceMetrics';
 import FaceScan from './src/FaceScan/FaceScan';
 import UnlockFacialGym from './src/FaceScan/UnlockFacialGym';
@@ -25,7 +26,6 @@ import FaceCoach from './src/Messages/FaceCoach';
 import DailyTrack from './src/TrackGym/DailyTrack';
 import AppNavigationContainer from './src/utils/useNavigationCleaner';
 import { WorkoutProvider } from './src/utils/WorkoutProvider';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Stack = createStackNavigator();
 
@@ -208,6 +208,7 @@ function RootStack() {
           <Stack.Screen name="Sessions" component={Sessions} />
 
           <Stack.Screen name="FaceScan" component={FaceScan} />
+          <Stack.Screen name="FaceCapture" component={FaceCapture} />
           <Stack.Screen name="FaceMetrics" component={FaceMetrics} />
           <Stack.Screen name="ChooseGoal" component={ChooseGoal} />
           <Stack.Screen name="UnlockFacialGym" component={UnlockFacialGym} />

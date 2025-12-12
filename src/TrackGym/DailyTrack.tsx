@@ -37,6 +37,7 @@ const CHART_WIDTH = WINDOW_WIDTH - CHART_MARGIN_HORIZONTAL * 2;
 type RootStackParamList = {
   Auth: undefined;
   DailyRoutine: undefined;
+  FaceCapture: undefined;
   UnlockFacialGym: undefined;
   FaceScan: undefined;
   FaceCoach: { token: string };
@@ -556,6 +557,7 @@ const DailyTrack = () => {
 
     } catch (err) {
       console.error('Failed to load dashboard:', err);
+      navigation.navigate("UnlockFacialGym")
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
@@ -654,6 +656,11 @@ const DailyTrack = () => {
             <View style={tw`flex-row gap-4`}>
               <TouchableOpacity
                 onPress={() => navigation.navigate("DailyRoutine")}
+                style={tw`flex-1 bg-[#60A5FB] py-5 rounded-2xl`}>
+                <Text style={tw`text-white font-bold text-center text-base`}>Start Today's Session</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("FaceCapture")}
                 style={tw`flex-1 bg-[#60A5FB] py-5 rounded-2xl`}>
                 <Text style={tw`text-white font-bold text-center text-base`}>Start Today's Session</Text>
               </TouchableOpacity>

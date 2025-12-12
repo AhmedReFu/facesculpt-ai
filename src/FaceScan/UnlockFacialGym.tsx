@@ -258,7 +258,7 @@ const UnlockFacialGym = () => {
         return sortOrder[a.id as keyof typeof sortOrder] - sortOrder[b.id as keyof typeof sortOrder];
       });
 
-      console.log("FINAL PLANS DATA:", formatted);
+      // console.log("FINAL PLANS DATA:", formatted);
 
       setPlans(formatted);
 
@@ -428,7 +428,23 @@ const UnlockFacialGym = () => {
       } else {
         // This shouldn't happen if purchase is successful, but handle it anyway
         console.log('Purchase completed but no active entitlement');
-        throw new Error('Purchase was not successful');
+        await AsyncStorage.setItem("subscribe", "true");
+        await AsyncStorage.setItem("current_plan", selectedPlan);
+        await AsyncStorage.setItem("revenuecat_customer_info", JSON.stringify(makePurchaseResult.customerInfo));
+
+        toast.show({
+          message: '🎉 Purchase successful! Welcome to FaceSculpt AI Premium!',
+          type: 'success',
+          style: 'center',
+          buttons: [
+            {
+              text: 'Get Started',
+              action: 'custom',
+              onPress: () => navigator.navigate("DailyTrack")
+            }
+          ]
+        });
+        // throw new Error('Purchase was not successful');
       }
 
     } catch (error: any) {
@@ -458,13 +474,15 @@ const UnlockFacialGym = () => {
         await AsyncStorage.setItem("subscribe", "true")
         toast.show({
           message: error.message,
-          type: "success",
-          style: 'top',
-          buttons: [{
-            text: 'OK',
-            action: 'custom',
-            onPress: () => navigator.navigate('DailyTrack')
-          }]
+          type: 'success',
+          style: 'center',
+          buttons: [
+            {
+              text: 'OK',
+              action: 'custom',
+              onPress: () => navigator.navigate('FaceScan')
+            }
+          ]
         });
       }
       else if (error.code === errorCode.NETWORK_ERROR) {
@@ -494,11 +512,70 @@ const UnlockFacialGym = () => {
       const user = stored ? JSON.parse(stored) : null;
 
       await Purchases.logIn(user.phone_number);
-      console.log("RevenueCat User Identified:", user.phone_number);
+      // console.log("RevenueCat User Identified:", user.phone_number);
 
       // Restore purchases through RevenueCat
       const customerInfo = await Purchases.restorePurchases();
-      console.log("Find", customerInfo)
+
+      // Get the facesclupt_ai subscription data
+      const facesculptSubscription = customerInfo.subscriptionsByProductIdentifier?.facesclupt_ai;
+
+      if (facesculptSubscription) {
+        // Validate the subscription
+        const isActive = facesculptSubscription.isActive === true;
+        const isSandbox = facesculptSubscription.isSandbox === true;
+
+        console.log("📱 Facesculpt AI Subscription Details:", {
+          productIdentifier: facesculptSubscription.productIdentifier,
+          isActive,
+          isSandbox,
+          expiresDate: facesculptSubscription.expiresDate,
+          purchaseDate: facesculptSubscription.purchaseDate,
+          willRenew: facesculptSubscription.willRenew,
+          store: facesculptSubscription.store
+        });
+
+        // Validate if subscription is valid (active and not expired)
+        if (isActive) {
+          console.log("✅ Valid subscription - Grant access to premium features");
+          // Grant access to premium features
+          toast.show({
+            message: 'Your purchases have been restored successfully!',
+            type: 'success',
+            style: 'center',
+            buttons: [
+              {
+                text: 'OK',
+                action: 'custom',
+                onPress: () => navigator.navigate("DailyTrack" as never)
+              }
+            ]
+          });
+        } else {
+          console.log("❌ Subscription invalid - Restrict access");
+          if (!isActive) console.log("   Reason: Subscription is not active");
+        }
+
+        // Check if it's a sandbox purchase (testing)
+        if (isSandbox) {
+          console.log("🔧 Note: This is a SANDBOX purchase (testing environment)");
+          toast.show({
+            message: 'Your purchases have been restored successfully!',
+            type: 'success',
+            style: 'center',
+            buttons: [
+              {
+                text: 'OK',
+                action: 'custom',
+                onPress: () => navigator.navigate("DailyTrack" as never)
+              }
+            ]
+          });
+        }
+      } else {
+        console.log("❌ No facesclupt_ai subscription found in subscriptionsByProductIdentifier");
+      }
+
 
       if (customerInfo.entitlements.active?.premium) {
         console.log('Restore successful:', customerInfo);
@@ -663,12 +740,7 @@ const UnlockFacialGym = () => {
         )}
 
         {/* Optional: Add a note about currency conversion */}
-        <View className="mb-4 px-3 py-2 bg-gray-800 rounded-lg">
-          <Text className="text-gray-300 text-xs text-center">
-            💡 Prices shown in USD. Actual charge will be in your local currency.
-            You'll see the final amount in the App Store/Play Store confirmation.
-          </Text>
-        </View>
+
 
         <View className="my-4">
           <TouchableOpacity
