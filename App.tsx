@@ -8,7 +8,6 @@ import Purchases from "react-native-purchases";
 import "./global.css";
 
 import ChooseGoal from './src/FaceScan/ChooseGoal';
-import FaceCapture from './src/FaceScan/FaceCapture';
 import FaceMetrics from './src/FaceScan/FaceMetrics';
 import FaceScan from './src/FaceScan/FaceScan';
 import UnlockFacialGym from './src/FaceScan/UnlockFacialGym';
@@ -183,14 +182,14 @@ function RootStack() {
         <Stack.Navigator
           screenOptions={{
             headerShown: false,
-            animation: 'none',
+            animation: 'default',
             gestureEnabled: false,
             gestureDirection: 'horizontal',
           }}
           initialRouteName='Home'
         >
           <Stack.Screen name="Home" component={Home} />
-          <Stack.Screen name="Auth" component={AuthScreen} />
+          <Stack.Screen name="Auth" component={AuthScreen} options={{ animation: "slide_from_left" }} />
           <Stack.Screen name="OtpAuth" component={OtpAuth} />
           <Stack.Screen name="ResetPassword" component={ResetPassword} />
           <Stack.Screen name="Otp" component={Otp} />
@@ -208,7 +207,6 @@ function RootStack() {
           <Stack.Screen name="Sessions" component={Sessions} />
 
           <Stack.Screen name="FaceScan" component={FaceScan} />
-          <Stack.Screen name="FaceCapture" component={FaceCapture} />
           <Stack.Screen name="FaceMetrics" component={FaceMetrics} />
           <Stack.Screen name="ChooseGoal" component={ChooseGoal} />
           <Stack.Screen name="UnlockFacialGym" component={UnlockFacialGym} />

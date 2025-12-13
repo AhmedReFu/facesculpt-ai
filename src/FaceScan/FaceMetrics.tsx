@@ -19,7 +19,7 @@ const API_ENDPOINTS = {
 };
 
 const MAX_RETRY_ATTEMPTS = 10;
-const RETRY_DELAY = 5000; // 5 seconds
+const RETRY_DELAY = 1000; // 5 seconds
 
 type RootStackParamList = {
     DailyTrack: undefined;
@@ -186,7 +186,7 @@ const FaceMetrics = () => {
                         setScanData(apiData);
                         setIsLoading(false);
                         console.log('✅ Face metrics loaded successfully');
-                    }, 3000);
+                    }, 1000);
                 } else {
                     // Missing metrics data
                     setIsLoading(false);
