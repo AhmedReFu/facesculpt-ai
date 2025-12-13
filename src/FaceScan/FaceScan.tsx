@@ -5,9 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { StatusBar } from 'expo-status-bar';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Svg, { Circle, Ellipse } from 'react-native-svg';
 import tw from "twrnc";
 import { Toast, useToast } from '../hooks/useToost';
 
@@ -23,23 +22,58 @@ const FaceScan = () => {
     const [facing, setFacing] = useState<CameraType>('front');
     const [permission, requestPermission] = useCameraPermissions();
     const [uploading, setUploading] = useState(false);
+    const [circleProgress, setCircleProgress] = useState<number>(0);
+    const [isScanning, setIsScanning] = useState<boolean>(false);
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    if (!permission) {
-        return <View />;
-    }
+    // Auto progress animation - completes in ~3 seconds
+    useEffect(() => {
+        if (!isScanning) {
+            // Clean up interval if scanning stops
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+            return;
+        }
 
-    if (!permission.granted) {
-        return (
-            <View style={styles.container}>
-                <Text style={styles.message}>We need your permission to show the camera</Text>
-                <Button onPress={requestPermission} title="Grant Permission" />
-            </View>
-        );
-    }
+        intervalRef.current = setInterval(() => {
+            setCircleProgress(prev => {
+                const newProgress = prev + 1.5; // Adjust speed here (higher = faster)
+
+                // Capture photo when progress reaches 100%
+                if (newProgress >= 100) {
+                    if (intervalRef.current) {
+                        clearInterval(intervalRef.current);
+                        intervalRef.current = null;
+                    }
+                    // Delay capture slightly for visual feedback
+                    setTimeout(() => {
+                        takePicture();
+                    }, 200);
+                    return 100;
+                }
+
+                return newProgress;
+            });
+        }, 50); // Update every 50ms for smooth animation
+
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+        };
+    }, [isScanning]);
 
     const toggleCameraFacing = () => {
         setFacing(current => (current === 'back' ? 'front' : 'back'));
     };
+
+    const startScan = useCallback(() => {
+        setCircleProgress(0);
+        setIsScanning(true);
+    }, []);
 
     // Capture photo and upload in one flow
     const takePicture = async () => {
@@ -64,6 +98,7 @@ const FaceScan = () => {
                         ]
                     });
                     setUploading(false);
+                    setIsScanning(false);
                     return;
                 }
 
@@ -118,6 +153,7 @@ const FaceScan = () => {
                         ]
                     });
                     setUploading(false);
+                    setIsScanning(false);
                     return;
                 }
 
@@ -133,6 +169,7 @@ const FaceScan = () => {
                     // Step 3: Navigate to FaceMetrics after showing success
                     setTimeout(() => {
                         setUploading(false);
+                        setIsScanning(false);
                         (navigation as any).replace('FaceMetrics');
                     }, 1000);
 
@@ -143,6 +180,7 @@ const FaceScan = () => {
             } catch (error) {
                 console.error('Error in takePicture:', error);
                 setUploading(false);
+                setIsScanning(false);
 
                 toast.show({
                     message: 'Failed to process image. Please try again.',
@@ -153,6 +191,20 @@ const FaceScan = () => {
             }
         }
     };
+
+    // Handle permission states AFTER all hooks are called
+    if (!permission) {
+        return <View />;
+    }
+
+    if (!permission.granted) {
+        return (
+            <View style={styles.container}>
+                <Text style={styles.message}>We need your permission to show the camera</Text>
+                <Button onPress={requestPermission} title="Grant Permission" />
+            </View>
+        );
+    }
 
     return (
         <View style={styles.fullScreen}>
@@ -172,6 +224,12 @@ const FaceScan = () => {
                     <Text style={styles.instructions}>
                         Position your face within the outline{'\n'}and hold still
                     </Text>
+
+                    {isScanning && (<Text style={styles.progressText}>
+                        {circleProgress >= 100
+                            ? '✓ Scan Complete!'
+                            : 'Please your face center and hold still while scanning...'}
+                    </Text>)}
                 </View>
 
                 <CameraView
@@ -180,36 +238,60 @@ const FaceScan = () => {
                     facing={facing}
                 >
                     <View style={styles.faceOutlineContainer}>
-                        <Svg height="400" width="280" style={styles.svg}>
-                            <Ellipse
-                                cx="140"
-                                cy="200"
-                                rx="110"
-                                ry="190"
-                                stroke="white"
-                                strokeWidth="3"
-                                fill="transparent"
-                            />
-                            <Circle cx="100" cy="180" r="4" fill="white" />
-                            <Circle cx="190" cy="180" r="4" fill="white" />
-                            <Circle cx="140" cy="250" r="4" fill="white" />
-                            <Circle cx="100" cy="300" r="4" fill="white" />
-                            <Circle cx="180" cy="300" r="4" fill="white" />
-                        </Svg>
+                        {/* Circular Progress Animation - Only shows when scanning */}
+
+                        <View style={styles.circleProgressContainer}>
+                            {Array.from({ length: 60 }).map((_, index) => {
+                                const angle = (index * 6) - 90;
+                                const isActive = (index / 60) * 100 <= circleProgress;
+
+                                return (
+                                    <View
+                                        key={index}
+                                        style={[
+                                            styles.progressSegment,
+                                            {
+                                                transform: [
+                                                    { rotate: `${angle}deg` },
+                                                    { translateX: 140 }, // Adjusted for smaller circle
+                                                ],
+                                                backgroundColor: isActive ? '#00FF00' : 'rgba(255,255,255,0.3)',
+                                            }
+                                        ]}
+                                    />
+                                );
+                            })}
+
+                            {/* Center dot for better visual */}
+                            {/* <View style={styles.centerDot} /> */}
+                        </View>
+
                     </View>
+
+                    {/* Progress indicator */}
+                    {isScanning && (
+                        <View style={styles.progressContainer}>
+
+                            {circleProgress < 100 && (
+                                <Text style={styles.progressPercent}>
+                                    {Math.round(circleProgress)}%
+                                </Text>
+                            )}
+                        </View>
+                    )}
                 </CameraView>
 
                 <View style={styles.bottomSection}>
                     <TouchableOpacity
                         style={[
                             styles.captureButton,
-                            uploading && styles.captureButtonDisabled
+                            (uploading || isScanning) && styles.captureButtonDisabled
                         ]}
-                        onPress={takePicture}
-                        disabled={uploading}
+                        onPress={startScan}
+                        disabled={uploading || isScanning}
                     >
                         <View style={styles.captureButtonInner}>
-                            {uploading ? (
+                            {(uploading || isScanning) ? (
                                 <ActivityIndicator size="large" color="white" />
                             ) : (
                                     <MaterialIcons name="camera-alt" size={32} color="white" />
@@ -217,7 +299,7 @@ const FaceScan = () => {
                         </View>
                     </TouchableOpacity>
 
-                    {!uploading && (
+                    {!(uploading || isScanning) && (
                         <TouchableOpacity
                             style={styles.flipButton}
                             onPress={toggleCameraFacing}
@@ -291,17 +373,54 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 24,
         marginHorizontal: 60,
-        marginVertical: 60,
+        marginVertical: 20,
         lineHeight: 20,
     },
     faceOutlineContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: -40,
+        marginTop: -20,
     },
-    svg: {
-        overflow: 'visible',
+    // Circular Progress Animation Styles - Adjusted size
+    circleProgressContainer: {
+        width: 350, // Reduced from 300
+        height: 350, // Reduced from 300
+        position: 'absolute',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    progressSegment: {
+        position: 'absolute',
+        width: 18, // Reduced from 20
+        height: 4,
+        borderRadius: 2,
+    },
+    centerDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+    },
+    progressContainer: {
+        position: 'absolute',
+        top: 80,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    progressText: {
+        color: 'white',
+        fontSize: 18,
+        fontWeight: '600',
+        textAlign: 'center',
+        margin: 5
+    },
+    progressPercent: {
+        color: '#00FF00',
+        fontSize: 32,
+        fontWeight: 'bold',
     },
     bottomSection: {
         alignItems: 'center',

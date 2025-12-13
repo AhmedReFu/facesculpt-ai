@@ -37,7 +37,6 @@ const CHART_WIDTH = WINDOW_WIDTH - CHART_MARGIN_HORIZONTAL * 2;
 type RootStackParamList = {
   Auth: undefined;
   DailyRoutine: undefined;
-  FaceCapture: undefined;
   UnlockFacialGym: undefined;
   FaceScan: undefined;
   FaceCoach: { token: string };
@@ -446,7 +445,6 @@ const DailyTrack = () => {
   const [token, setToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isSubscribed, setIsSubscribed] = useState<string | null>(null)
 
   useEffect(() => {
 
@@ -462,7 +460,7 @@ const DailyTrack = () => {
       const refreshToken = await AsyncStorage.getItem('refresh_token');
       setRefreshToken(refreshToken)
       const subscribe = await AsyncStorage.getItem("subscribe");
-      setIsSubscribed(subscribe)
+      // setIsSubscribed(subscribe)
       setToken(accessToken);
 
       if (!accessToken) {
@@ -500,6 +498,7 @@ const DailyTrack = () => {
       });
 
       const result = await response.json();
+
       const customer = await Purchases.getCustomerInfo();
       console.log(customer.entitlements.active)
       if (customer.entitlements.active.isSandbox) {
@@ -515,7 +514,7 @@ const DailyTrack = () => {
         //   const expirationDate = customer.entitlements.active.premium.expirationDate;
         //   console.log("Expiration date:", expirationDate);
         // }
-      }
+       }
 
       // // You can also check active subscriptions
       // if (customer.activeSubscriptions && customer.activeSubscriptions.length > 0) {
@@ -656,11 +655,6 @@ const DailyTrack = () => {
             <View style={tw`flex-row gap-4`}>
               <TouchableOpacity
                 onPress={() => navigation.navigate("DailyRoutine")}
-                style={tw`flex-1 bg-[#60A5FB] py-5 rounded-2xl`}>
-                <Text style={tw`text-white font-bold text-center text-base`}>Start Today's Session</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => navigation.navigate("FaceCapture")}
                 style={tw`flex-1 bg-[#60A5FB] py-5 rounded-2xl`}>
                 <Text style={tw`text-white font-bold text-center text-base`}>Start Today's Session</Text>
               </TouchableOpacity>
