@@ -7,6 +7,7 @@ import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FaceDetector, RNCamera } from 'react-native-camera';
 import tw from "twrnc";
 import { Toast, useToast } from '../hooks/useToost';
 
@@ -36,7 +37,8 @@ const FaceScan = () => {
             }
             return;
         }
-
+        FaceDetector
+        RNCamera
         intervalRef.current = setInterval(() => {
             setCircleProgress(prev => {
                 const newProgress = prev + 1.5; // Adjust speed here (higher = faster)
@@ -73,6 +75,14 @@ const FaceScan = () => {
     const startScan = useCallback(() => {
         setCircleProgress(0);
         setIsScanning(true);
+        toast.show({
+            message: `${circleProgress >= 100
+                ? '✓ Scan Complete!'
+                : 'Please your face center and hold still while scanning...'}`,
+            type: 'warning',
+            style: 'top',
+            duration: 2000
+        });
     }, []);
 
     // Capture photo and upload in one flow

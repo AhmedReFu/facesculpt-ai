@@ -97,6 +97,10 @@ function RootStack() {
 
   // Check internet connection
   const checkConnection = React.useCallback(async () => {
+    if (__DEV__) {
+      Purchases.configure({ apiKey: "test_MJBwANZMPlXEPTGhiOrZqlzMrQj" })
+    }
+
     if (Platform.OS === 'android') {
       Purchases.configure({ apiKey: "goog_pZuivWeWkPuaNMFYnVvexWkfELI" })
     }

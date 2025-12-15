@@ -7,9 +7,8 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import CustomButton from '../Components/CustomButton';
 import { Images } from '../constants';
 import { Toast, useToast } from '../hooks/useToost';
 import { useNavigationReset } from '../lib/useNavigationReset';
@@ -137,7 +136,7 @@ const Home = () => {
                     } else {
                         navigator.navigate("Auth");
                     }
-                }, 4000);
+                }, 2000);
             } catch (error) {
                 console.error("Online mode error:", error);
                 setTimeout(() => {
@@ -214,7 +213,12 @@ const Home = () => {
                 </View>
 
                 {/* Button */}
-                <CustomButton name="Start Face Scan" />
+
+                <TouchableOpacity
+                    disabled
+                    className='bg-[#60A5FB] p-5 rounded-xl flex-row gap-2 items-center justify-center'>
+                    <Text className='text-center text-white text-xl font-semibold'>Start Face Scan</Text>
+                </TouchableOpacity>
 
                 {/* Security Info */}
                 <View className="flex-row my-4 items-center">

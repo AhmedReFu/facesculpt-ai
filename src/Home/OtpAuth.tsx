@@ -1,4 +1,4 @@
-import { IPA_BASE, OTP_AUTH } from '@env';
+import { IPA_BASE, OTP_AUTH, RESEND_OTP } from '@env';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -20,6 +20,7 @@ import { Toast, useToast } from '../hooks/useToost';
 const API_BASE_URL = IPA_BASE;
 const API_ENDPOINTS = {
     OTP_AUTH: OTP_AUTH,
+    OTP_RESEND: RESEND_OTP,
 };
 
 type RootStackParamList = {
@@ -207,16 +208,33 @@ const OtpAuth = () => {
                 setTimeout(() => {
                     inputsRef.current[0]?.focus();
                 }, 100);
-
+                const otpPayload = {
+                    phone_number: params.phone_number,
+                }
                 // TODO: Implement actual resend OTP API call here
                 // const response = await fetch(...);
-
-                toast.show({
-                    message: 'A new verification code has been sent to your phone.',
-                    type: 'success',
-                    style: 'top',
-                    duration: 3000
+                const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.OTP_RESEND}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(otpPayload),
                 });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    console.log('OTP verified successfully!');
+                    toast.show({
+                        message: 'A new verification code has been sent to your phone.',
+                        type: 'success',
+                        style: 'top',
+                        duration: 3000
+                    });
+                } else {
+                    // API returned error
+                    throw new Error(result.message || 'Invalid or expired OTP');
+                }
+
             } catch (error) {
                 toast.show({
                     message: 'Failed to resend code. Please try again.',

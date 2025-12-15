@@ -438,6 +438,7 @@ const DailyTrack = () => {
 
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
+
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
@@ -549,14 +550,20 @@ const DailyTrack = () => {
         const transformedLeaderboard = transformLeaderboard(apiData.leaderboard);
         setLeaderboardEntries(transformedLeaderboard);
 
-      } else {
+      } else if (result.message === "PAYMENT_REQUIRED") {
+        navigation.navigate("UnlockFacialGym")
+      }
+      else {
         console.log("error here")
         throw new Error(result.message || 'Failed to load dashboard');
       }
 
     } catch (err) {
       console.error('Failed to load dashboard:', err);
-      navigation.navigate("UnlockFacialGym")
+      navigation.navigate("Auth")
+      await AsyncStorage.removeItem('refresh_token',);
+      await AsyncStorage.removeItem("subscribe")
+      await AsyncStorage.removeItem('isLoggedIn',);
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
@@ -666,7 +673,7 @@ const DailyTrack = () => {
             </View>
           </View>
 
-          <Text style={tw`text-white text-2xl font-bold my-4`}>{dashboardData.badges && 'Day 0 Complete '}!</Text>
+          <Text style={tw`text-white text-2xl font-bold my-4`}>{dashboardData.badges || 'Day 0 Complete'}!</Text>
 
           <View style={tw`bg-[#1E2532] p-3 rounded-full flex-row items-center self-start`}>
             <MaterialIcons name="local-fire-department" size={24} color="#60A5FB" />

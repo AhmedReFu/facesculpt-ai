@@ -1,5 +1,6 @@
+import { IPA_BASE, RESEND_OTP } from '@env';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -15,11 +16,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Images } from '../constants';
 import { Toast, useToast } from '../hooks/useToost';
 
+const API_BASE_URL = IPA_BASE;
+console.log(IPA_BASE);
+const API_ENDPOINTS = {
+    OTP_RESEND: RESEND_OTP,
+};
+
 type RootStackParamList = {
-    CreateNewPassword: undefined;
+    CreateNewPassword: undefined | { phone_number?: string } | { otp?: number };
     Auth: undefined;
 };
 
+interface RouteParams {
+    phone_number?: string;
+}
 type OtpScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const Otp = () => {
@@ -28,6 +38,8 @@ const Otp = () => {
     const [code, setCode] = useState<string[]>(['', '', '', '']);
     const [timer, setTimer] = useState<number>(60);
     const inputsRef = useRef<TextInput[]>([]);
+    const route = useRoute();
+    const params = route.params as RouteParams;
 
     // Initialize refs array
     useEffect(() => {
@@ -94,24 +106,46 @@ const Otp = () => {
         });
 
         setTimeout(() => {
-            navigation.navigate('CreateNewPassword');
+            navigation.navigate('CreateNewPassword', { phone_number: params.phone_number });
         }, 1000);
     };
 
-    const handleResend = () => {
+    const handleResend = async () => {
         if (timer === 0) {
             setTimer(60);
             setCode(['', '', '', '']);
             setTimeout(() => {
                 inputsRef.current[0]?.focus();
             }, 100);
-
-            toast.show({
-                message: 'A new verification code has been sent to your phone.',
-                type: 'success',
-                style: 'top',
-                duration: 3000
+            const otpPayload = {
+                phone_number: params.phone_number,
+            }
+            // TODO: Implement actual resend OTP API call here
+            // const response = await fetch(...);
+            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.OTP_RESEND}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(otpPayload),
             });
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                console.log('OTP verified successfully!');
+                toast.show({
+                    message: 'A new verification code has been sent to your phone.',
+                    type: 'success',
+                    style: 'top',
+                    duration: 3000
+                });
+            } else {
+                // API returned error
+                throw new Error(result.message || 'Invalid or expired OTP');
+            }
+
+
+
         } else {
             toast.show({
                 message: `Please wait ${timer} seconds before requesting a new code.`,

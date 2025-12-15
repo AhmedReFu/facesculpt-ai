@@ -1,4 +1,4 @@
-// screens/DailyRoutine.tsx - UPDATED
+// screens/DailyRoutine.tsx - WITH SETS TRACKING
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -18,6 +18,7 @@ const DailyRoutine = () => {
         currentExerciseIndex,
         getNextIncompleteExercise,
         isWorkoutCompleted,
+        restartWorkout,
         loading,
     } = useWorkout();
 
@@ -46,8 +47,11 @@ const DailyRoutine = () => {
 
     const nextExercise = getNextIncompleteExercise();
     const allCompleted = isWorkoutCompleted;
-    const completedExercises = exercises.filter(ex => ex.completed).length;
-    const progressPercentage = exercises.length > 0 ? (completedExercises / exercises.length) * 100 : 0;
+
+    // Calculate total sets progress
+    const totalSetsCompleted = exercises.reduce((sum, ex) => sum + (ex.completedSets || 0), 0);
+    const totalSetsRequired = exercises.reduce((sum, ex) => sum + ex.sets, 0);
+    const progressPercentage = totalSetsRequired > 0 ? (totalSetsCompleted / totalSetsRequired) * 100 : 0;
 
     if (loading) {
         return (
@@ -112,19 +116,37 @@ const DailyRoutine = () => {
                     Personalized from your latest scan.
                 </Text>
 
-                <View className="bg-[#1D2229] rounded-full h-2 mt-4 mb-6">
+                {/* Progress Bar */}
+                <View className="bg-[#1D2229] rounded-full h-2 mt-4 mb-2">
                     <View
                         className="bg-[#60A5FB] h-2 rounded-full"
                         style={{ width: `${progressPercentage}%` }}
                     />
                 </View>
 
+                {/* Sets Progress Text */}
+                <Text className="text-[#9CA3AF] text-sm mb-4">
+                    {totalSetsCompleted}/{totalSetsRequired} sets completed ({Math.round(progressPercentage)}%)
+                </Text>
+
                 {allCompleted && (
-                    <View className="bg-[#1a3a2d] border border-[#4ade80] rounded-xl p-4 mb-4 flex-row items-center">
-                        <Ionicons name="checkmark-circle" size={24} color="#4ade80" />
-                        <Text className="text-[#4ade80] ml-2 font-semibold">
-                            All exercises completed! 🎉
-                        </Text>
+                    <View className="bg-[#1a3a2d] border border-[#4ade80] rounded-xl p-4 mb-4">
+                        <View className="flex-row items-center justify-between">
+                            <View className="flex-row items-center flex-1">
+                                <Ionicons name="checkmark-circle" size={24} color="#4ade80" />
+                                <Text className="text-[#4ade80] ml-2 font-semibold">
+                                    All exercises completed! 🎉
+                                </Text>
+                            </View>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    restartWorkout();
+                                }}
+                                className="bg-[#4ade80] px-4 py-2 rounded-lg"
+                            >
+                                <Text className="text-white font-semibold">Restart</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 )}
 
@@ -141,54 +163,59 @@ const DailyRoutine = () => {
                         </View>
                     </View>
 
-                    {exercises.map((exercise, index) => (
-                        <TouchableOpacity
-                            key={exercise.id}
-                            onPress={() => handleExercisePress(exercise)}
-                            activeOpacity={0.8}
-                            disabled={exercise.completed}
-                        >
-                            <View className={`
-                                flex-row justify-between items-center rounded-xl p-4 my-2
-                                ${exercise.completed
-                                    ? 'bg-[#1a3a2d] border border-[#4ade80]'
-                                    : index === currentExerciseIndex
-                                        ? 'bg-[#2A3A4F] border border-[#60A5FB]'
-                                        : 'bg-[#1D2229]'
-                                }
-                                ${exercise.completed && 'opacity-70'}
-                            `}>
-                                <View className="flex-row items-center">
-                                    <View className={`
-                                        p-3 rounded-xl mr-4
-                                        ${exercise.completed ? 'bg-[#2a5c46]' : 'bg-[#202F41]'}
-                                    `}>
-                                        <MaterialCommunityIcons
-                                            name={exercise.icon as any}
-                                            size={28}
-                                            color={exercise.completed ? "#4ade80" : "#60A5FB"}
-                                        />
-                                    </View>
-                                    <View>
-                                        <Text className={`
-                                            text-lg font-medium
-                                            ${exercise.completed ? 'text-[#4ade80]' : 'text-white'}
+                    {exercises.map((exercise, index) => {
+                        const setsProgress = `${exercise.completedSets || 0}/${exercise.sets}`;
+                        const isFullyComplete = exercise.completed;
+
+                        return (
+                            <TouchableOpacity
+                                key={exercise.id}
+                                onPress={() => handleExercisePress(exercise)}
+                                activeOpacity={0.8}
+                                disabled={isFullyComplete}
+                            >
+                                <View className={`
+                                    flex-row justify-between items-center rounded-xl p-4 my-2
+                                    ${isFullyComplete
+                                        ? 'bg-[#1a3a2d] border border-[#4ade80]'
+                                        : index === currentExerciseIndex
+                                            ? 'bg-[#2A3A4F] border border-[#60A5FB]'
+                                            : 'bg-[#1D2229]'
+                                    }
+                                    ${isFullyComplete && 'opacity-70'}
+                                `}>
+                                    <View className="flex-row items-center">
+                                        <View className={`
+                                            p-3 rounded-xl mr-4
+                                            ${isFullyComplete ? 'bg-[#2a5c46]' : 'bg-[#202F41]'}
                                         `}>
-                                            {exercise.name}
-                                        </Text>
-                                        <Text className="text-[#9CA3AF] text-base mt-1">
-                                            {exercise.displayText}   {exercise.sets} sets {exercise.completed ? '✓' : ''}
-                                        </Text>
+                                            <MaterialCommunityIcons
+                                                name={exercise.icon as any}
+                                                size={28}
+                                                color={isFullyComplete ? "#4ade80" : "#60A5FB"}
+                                            />
+                                        </View>
+                                        <View>
+                                            <Text className={`
+                                                text-lg font-medium
+                                                ${isFullyComplete ? 'text-[#4ade80]' : 'text-white'}
+                                            `}>
+                                                {exercise.name}
+                                            </Text>
+                                            <Text className="text-[#9CA3AF] text-base mt-1">
+                                                {exercise.displayText} • Sets: {setsProgress} {isFullyComplete ? '✓' : ''}
+                                            </Text>
+                                        </View>
                                     </View>
+                                    <MaterialIcons
+                                        name="keyboard-arrow-right"
+                                        size={30}
+                                        color={isFullyComplete ? "#4ade80" : "white"}
+                                    />
                                 </View>
-                                <MaterialIcons
-                                    name="keyboard-arrow-right"
-                                    size={30}
-                                    color={exercise.completed ? "#4ade80" : "white"}
-                                />
-                            </View>
-                        </TouchableOpacity>
-                    ))}
+                            </TouchableOpacity>
+                        );
+                    })}
                 </ScrollView>
 
                 <View className="pb-6 pt-4 bg-[#000000]">

@@ -345,7 +345,7 @@ const AuthScreen = () => {
                 setAgreeTerms(false);
 
             } else {
-                const errorMessage = data.message + data.data || 'Sign up failed. Please try again.';
+                const errorMessage = data.message || 'Sign up failed. Please try again.';
                 toast.show({
                     message: errorMessage,
                     type: 'error',
