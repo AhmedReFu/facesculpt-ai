@@ -7,9 +7,11 @@ import Purchases from "react-native-purchases";
 
 import "./global.css";
 
+import { REVENUE_API_ANDROID, REVENUE_API_APPLE } from '@env';
 import ChooseGoal from './src/FaceScan/ChooseGoal';
 import FaceMetrics from './src/FaceScan/FaceMetrics';
 import FaceScan from './src/FaceScan/FaceScan';
+import NewFaceDetection from './src/FaceScan/NewFaceDetection';
 import UnlockFacialGym from './src/FaceScan/UnlockFacialGym';
 import CreateNewPassword from './src/ForgotPassword/CreateNewPassword';
 import Otp from './src/ForgotPassword/Otp';
@@ -97,15 +99,12 @@ function RootStack() {
 
   // Check internet connection
   const checkConnection = React.useCallback(async () => {
-    if (__DEV__) {
-      Purchases.configure({ apiKey: "test_MJBwANZMPlXEPTGhiOrZqlzMrQj" })
-    }
 
     if (Platform.OS === 'android') {
-      Purchases.configure({ apiKey: "goog_pZuivWeWkPuaNMFYnVvexWkfELI" })
+      Purchases.configure({ apiKey: REVENUE_API_ANDROID })
     }
     else if (Platform.OS === 'ios') {
-      Purchases.configure({ apiKey: "appl_SGOUsugAvdJhvzWJZhOwbmNOKrG" })
+      Purchases.configure({ apiKey: REVENUE_API_APPLE })
     }
 
     try {
@@ -211,6 +210,7 @@ function RootStack() {
           <Stack.Screen name="Sessions" component={Sessions} />
 
           <Stack.Screen name="FaceScan" component={FaceScan} />
+          <Stack.Screen name="NewFaceDetection" component={NewFaceDetection} />
           <Stack.Screen name="FaceMetrics" component={FaceMetrics} />
           <Stack.Screen name="ChooseGoal" component={ChooseGoal} />
           <Stack.Screen name="UnlockFacialGym" component={UnlockFacialGym} />

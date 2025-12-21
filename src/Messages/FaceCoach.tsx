@@ -242,7 +242,7 @@ const FaceCoach: React.FC = () => {
                     // Handle real-time messages
                 else if (data.sender && data.message) {
                     console.log("💬 Real-time message received:", data.sender);
-
+                    setIsLoadingHistory(false)
                     if (data.sender === "AI") {
                         const newMessage: Message = {
                             id: `msg-${Date.now()}-${Math.random()}`,
