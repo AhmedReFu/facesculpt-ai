@@ -36,6 +36,7 @@ const CHART_WIDTH = WINDOW_WIDTH - CHART_MARGIN_HORIZONTAL * 2;
 // ============================================
 type RootStackParamList = {
   Auth: undefined;
+  FaceScaning: undefined;
   DailyRoutine: undefined;
   NewFaceDetection: undefined;
   UnlockFacialGym: undefined;
@@ -667,7 +668,7 @@ const DailyTrack = () => {
                 <Text style={tw`text-white font-bold text-center text-base`}>Start Today's Session</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => navigation.navigate("NewFaceDetection")}
+                onPress={() => navigation.navigate("FaceScaning")}
                 style={tw`flex-1 bg-[#60A5FB] py-5 rounded-2xl`}>
                 <Text style={tw`text-white font-bold text-center text-base`}>New Scanner</Text>
               </TouchableOpacity>

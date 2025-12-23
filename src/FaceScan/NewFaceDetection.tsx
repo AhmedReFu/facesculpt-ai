@@ -15,7 +15,7 @@ const API_ENDPOINTS = {
     IMAGE_UPLOAD: IMAGE_UPLOAD,
 };
 
-const FaceScan = () => {
+const NewFaceDetection = () => {
     const navigation = useNavigation();
     const cameraRef = useRef<CameraView>(null);
     const toast = useToast();
@@ -480,4 +480,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default FaceScan;
+export default NewFaceDetection;

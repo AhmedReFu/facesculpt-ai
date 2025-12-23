@@ -33,6 +33,7 @@
     "prettier-plugin-tailwindcss": "^0.5.14",
     "react": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-camera": "^4.2.1",
     "react-native-chart-kit": "^6.12.0",
     "react-native-dotenv": "^3.4.11",
     "react-native-gesture-handler": "~2.28.0",
@@ -43,11 +44,13 @@
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
     "react-native-toast-message": "^2.3.3",
+    "react-native-vision-camera": "^4.0.0",
     "react-native-worklets": "0.5.1",
     "react-native-worklets-core": "^1.6.2",
     "socket.io-client": "^4.8.1",
     "tailwindcss": "^3.4.18",
-    "twrnc": "^4.11.1"
+    "twrnc": "^4.11.1",
+    "vision-camera-face-detector": "^0.1.8"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
@@ -56,6 +59,7 @@
     "@types/react-native-dotenv": "^0.2.2",
     "babel-preset-expo": "^54.0.7",
     "react-native": "~0.81.5",
+    "react-refresh": "^0.18.0",
     "typescript": "~5.9.2"
   },
   "private": true

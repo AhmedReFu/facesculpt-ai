@@ -74,9 +74,7 @@ const FaceScan = () => {
         setCircleProgress(0);
         setIsScanning(true);
         toast.show({
-            message: `${circleProgress >= 100
-                ? '✓ Scan Complete!'
-                : 'Please your face center and hold still while scanning...'}`,
+            message: `'Please your face center and hold still while scanning...'`,
             type: 'warning',
             style: 'top',
             duration: 2000
@@ -182,16 +180,18 @@ const FaceScan = () => {
                     }, 1000);
 
                 } else {
+
                     throw new Error(result.message || 'Upload failed');
                 }
 
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Error in takePicture:', error);
                 setUploading(false);
                 setIsScanning(false);
 
                 toast.show({
-                    message: 'Failed to process image. Please try again.',
+                    message: `${error?.message}`,
+                    // message: 'Failed to process image. Please try again.',
                     type: 'error',
                     style: 'center',
                     buttons: [{ text: 'OK', action: 'dismiss' }]
