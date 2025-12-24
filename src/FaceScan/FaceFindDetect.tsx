@@ -8,8 +8,8 @@ import {
   Camera as FaceCamera,
 } from "react-native-vision-camera-face-detector";
 
-const MIN_FACE_RATIO = 0.2;
-const MAX_FACE_RATIO = 0.35;
+const MIN_FACE_RATIO = 0.2;  // minimum distance ratio
+const MAX_FACE_RATIO = 0.35; // maximum distance ratio
 
 type FaceStatus =
   | "NO_FACE"
@@ -28,9 +28,9 @@ const FaceFindDetect: React.FC = () => {
 
   const faceDetectionOptions = useRef<any>({
     performanceMode: "fast",
-    landmarkMode: "all",
+    landmarkMode: "all",      // sob landmark chai (eye, nose, mouth, ear)
     contourMode: "none",
-    classificationMode: "all",
+    classificationMode: "all", // eye open probability er jonno
     minFaceSize: 0.2,
     trackingEnabled: true,
   }).current;
@@ -42,11 +42,13 @@ const FaceFindDetect: React.FC = () => {
     })();
   }, [device]);
 
-  const probOk = (value: number | null | undefined, min = 0.50) => {
+  // helper: probability jodi null/undefined hoy -> false
+  const probOk = (value: number | null | undefined, min = 0.3) => {
     if (value == null) return false;
     return value >= min;
   };
 
+  // 1) full face clear kina check (eye + nose + lip + ear)
   const isFaceClear = (face: Face) => {
     const lm: any = face.landmarks;
     if (!lm) return false;
@@ -56,25 +58,31 @@ const FaceFindDetect: React.FC = () => {
     const hasMouth = lm.MOUTH_LEFT && lm.MOUTH_RIGHT;
     const hasEars = lm.LEFT_EAR && lm.RIGHT_EAR;
 
+    // jodi kono ekta nai -> face clear na
     if (!hasEyes || !hasNose || !hasMouth || !hasEars) {
       return false;
     }
 
-    if (!probOk(face.leftEyeOpenProbability, 0.05)) return false;
-    if (!probOk(face.rightEyeOpenProbability, 0.05)) return false;
+    // optional: eye open probability diye aro ekto strict kora
+    const leftEyeOpen = (face as any).leftEyeOpenProbability;
+    const rightEyeOpen = (face as any).rightEyeOpenProbability;
 
-    // 👇 ei line ta AGE vul chilo
-       if (!probOk(face.smilingProbability, 0.05)) return false;
+    // chaile niche 2 line comment kore dileo cholbe
+    if (!probOk(leftEyeOpen, 0.3)) return false;
+    if (!probOk(rightEyeOpen, 0.3)) return false;
 
+    // smilingProbability ke ekdom use korchi na
     return true;
   };
 
+  // 2) distance check
   const evaluateFaceDistance = (face: Face, frame: Frame): FaceStatus => {
     const { width, height } = face.bounds;
     const faceArea = width * height;
     const frameArea = frame.width * frame.height;
     const ratio = faceArea / frameArea;
 
+    // debug korte chaile:
     // console.log("face ratio:", ratio.toFixed(2));
 
     if (ratio < MIN_FACE_RATIO) return "TOO_FAR";
@@ -83,27 +91,36 @@ const FaceFindDetect: React.FC = () => {
   };
 
   const handleFacesDetection = (facesDetected: Face[], frame: Frame) => {
-    setFaces(facesDetected);
+    try {
+      setFaces(facesDetected);
 
-    if (!facesDetected || facesDetected.length === 0) {
-      setFaceStatus("NO_FACE");
-      return;
-    }
+      // 0) kono face nai
+      if (!facesDetected || facesDetected.length === 0) {
+        setFaceStatus("NO_FACE");
+        return;
+      }
 
-    if (facesDetected.length !== 1) {
-      setFaceStatus("MULTIPLE_FACES");
-      return;
-    }
+      // 1) ekdom 1 ta face chara onno face thakle fail
+      if (facesDetected.length !== 1) {
+        setFaceStatus("MULTIPLE_FACES");
+        return;
+      }
 
-    const face = facesDetected[0];
+      const face = facesDetected[0];
 
-    if (!isFaceClear(face)) {
+      // 2) face clear kina (eye + nose + lip + ear + eye prob)
+      if (!isFaceClear(face)) {
+        setFaceStatus("FACE_NOT_CLEAR");
+        return;
+      }
+
+      // 3) distance check
+      const distanceStatus = evaluateFaceDistance(face, frame);
+      setFaceStatus(distanceStatus);
+    } catch (e) {
+      console.error("face detection error:", e);
       setFaceStatus("FACE_NOT_CLEAR");
-      return;
     }
-
-    const distanceStatus = evaluateFaceDistance(face, frame);
-    setFaceStatus(distanceStatus);
   };
 
   if (!device) {
