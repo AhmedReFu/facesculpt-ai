@@ -4,14 +4,15 @@ import { createStackNavigator } from '@react-navigation/stack';
 import * as React from 'react';
 import { BackHandler, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Purchases from "react-native-purchases";
+import 'react-native-reanimated';
 
 import "./global.css";
 
 import { REVENUE_API_ANDROID, REVENUE_API_APPLE } from '@env';
 import ChooseGoal from './src/FaceScan/ChooseGoal';
+import FaceFindDetect from './src/FaceScan/FaceFindDetect';
 import FaceMetrics from './src/FaceScan/FaceMetrics';
 import FaceScan from './src/FaceScan/FaceScan';
-import FaceScanning from './src/FaceScan/FaceScanning';
 import NewFaceDetection from './src/FaceScan/NewFaceDetection';
 import UnlockFacialGym from './src/FaceScan/UnlockFacialGym';
 import CreateNewPassword from './src/ForgotPassword/CreateNewPassword';
@@ -100,6 +101,7 @@ function RootStack() {
 
   // Check internet connection
   const checkConnection = React.useCallback(async () => {
+
 
     if (Platform.OS === 'android') {
       Purchases.configure({ apiKey: REVENUE_API_ANDROID })
@@ -211,7 +213,7 @@ function RootStack() {
           <Stack.Screen name="Sessions" component={Sessions} />
 
           <Stack.Screen name="FaceScan" component={FaceScan} />
-          <Stack.Screen name="FaceScanning" component={FaceScanning} />
+          <Stack.Screen name="FaceFindDetect" component={FaceFindDetect} />
           <Stack.Screen name="NewFaceDetection" component={NewFaceDetection} />
           <Stack.Screen name="FaceMetrics" component={FaceMetrics} />
           <Stack.Screen name="ChooseGoal" component={ChooseGoal} />

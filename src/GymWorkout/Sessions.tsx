@@ -1,3 +1,4 @@
+// screens/Sessions.tsx - COMPLETE FIXED VERSION
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { CommonActions, RouteProp, useNavigation, useRoute } from '@react-navigation/native';
@@ -33,7 +34,9 @@ const Sessions = () => {
         getCurrentExercise,
         getNextExerciseInCircuit,
         currentSetNumber,
-        maxSets
+        maxSets,
+        getExerciseProgress,
+        getCurrentSetInfo
     } = useWorkout();
 
     const exerciseId = route.params.exerciseId;
@@ -46,17 +49,17 @@ const Sessions = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Check if this is the last exercise (cooldown)
-    const isLastExercise = exercise?.order === exercises.length;
+    // Check if this is the cooldown exercise
+    const isCooldown = exercise?.name === "Lymphatic Drainage";
+    const exerciseProgress = exercise ? getExerciseProgress(exercise.id) : { completed: 0, total: 0 };
+    const currentSetInExercise = exerciseProgress.completed + 1;
 
     // Update local state when exercise changes
     useEffect(() => {
         if (exercise) {
             setIsExerciseCompleted(exercise.completed);
-            if (!exercise.completed) {
-                if (!exercise.isRepBased) {
-                    setTimeLeft(exercise.duration);
-                }
+            if (!exercise.completed && !exercise.isRepBased) {
+                setTimeLeft(exercise.duration);
             }
         }
     }, [exercise?.id]);
@@ -90,7 +93,8 @@ const Sessions = () => {
         if (isProcessing || isExerciseCompleted) return;
 
         if (exercise?.isRepBased) {
-            return;
+            // For reps-based exercises, complete set immediately
+            handleCompleteSet();
         } else {
             if (timeLeft === 0) {
                 setTimeLeft(exercise?.duration || 0);
@@ -102,10 +106,12 @@ const Sessions = () => {
     const handleCompleteSet = () => {
         if (isProcessing || !exercise) return;
 
+        setIsProcessing(true);
+
         // Complete this set for the exercise
         completeExerciseSet(exercise.id);
 
-        const newCompletedSets = (exercise.completedSets || 0) + 1;
+        const newCompletedSets = exerciseProgress.completed + 1;
 
         toast.show({
             message: `Set ${newCompletedSets}/${exercise.sets} completed ✓`,
@@ -123,7 +129,6 @@ const Sessions = () => {
         // Check if this exercise is now fully complete
         if (newCompletedSets >= exercise.sets) {
             setIsExerciseCompleted(true);
-
             toast.show({
                 message: `${exercise.name} fully completed! 🎉`,
                 type: 'success',
@@ -134,23 +139,36 @@ const Sessions = () => {
 
         // Move to next exercise
         setTimeout(() => {
+            setIsProcessing(false);
+
             const nextExercise = getNextExerciseInCircuit();
+            console.log('Next exercise:', nextExercise?.name);
 
             if (nextExercise) {
-                navigation.navigate('Sessions', {
+                // Navigate to next exercise
+                (navigation as any).replace('Sessions', {
                     exerciseId: nextExercise.id,
                 });
             } else {
                 // All exercises completed
-                navigation.dispatch(
-                    CommonActions.reset({
-                        index: 1,
-                        routes: [
-                            { name: 'DailyTrack' },
-                            { name: 'DailyRoutine' },
-                        ],
-                    })
-                );
+                toast.show({
+                    message: '🎉 Congratulations! Workout Complete!',
+                    type: 'success',
+                    style: 'top',
+                    duration: 3000
+                });
+
+                setTimeout(() => {
+                    navigation.dispatch(
+                        CommonActions.reset({
+                            index: 1,
+                            routes: [
+                                { name: 'DailyTrack' },
+                                { name: 'DailyRoutine' },
+                            ],
+                        })
+                    );
+                }, 1500);
             }
         }, 800);
     };
@@ -204,7 +222,8 @@ const Sessions = () => {
                     </TouchableOpacity>
 
                     <Text className="text-white text-xl font-semibold flex-1 text-center">
-                        {isLastExercise ? 'Cool Down' : `Set ${currentSetNumber}/${maxSets}`}
+                        {/* {isCooldown ? 'Cool Down' : `Set ${currentSetNumber}/${maxSets}`} */}
+                        Sessions
                     </Text>
                 </View>
             </View>
@@ -263,10 +282,10 @@ const Sessions = () => {
                         </Text>
 
                         {/* Sets info for last exercise */}
-                        {isLastExercise && !isExerciseCompleted && (
+                        {isCooldown && !isExerciseCompleted && (
                             <View className="flex-row items-center gap-2 mt-2 mb-3">
                                 <Text className="text-[#60A5FB] text-xl font-bold">
-                                    Set {(exercise.completedSets || 0) + 1}/{exercise.sets}
+                                    Set {currentSetInExercise}/{exercise.sets}
                                 </Text>
                             </View>
                         )}
@@ -304,14 +323,14 @@ const Sessions = () => {
                             {isExerciseCompleted ? 'Exercise Complete!' : 'Complete all reps for this set'}
                         </Text>
 
-                        {/* Sets info for last exercise */}
-                        {isLastExercise && !isExerciseCompleted && (
+                        {/* Sets info */}
+                        {/* {!isCooldown && !isExerciseCompleted && (
                             <View className="flex-row items-center gap-2 mt-2">
                                 <Text className="text-[#60A5FB] text-xl font-bold">
-                                    Set {(exercise.completedSets || 0) + 1}/{exercise.sets}
+                                    Set {currentSetInExercise}/{exercise.sets}
                                 </Text>
                             </View>
-                        )}
+                        )} */}
                     </View>
                 )}
 

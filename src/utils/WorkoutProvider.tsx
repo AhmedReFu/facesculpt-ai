@@ -1,4 +1,4 @@
-// contexts/WorkoutProvider.tsx - WITH SETS TRACKING
+// contexts/WorkoutProvider.tsx - COMPLETE FIXED VERSION
 import { GET_PLAN, IPA_BASE, WORKOUT_DONE } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
@@ -16,7 +16,7 @@ export interface Exercise {
     reps: number;
     duration: number;
     sets: number;
-    completedSets: number; // Track how many sets are completed
+    completedSets: number;
     icon: string;
     instructions: string[];
     completed: boolean;
@@ -32,10 +32,10 @@ interface WorkoutContextType {
     currentExerciseIndex: number;
     currentSetNumber: number;
     maxSets: number;
-    completeExerciseSet: (exerciseId: number) => void; // Complete one set
+    completeExerciseSet: (exerciseId: number) => void;
     completeExercise: (exerciseId: number) => Promise<void>;
     resetWorkout: () => void;
-    restartWorkout: () => void; // Manual restart by user
+    restartWorkout: () => void;
     getCurrentExercise: () => Exercise | null;
     moveToNextExercise: () => void;
     isWorkoutCompleted: boolean;
@@ -45,6 +45,8 @@ interface WorkoutContextType {
     loading: boolean;
     workoutPlanId: number | null;
     fetchWorkoutPlan: () => Promise<void>;
+    getExerciseProgress: (exerciseId: number) => { completed: number; total: number };
+    getCurrentSetInfo: () => { currentSet: number; maxSets: number };
 }
 
 const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
@@ -73,20 +75,23 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
 
     const workoutCompletionCalledRef = useRef(false);
     const isCallingAPIRef = useRef(false);
+    const hasInitializedRef = useRef(false);
 
-    // Load workout state from storage
     useEffect(() => {
-        loadWorkoutState();
+        if (!hasInitializedRef.current) {
+            hasInitializedRef.current = true;
+            initializeWorkout();
+        }
     }, []);
 
-    // Save workout state whenever it changes
     useEffect(() => {
         if (exercises.length > 0) {
             saveWorkoutState();
         }
     }, [exercises, currentExerciseIndex, currentSetNumber]);
 
-    const loadWorkoutState = async () => {
+    const initializeWorkout = async () => {
+        console.log('🚀 Initializing workout...');
         try {
             const savedState = await AsyncStorage.getItem(WORKOUT_STATE_KEY);
             if (savedState) {
@@ -96,10 +101,13 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
                 setCurrentSetNumber(state.currentSetNumber || 1);
                 setMaxSets(state.maxSets || 3);
                 setWorkoutPlanId(state.workoutPlanId || null);
-                console.log('📂 Loaded workout state from storage');
+                console.log('📂 Loaded cached workout state');
+                setLoading(false);
             }
+            await fetchWorkoutPlan();
         } catch (error) {
-            console.error('Error loading workout state:', error);
+            console.error('Error initializing workout:', error);
+            setLoading(false);
         }
     };
 
@@ -130,11 +138,11 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
 
     const fetchWorkoutPlan = async () => {
         try {
-            setLoading(true);
+            console.log('📡 Fetching workout plan from API...');
             const accessToken = await AsyncStorage.getItem('token');
 
             if (!accessToken) {
-                console.log('No token found');
+                console.log('⚠️ No token found, skipping API call');
                 setLoading(false);
                 return;
             }
@@ -152,12 +160,11 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
             if (response.ok && result.success && result.data) {
                 const apiData = result.data;
                 const newWorkoutPlanId = apiData.id;
-
-                // Check if this is a NEW workout plan (different from current)
                 const isNewPlan = workoutPlanId !== newWorkoutPlanId;
 
                 setWorkoutPlanId(newWorkoutPlanId);
 
+                // Transform API data
                 const transformedExercises: Exercise[] = apiData.exercises.map((item: any, index: number) => {
                     const isRepBased = item.reps > 0;
                     const displayValue = isRepBased ? item.reps : item.duration;
@@ -169,7 +176,7 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
                         reps: item.reps,
                         duration: item.duration,
                         sets: item.sets,
-                        completedSets: 0, // Initialize completed sets to 0
+                        completedSets: 0,
                         isRepBased: isRepBased,
                         displayText: `${displayValue} ${displayUnit}`,
                         icon: getIconForMetric(item.exercise.target_metric, index),
@@ -183,14 +190,13 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
 
                 transformedExercises.sort((a, b) => a.order - b.order);
 
-                // Calculate max sets (excluding last cooldown exercise)
+                // Calculate max sets from regular exercises (excluding last cooldown)
                 const regularExercises = transformedExercises.slice(0, -1);
-                const calculatedMaxSets = Math.max(...regularExercises.map(ex => ex.sets));
+                const calculatedMaxSets = Math.max(...regularExercises.map(ex => ex.sets), 1);
 
                 setExercises(transformedExercises);
                 setMaxSets(calculatedMaxSets);
 
-                // Only reset progress if it's a NEW plan (after face scan)
                 if (isNewPlan) {
                     console.log('🆕 NEW workout plan detected - Resetting progress');
                     setCurrentExerciseIndex(0);
@@ -203,20 +209,21 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
 
                 console.log('✅ Workout plan loaded:', {
                     planId: newWorkoutPlanId,
-                    exercises: transformedExercises.length,
-                    maxSets: calculatedMaxSets,
-                    isNewPlan
+                    totalExercises: transformedExercises.length,
+                    maxSets: calculatedMaxSets
                 });
             } else {
                 throw new Error(result.message || 'Failed to load workout plan');
             }
         } catch (error) {
-            console.error('Failed to fetch workout plan:', error);
-            toast.show({
-                message: "Error: Failed to load workout plan. Please try again.",
-                type: 'error',
-                style: 'center'
-            });
+            console.error('❌ Failed to fetch workout plan:', error);
+            if (exercises.length === 0) {
+                toast.show({
+                    message: "Error: Failed to load workout plan. Please try again.",
+                    type: 'error',
+                    style: 'center'
+                });
+            }
         } finally {
             setLoading(false);
         }
@@ -260,6 +267,8 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const completeExerciseSet = (exerciseId: number) => {
+        console.log(`🎯 Completing set for exercise ${exerciseId}`);
+
         setExercises(prev => {
             const updated = prev.map(exercise => {
                 if (exercise.id === exerciseId) {
@@ -277,16 +286,12 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
                 return exercise;
             });
 
-            // Check if ALL exercises are fully completed
+            // Check if ALL exercises are completed
             const allExercisesComplete = updated.every(ex => ex.completed);
 
             if (allExercisesComplete && !workoutCompletionCalledRef.current) {
                 console.log('🎯 ALL EXERCISES & ALL SETS COMPLETED! Calling API...');
                 callWorkoutCompletionAPI();
-            } else {
-                const totalCompleted = updated.filter(ex => ex.completed).length;
-                const totalRemaining = updated.length - totalCompleted;
-                console.log(`📊 Progress: ${totalCompleted}/${updated.length} exercises fully completed (${totalRemaining} remaining)`);
             }
 
             return updated;
@@ -294,7 +299,6 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const completeExercise = async (exerciseId: number) => {
-        // This marks the entire exercise as complete (all sets done)
         setExercises(prev => {
             const updated = prev.map(exercise =>
                 exercise.id === exerciseId
@@ -313,71 +317,103 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
         });
     };
 
-    const moveToNextExercise = () => {
-        setCurrentExerciseIndex(prev => {
-            const nextIndex = prev + 1;
-            return nextIndex < exercises.length ? nextIndex : prev;
-        });
-    };
-
     const getNextExerciseInCircuit = (): Exercise | null => {
-        // Get regular exercises (exclude last cooldown)
+        console.log('🔍 Finding next exercise in circuit...');
+        console.log('Current Set:', currentSetNumber);
+        console.log('Max Sets:', maxSets);
+        console.log('Current Exercise Index:', currentExerciseIndex);
+
+        // Separate regular exercises from cooldown
         const regularExercises = exercises.slice(0, -1);
+        const cooldownExercise = exercises[exercises.length - 1];
+
+        // If workout is already completed, return null
+        if (exercises.every(ex => ex.completed)) {
+            console.log('✅ Workout already completed');
+            return null;
+        }
+
+        // If cooldown is completed, workout is done
+        if (cooldownExercise?.completed) {
+            console.log('✅ Cooldown already completed');
+            return null;
+        }
+
         const currentExercise = exercises[currentExerciseIndex];
 
-        if (!currentExercise) return null;
-
-        // Check if current exercise is the last cooldown
-        const isLastExercise = currentExercise.order === exercises.length;
-
-        if (isLastExercise) {
-            // Already on cooldown, check if all its sets are done
-            if (currentExercise.completedSets >= currentExercise.sets) {
-                return null; // Cooldown complete, workout done
+        // Check if we're on the cooldown exercise
+        if (currentExercise?.order === exercises.length) {
+            // We're on cooldown
+            if (!cooldownExercise.completed) {
+                return cooldownExercise;
             }
-            return currentExercise; // Stay on cooldown
+            return null;
         }
 
-        // Find next exercise in current set round that still needs sets
-        const currentIndexInRegular = regularExercises.findIndex(ex => ex.id === currentExercise.id);
+        // ===== FIXED CIRCUIT LOGIC =====
+        // Check all exercises in order
+        for (let i = 0; i < regularExercises.length; i++) {
+            const exercise = regularExercises[i];
 
-        // Look for next exercise in current set round that hasn't completed this set yet
-        for (let i = currentIndexInRegular + 1; i < regularExercises.length; i++) {
-            const ex = regularExercises[i];
-            // Check if this exercise needs more sets and hasn't completed the current set round
-            if (ex.completedSets < ex.sets && ex.completedSets < currentSetNumber) {
-                return ex;
+            // Skip if exercise doesn't have this set
+            if (exercise.sets < currentSetNumber) {
+                console.log(`⏭️ ${exercise.name} has only ${exercise.sets} sets, skipping Set ${currentSetNumber}`);
+                continue;
             }
-        }
 
-        // Check if current set round is complete for all exercises
-        const allExercisesCompletedCurrentSet = regularExercises.every(ex =>
-            ex.completedSets >= currentSetNumber || ex.sets < currentSetNumber
-        );
-
-        if (allExercisesCompletedCurrentSet) {
-            // Move to next set round
-            if (currentSetNumber < maxSets) {
-                setCurrentSetNumber(currentSetNumber + 1);
-
-                // Find first exercise in next set round that needs more sets
-                const nextExercise = regularExercises.find(ex =>
-                    ex.completedSets < ex.sets && ex.sets >= (currentSetNumber + 1)
-                );
-
-                return nextExercise || null;
-            } else {
-                // All regular exercise sets completed, move to cooldown
-                const cooldown = exercises[exercises.length - 1];
-                return cooldown.completed ? null : cooldown;
+            // Check if this exercise hasn't completed this set yet
+            if (exercise.completedSets < currentSetNumber) {
+                console.log(`➡️ Found exercise: ${exercise.name} (Set ${currentSetNumber}, Completed: ${exercise.completedSets})`);
+                return exercise;
             }
         }
 
+        // All regular exercises completed for current set
+        console.log(`✅ All regular exercises completed for Set ${currentSetNumber}`);
+
+        // Check if we should move to next set
+        if (currentSetNumber < maxSets) {
+            const nextSet = currentSetNumber + 1;
+            console.log(`🔄 Moving to Set ${nextSet}/${maxSets}`);
+
+            // Find first exercise for next set
+            for (let i = 0; i < regularExercises.length; i++) {
+                const exercise = regularExercises[i];
+
+                if (exercise.sets < nextSet) continue;
+
+                if (exercise.completedSets < nextSet) {
+                    console.log(`🎯 Starting Set ${nextSet} with: ${exercise.name}`);
+                    // Update state for next set
+                    setCurrentSetNumber(nextSet);
+                    return exercise;
+                }
+            }
+        }
+
+        // All sets completed, move to cooldown
+        console.log('🏁 All sets completed! Moving to cooldown...');
+        if (cooldownExercise && !cooldownExercise.completed) {
+            console.log('🧘 Moving to cooldown:', cooldownExercise.name);
+            return cooldownExercise;
+        }
+
+        console.log('🎉 Workout fully completed!');
         return null;
     };
 
+    const moveToNextExercise = () => {
+        const nextExercise = getNextExerciseInCircuit();
+        if (nextExercise) {
+            const nextIndex = exercises.findIndex(ex => ex.id === nextExercise.id);
+            if (nextIndex !== -1) {
+                setCurrentExerciseIndex(nextIndex);
+                console.log(`📱 Moved to: ${nextExercise.name} (index ${nextIndex})`);
+            }
+        }
+    };
+
     const resetWorkout = () => {
-        // This is called internally or when user gets NEW workout plan
         setExercises(prev =>
             prev.map(exercise => ({ ...exercise, completed: false, completedSets: 0 }))
         );
@@ -385,11 +421,10 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
         setCurrentSetNumber(1);
         workoutCompletionCalledRef.current = false;
         clearWorkoutState();
-        console.log('🔄 Workout has been reset (internal)');
+        console.log('🔄 Workout has been reset');
     };
 
     const restartWorkout = () => {
-        // Manual restart by user - resets progress but keeps same plan
         setExercises(prev =>
             prev.map(exercise => ({ ...exercise, completed: false, completedSets: 0 }))
         );
@@ -408,8 +443,25 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
         return exercises.find(exercise => !exercise.completed) || null;
     };
 
+    const getExerciseProgress = (exerciseId: number) => {
+        const exercise = exercises.find(ex => ex.id === exerciseId);
+        return {
+            completed: exercise?.completedSets || 0,
+            total: exercise?.sets || 0
+        };
+    };
+
+    const getCurrentSetInfo = () => {
+        return {
+            currentSet: currentSetNumber,
+            maxSets: maxSets
+        };
+    };
+
     const isWorkoutCompleted = exercises.length > 0 && exercises.every(exercise => exercise.completed);
-    const workoutProgress = exercises.length > 0 ? exercises.filter(ex => ex.completed).length / exercises.length : 0;
+    const workoutProgress = exercises.length > 0
+        ? exercises.filter(ex => ex.completed).length / exercises.length
+        : 0;
 
     const contextValue: WorkoutContextType = {
         exercises,
@@ -429,6 +481,8 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
         loading,
         workoutPlanId,
         fetchWorkoutPlan,
+        getExerciseProgress,
+        getCurrentSetInfo,
     };
 
     return (

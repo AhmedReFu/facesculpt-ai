@@ -1,4 +1,4 @@
-// screens/DailyRoutine.tsx - WITH SETS TRACKING
+// screens/DailyRoutine.tsx - YOUR ORIGINAL CODE
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';

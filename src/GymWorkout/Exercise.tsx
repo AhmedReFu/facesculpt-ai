@@ -1,4 +1,4 @@
-// screens/Exercise.tsx
+// screens/Exercise.tsx - YOUR ORIGINAL CODE
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
