@@ -11,7 +11,7 @@ import { REVENUE_API_ANDROID, REVENUE_API_APPLE } from '@env';
 import ChooseGoal from './src/FaceScan/ChooseGoal';
 import FaceMetrics from './src/FaceScan/FaceMetrics';
 import FaceScan from './src/FaceScan/FaceScan';
-import FaceScaning from './src/FaceScan/FaceScaning';
+import FaceScanning from './src/FaceScan/FaceScanning';
 import NewFaceDetection from './src/FaceScan/NewFaceDetection';
 import UnlockFacialGym from './src/FaceScan/UnlockFacialGym';
 import CreateNewPassword from './src/ForgotPassword/CreateNewPassword';
@@ -211,7 +211,7 @@ function RootStack() {
           <Stack.Screen name="Sessions" component={Sessions} />
 
           <Stack.Screen name="FaceScan" component={FaceScan} />
-          <Stack.Screen name="FaceScaning" component={FaceScaning} />
+          <Stack.Screen name="FaceScanning" component={FaceScanning} />
           <Stack.Screen name="NewFaceDetection" component={NewFaceDetection} />
           <Stack.Screen name="FaceMetrics" component={FaceMetrics} />
           <Stack.Screen name="ChooseGoal" component={ChooseGoal} />

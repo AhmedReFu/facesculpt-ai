@@ -13,5 +13,5 @@
     "**/*.tsx",
     "env.d.ts",
     "nativewind-env.d.ts"
-, "src/FaceScan/tfjs-native-module.ts", "src/FaceScan/FaceScaning.tsx"  ]
+, "src/FaceScan/tfjs-native-module.ts", "src/FaceScan/FaceScanning.tsx"  ]
 }
