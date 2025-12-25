@@ -71,7 +71,7 @@ const Home = () => {
                         if (subscribe === "true") {
                             navigator.replace("DailyTrack");
                         } else {
-                            navigator.replace("FaceScan");
+                            navigator.replace("FaceScanWithDetection");
                         }
                     } else {
                         navigator.replace("Auth");
@@ -131,7 +131,7 @@ const Home = () => {
                         if (subscribe === "true") {
                             navigator.navigate("DailyTrack");    
                         } else {
-                            navigator.navigate("FaceScan");
+                            navigator.navigate("FaceScanWithDetection");
                         }
                     } else {
                         navigator.navigate("Auth");

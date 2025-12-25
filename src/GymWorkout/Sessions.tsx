@@ -1,4 +1,3 @@
-// screens/Sessions.tsx - COMPLETE FIXED VERSION
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { CommonActions, RouteProp, useNavigation, useRoute } from '@react-navigation/native';
@@ -18,9 +17,7 @@ interface InstructionItemProps {
 const InstructionItem = ({ text }: InstructionItemProps) => (
     <View className="flex-row items-start mb-2">
         <Ionicons name="checkmark" size={18} color="#60A5FB" className="mr-2 mt-0.5" />
-        <Text className="text-[#9CA3AF] text-[16px] flex-1 leading-5">
-            {text}
-        </Text>
+        <Text className="text-[#9CA3AF] text-[16px] flex-1 leading-5">{text}</Text>
     </View>
 );
 
@@ -33,28 +30,27 @@ const Sessions = () => {
         completeExerciseSet,
         getCurrentExercise,
         getNextExerciseInCircuit,
-        currentSetNumber,
-        maxSets,
         getExerciseProgress,
-        getCurrentSetInfo
     } = useWorkout();
 
     const exerciseId = route.params.exerciseId;
-    const exercise = exercises.find(ex => ex.id === exerciseId) || getCurrentExercise();
+    const exercise =
+        exercises.find(ex => ex.id === exerciseId) || getCurrentExercise();
 
-    // Timer states
     const [timeLeft, setTimeLeft] = useState(exercise?.duration || 0);
     const [isRunning, setIsRunning] = useState(false);
-    const [isExerciseCompleted, setIsExerciseCompleted] = useState(exercise?.completed || false);
+    const [isExerciseCompleted, setIsExerciseCompleted] = useState(
+        exercise?.completed || false
+    );
     const [isProcessing, setIsProcessing] = useState(false);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Check if this is the cooldown exercise
-    const isCooldown = exercise?.name === "Lymphatic Drainage";
-    const exerciseProgress = exercise ? getExerciseProgress(exercise.id) : { completed: 0, total: 0 };
+    const isCooldown = exercise?.name === 'Lymphatic Drainage';
+    const exerciseProgress = exercise
+        ? getExerciseProgress(exercise.id)
+        : { completed: 0, total: 0 };
     const currentSetInExercise = exerciseProgress.completed + 1;
 
-    // Update local state when exercise changes
     useEffect(() => {
         if (exercise) {
             setIsExerciseCompleted(exercise.completed);
@@ -64,11 +60,10 @@ const Sessions = () => {
         }
     }, [exercise?.id]);
 
-    // Timer effect for duration-based exercises
     useEffect(() => {
         if (!exercise?.isRepBased && isRunning && timeLeft > 0) {
             intervalRef.current = setInterval(() => {
-                setTimeLeft((prev) => {
+                setTimeLeft(prev => {
                     if (prev <= 1) {
                         setIsRunning(false);
                         return 0;
@@ -90,14 +85,13 @@ const Sessions = () => {
     }, [isRunning, timeLeft, exercise?.isRepBased]);
 
     const handleStartPause = () => {
-        if (isProcessing || isExerciseCompleted) return;
+        if (isProcessing || isExerciseCompleted || !exercise) return;
 
-        if (exercise?.isRepBased) {
-            // For reps-based exercises, complete set immediately
+        if (exercise.isRepBased) {
             handleCompleteSet();
         } else {
             if (timeLeft === 0) {
-                setTimeLeft(exercise?.duration || 0);
+                setTimeLeft(exercise.duration || 0);
             }
             setIsRunning(!isRunning);
         }
@@ -108,7 +102,6 @@ const Sessions = () => {
 
         setIsProcessing(true);
 
-        // Complete this set for the exercise
         completeExerciseSet(exercise.id);
 
         const newCompletedSets = exerciseProgress.completed + 1;
@@ -117,27 +110,24 @@ const Sessions = () => {
             message: `Set ${newCompletedSets}/${exercise.sets} completed ✓`,
             type: 'success',
             style: 'top',
-            duration: 1500
+            duration: 1500,
         });
 
-        // Reset timer for next set
         if (!exercise.isRepBased) {
             setTimeLeft(exercise.duration);
             setIsRunning(false);
         }
 
-        // Check if this exercise is now fully complete
         if (newCompletedSets >= exercise.sets) {
             setIsExerciseCompleted(true);
             toast.show({
                 message: `${exercise.name} fully completed! 🎉`,
                 type: 'success',
                 style: 'top',
-                duration: 2000
+                duration: 2000,
             });
         }
 
-        // Move to next exercise
         setTimeout(() => {
             setIsProcessing(false);
 
@@ -145,27 +135,22 @@ const Sessions = () => {
             console.log('Next exercise:', nextExercise?.name);
 
             if (nextExercise) {
-                // Navigate to next exercise
                 (navigation as any).replace('Sessions', {
                     exerciseId: nextExercise.id,
                 });
             } else {
-                // All exercises completed
                 toast.show({
                     message: '🎉 Congratulations! Workout Complete!',
                     type: 'success',
                     style: 'top',
-                    duration: 3000
+                    duration: 3000,
                 });
 
                 setTimeout(() => {
                     navigation.dispatch(
                         CommonActions.reset({
                             index: 1,
-                            routes: [
-                                { name: 'DailyTrack' },
-                                { name: 'DailyRoutine' },
-                            ],
+                            routes: [{ name: 'DailyTrack' }, { name: 'DailyRoutine' }],
                         })
                     );
                 }, 1500);
@@ -174,8 +159,9 @@ const Sessions = () => {
     };
 
     const handleReset = () => {
+        if (!exercise) return;
         setIsRunning(false);
-        setTimeLeft(exercise?.duration || 0);
+        setTimeLeft(exercise.duration || 0);
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
         }
@@ -189,10 +175,7 @@ const Sessions = () => {
         navigation.dispatch(
             CommonActions.reset({
                 index: 1,
-                routes: [
-                    { name: 'DailyTrack' },
-                    { name: 'DailyRoutine' },
-                ],
+                routes: [{ name: 'DailyTrack' }, { name: 'DailyRoutine' }],
             })
         );
     };
@@ -200,6 +183,7 @@ const Sessions = () => {
     if (!exercise) {
         return (
             <View className="flex-1 bg-[#000000] justify-center items-center">
+                <StatusBar style="light" />
                 <Text className="text-white text-lg">Exercise not found</Text>
             </View>
         );
@@ -210,7 +194,7 @@ const Sessions = () => {
 
     return (
         <View className="flex-1 bg-[#000000] px-4">
-            <StatusBar style='light' />
+            <StatusBar style="light" />
 
             <View className="pt-12 pb-4 bg-[#000000]">
                 <View className="flex-row items-center py-4">
@@ -222,7 +206,6 @@ const Sessions = () => {
                     </TouchableOpacity>
 
                     <Text className="text-white text-xl font-semibold flex-1 text-center">
-                        {/* {isCooldown ? 'Cool Down' : `Set ${currentSetNumber}/${maxSets}`} */}
                         Sessions
                     </Text>
                 </View>
@@ -245,29 +228,47 @@ const Sessions = () => {
                 </Text>
 
                 <View className="mb-6">
-                    {exercise.instructions.map((instruction: string, index: number) => (
-                        <InstructionItem key={index} text={instruction} />
-                    ))}
+                    {(exercise.instructions || []).map(
+                        (instruction: string, index: number) => (
+                            <InstructionItem key={index} text={instruction} />
+                        )
+                    )}
                 </View>
 
-                {/* Duration-based Exercise Display (with Timer) */}
                 {isDurationBased && (
                     <View className="bg-[#252b33] rounded-3xl p-8 items-center mb-6">
-                        <TouchableOpacity onPress={handleStartPause} disabled={isExerciseCompleted}>
+                        <TouchableOpacity
+                            onPress={handleStartPause}
+                            disabled={isExerciseCompleted}
+                        >
                             <View className="rounded-full mb-4">
                                 <MaterialCommunityIcons
-                                    name={isExerciseCompleted ? "check-circle" : isRunning ? "pause" : "timer-outline"}
+                                    name={
+                                        isExerciseCompleted
+                                            ? 'check-circle'
+                                            : isRunning
+                                                ? 'pause'
+                                                : 'timer-outline'
+                                    }
                                     size={40}
-                                    color={isExerciseCompleted ? "#4ade80" : timeLeft === 0 ? "#4ade80" : "#60A5FB"}
+                                    color={
+                                        isExerciseCompleted
+                                            ? '#4ade80'
+                                            : timeLeft === 0
+                                                ? '#4ade80'
+                                                : '#60A5FB'
+                                    }
                                 />
                             </View>
                         </TouchableOpacity>
 
-                        <Text className={`
-                            text-white text-2xl font-bold mb-2
-                            ${timeLeft <= 3 && timeLeft > 0 ? 'text-red-400' : ''}
-                            ${timeLeft === 0 ? 'text-green-400' : ''}
-                        `}>
+                        <Text
+                            className={`
+              text-white text-2xl font-bold mb-2
+              ${timeLeft <= 3 && timeLeft > 0 ? 'text-red-400' : ''}
+              ${timeLeft === 0 ? 'text-green-400' : ''}
+            `}
+                        >
                             {isExerciseCompleted ? 'Completed!' : `${timeLeft}s`}
                         </Text>
 
@@ -281,7 +282,6 @@ const Sessions = () => {
                                         : 'Tap to start'}
                         </Text>
 
-                        {/* Sets info for last exercise */}
                         {isCooldown && !isExerciseCompleted && (
                             <View className="flex-row items-center gap-2 mt-2 mb-3">
                                 <Text className="text-[#60A5FB] text-xl font-bold">
@@ -301,36 +301,30 @@ const Sessions = () => {
                     </View>
                 )}
 
-                {/* Reps-based Exercise Display */}
                 {!isDurationBased && (
                     <View className="bg-[#252b33] rounded-3xl p-8 items-center mb-6">
                         <View className="rounded-full mb-4">
                             <MaterialCommunityIcons
-                                name={isExerciseCompleted ? "check-circle" : "repeat"}
+                                name={isExerciseCompleted ? 'check-circle' : 'repeat'}
                                 size={40}
-                                color={isExerciseCompleted ? "#4ade80" : "#60A5FB"}
+                                color={isExerciseCompleted ? '#4ade80' : '#60A5FB'}
                             />
                         </View>
 
-                        <Text className={`
-                            text-white text-2xl font-bold mb-2
-                            ${isExerciseCompleted ? 'text-green-400' : ''}
-                        `}>
+                        <Text
+                            className={`
+              text-white text-2xl font-bold mb-2
+              ${isExerciseCompleted ? 'text-green-400' : ''}
+            `}
+                        >
                             {exercise.reps} reps
                         </Text>
 
                         <Text className="text-[#9CA3AF] text-base mb-2">
-                            {isExerciseCompleted ? 'Exercise Complete!' : 'Complete all reps for this set'}
+                            {isExerciseCompleted
+                                ? 'Exercise Complete!'
+                                : 'Complete all reps for this set'}
                         </Text>
-
-                        {/* Sets info */}
-                        {/* {!isCooldown && !isExerciseCompleted && (
-                            <View className="flex-row items-center gap-2 mt-2">
-                                <Text className="text-[#60A5FB] text-xl font-bold">
-                                    Set {currentSetInExercise}/{exercise.sets}
-                                </Text>
-                            </View>
-                        )} */}
                     </View>
                 )}
 
@@ -347,7 +341,12 @@ const Sessions = () => {
                                 activeOpacity={0.7}
                                 disabled={isProcessing}
                             >
-                                <Ionicons name="chevron-back" size={20} color="white" className="mr-1" />
+                                <Ionicons
+                                    name="chevron-back"
+                                    size={20}
+                                    color="white"
+                                    className="mr-1"
+                                />
                                 <Text className="text-white font-semibold text-base">Prev</Text>
                             </TouchableOpacity>
 
@@ -355,9 +354,9 @@ const Sessions = () => {
                                 <TouchableOpacity
                                     onPress={handleStartPause}
                                     className={`
-                                        flex-1 py-4 rounded-2xl flex-row items-center justify-center
-                                        ${isRunning ? 'bg-[#f59e0b]' : 'bg-[#60A5FB]'}
-                                    `}
+                  flex-1 py-4 rounded-2xl flex-row items-center justify-center
+                  ${isRunning ? 'bg-[#f59e0b]' : 'bg-[#60A5FB]'}
+                `}
                                     activeOpacity={0.7}
                                     disabled={isProcessing}
                                 >
@@ -374,7 +373,9 @@ const Sessions = () => {
                                     activeOpacity={0.7}
                                     disabled={isProcessing}
                                 >
-                                    <Text className="text-white font-semibold text-base">Complete Set</Text>
+                                    <Text className="text-white font-semibold text-base">
+                                        Complete Set
+                                    </Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -382,20 +383,23 @@ const Sessions = () => {
                         <TouchableOpacity
                             onPress={handleCompleteSet}
                             className={`
-                                py-6 rounded-2xl flex-row items-center justify-center
-                                ${canCompleteSet ? 'bg-[#4ade80]' : 'bg-[#d4dce5]'}
-                                ${isProcessing || !canCompleteSet ? 'opacity-50' : ''}
-                            `}
+              py-6 rounded-2xl flex-row items-center justify-center
+              ${canCompleteSet ? 'bg-[#4ade80]' : 'bg-[#d4dce5]'}
+              ${isProcessing || !canCompleteSet ? 'opacity-50' : ''}
+            `}
                             activeOpacity={0.7}
                             disabled={isProcessing || !canCompleteSet}
                         >
                             <MaterialIcons
-                                name={canCompleteSet ? "check-circle" : "check-circle-outline"}
+                                name={canCompleteSet ? 'check-circle' : 'check-circle-outline'}
                                 size={24}
-                                color={canCompleteSet ? "white" : "#1a1f24"}
+                                color={canCompleteSet ? 'white' : '#1a1f24'}
                                 className="mr-2"
                             />
-                            <Text className={`font-semibold text-base ${canCompleteSet ? 'text-white' : 'text-[#1a1f24]'}`}>
+                            <Text
+                                className={`font-semibold text-base ${canCompleteSet ? 'text-white' : 'text-[#1a1f24]'
+                                    }`}
+                            >
                                 {isProcessing ? 'Processing...' : 'Complete Set'}
                             </Text>
                         </TouchableOpacity>
@@ -408,7 +412,12 @@ const Sessions = () => {
                         className="bg-[#4ade80] py-6 rounded-2xl flex-row items-center justify-center"
                         activeOpacity={0.7}
                     >
-                        <MaterialIcons name="check-circle" size={24} color="white" className="mr-2" />
+                        <MaterialIcons
+                            name="check-circle"
+                            size={24}
+                            color="white"
+                            className="mr-2"
+                        />
                         <Text className="text-white font-semibold text-base">
                             Workout Complete! Return to Routine
                         </Text>
@@ -416,7 +425,6 @@ const Sessions = () => {
                 )}
             </View>
 
-            {/* Toast Component */}
             <Toast
                 style={toast.style}
                 visible={toast.visible}

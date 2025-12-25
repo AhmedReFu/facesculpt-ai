@@ -276,14 +276,14 @@ const OtpAuth = () => {
                     {/* Back Button */}
                     <TouchableOpacity
                         onPress={handleBack}
-                        className={`absolute top-16 left-6 z-10 ${showSuccessModal ? 'opacity-0' : 'opacity-100'}`}
+                        className={`absolute top-4 left-6 z-10 ${showSuccessModal ? 'opacity-0' : 'opacity-100'}`}
                         disabled={isVerifying}
                     >
                         <Ionicons name="arrow-back" size={28} color="#fff" />
                     </TouchableOpacity>
 
                     {/* Logo */}
-                    <Image source={Images.Icon} resizeMode="contain" className='self-center mb-20' />
+                    <Image source={Images.Icon} resizeMode="contain" className='self-center my-20' />
 
                     {/* Heading */}
                     <Text className="text-3xl font-bold text-white text-center mb-3">

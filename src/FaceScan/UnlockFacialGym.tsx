@@ -480,7 +480,7 @@ const UnlockFacialGym = () => {
             {
               text: 'OK',
               action: 'custom',
-              onPress: () => navigator.navigate('FaceScan')
+              onPress: () => navigator.navigate('FaceScanWithDetection')
             }
           ]
         });

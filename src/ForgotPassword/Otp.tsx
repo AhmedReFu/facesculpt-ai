@@ -6,7 +6,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     Image,
     ScrollView,
-    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
@@ -17,7 +16,6 @@ import { Images } from '../constants';
 import { Toast, useToast } from '../hooks/useToost';
 
 const API_BASE_URL = IPA_BASE;
-console.log(IPA_BASE);
 const API_ENDPOINTS = {
     OTP_RESEND: RESEND_OTP,
 };
@@ -35,15 +33,16 @@ type OtpScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 const Otp = () => {
     const toast = useToast();
     const navigation = useNavigation<OtpScreenNavigationProp>();
-    const [code, setCode] = useState<string[]>(['', '', '', '']);
+    const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);
     const [timer, setTimer] = useState<number>(60);
+    const [isVerifying, setIsVerifying] = useState<boolean>(false);
     const inputsRef = useRef<TextInput[]>([]);
     const route = useRoute();
     const params = route.params as RouteParams;
 
     // Initialize refs array
     useEffect(() => {
-        inputsRef.current = inputsRef.current.slice(0, 4);
+        inputsRef.current = inputsRef.current.slice(0, 6);
     }, []);
 
     // Timer countdown
@@ -63,16 +62,16 @@ const Otp = () => {
         newCode[index] = numericText;
         setCode(newCode);
 
-        if (numericText && index < 3) {
+        if (numericText && index < 5) {
             setTimeout(() => {
                 inputsRef.current[index + 1]?.focus();
             }, 10);
         }
 
-        if (numericText && index === 3) {
+        if (numericText && index === 5) {
             const enteredCode = newCode.join('');
-            if (enteredCode.length === 4) {
-                // Handle auto-submit if needed
+            if (enteredCode.length === 6) {
+                handleSubmit(enteredCode);
             }
         }
     };
@@ -85,67 +84,116 @@ const Otp = () => {
         }
     };
 
-    const handleSubmit = (enteredCode?: string) => {
+    const handleSubmit = async (enteredCode?: string) => {
         const verificationCode = enteredCode || code.join('');
 
-        if (verificationCode.length < 4) {
+        if (verificationCode.length < 6) {
             toast.show({
-                message: 'Please enter a complete 4-digit code.',
+                message: 'Please enter a complete 6-digit code.',
                 type: 'warning',
                 style: 'top'
             });
             return;
         }
 
-        // Show success and navigate
-        toast.show({
-            message: 'Code verified successfully! ✓',
-            type: 'success',
-            style: 'top',
-            duration: 2000
-        });
+        // Check if phone number is available
+        if (!params?.phone_number) {
+            toast.show({
+                message: 'Phone number is missing. Please go back and try again.',
+                type: 'error',
+                style: 'center',
+                buttons: [
+                    {
+                        text: 'Go Back',
+                        action: 'back'
+                    }
+                ]
+            });
+            return;
+        }
 
-        setTimeout(() => {
-            navigation.navigate('CreateNewPassword', { phone_number: params.phone_number });
-        }, 1000);
+        try {
+            setIsVerifying(true);
+
+            // Show success and navigate
+            toast.show({
+                message: 'Code verified successfully! ✓',
+                type: 'success',
+                style: 'top',
+                duration: 2000
+            });
+
+            // Delay navigation for better UX
+            setTimeout(() => {
+                navigation.navigate('CreateNewPassword', {
+                    phone_number: params.phone_number,
+                    otp: parseInt(verificationCode)
+                });
+            }, 1000);
+
+        } catch (error) {
+            console.error('Error verifying OTP:', error);
+
+            toast.show({
+                message: 'Failed to verify OTP. Please try again.',
+                type: 'error',
+                style: 'center',
+                buttons: [{ text: 'OK', action: 'dismiss' }]
+            });
+
+            // Clear the code on error
+            setCode(['', '', '', '', '', '']);
+            setTimeout(() => {
+                inputsRef.current[0]?.focus();
+            }, 100);
+        } finally {
+            setIsVerifying(false);
+        }
     };
 
     const handleResend = async () => {
         if (timer === 0) {
-            setTimer(60);
-            setCode(['', '', '', '']);
-            setTimeout(() => {
-                inputsRef.current[0]?.focus();
-            }, 100);
-            const otpPayload = {
-                phone_number: params.phone_number,
-            }
-            // TODO: Implement actual resend OTP API call here
-            // const response = await fetch(...);
-            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.OTP_RESEND}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(otpPayload),
-            });
-            const result = await response.json();
+            try {
+                setTimer(60);
+                setCode(['', '', '', '', '', '']);
+                setTimeout(() => {
+                    inputsRef.current[0]?.focus();
+                }, 100);
 
-            if (response.ok && result.success) {
-                console.log('OTP verified successfully!');
-                toast.show({
-                    message: 'A new verification code has been sent to your phone.',
-                    type: 'success',
-                    style: 'top',
-                    duration: 3000
+                const otpPayload = {
+                    phone_number: params.phone_number,
+                };
+
+                const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.OTP_RESEND}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(otpPayload),
                 });
-            } else {
-                // API returned error
-                throw new Error(result.message || 'Invalid or expired OTP');
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    console.log('OTP resent successfully!');
+                    toast.show({
+                        message: 'A new verification code has been sent to your phone.',
+                        type: 'success',
+                        style: 'top',
+                        duration: 3000
+                    });
+                } else {
+                    throw new Error(result.message || 'Failed to resend OTP');
+                }
+
+            } catch (error) {
+                console.error('Error resending OTP:', error);
+                toast.show({
+                    message: 'Failed to resend code. Please try again.',
+                    type: 'error',
+                    style: 'top'
+                });
             }
-
-
-
         } else {
             toast.show({
                 message: `Please wait ${timer} seconds before requesting a new code.`,
@@ -159,39 +207,36 @@ const Otp = () => {
         navigation.goBack();
     };
 
-    const isContinueDisabled = code.join('').length < 4;
+    const isContinueDisabled = code.join('').length < 6 || isVerifying;
 
     return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView className="flex-1">
-                {/* Back Button - Top Left */}
-                <View style={styles.header}>
+        <SafeAreaView className="flex-1 bg-black">
+            <ScrollView>
+                <View className="flex-1 px-6 justify-center">
+                    {/* Back Button */}
                     <TouchableOpacity
                         onPress={handleBack}
-                        style={styles.backButton}
+                        className={`absolute top-4 left-6 z-10`}
+                        disabled={isVerifying}
                     >
                         <Ionicons name="arrow-back" size={28} color="#fff" />
                     </TouchableOpacity>
-                </View>
 
-                <View style={styles.content}>
-                    {/* Logo - Centered */}
-                    <Image
-                        source={Images.Icon}
-                        className='self-center mb-20'
-                        resizeMode="contain"
-                    />
+                    {/* Logo */}
+                    <Image source={Images.Icon} resizeMode="contain" className='self-center my-20' />
 
                     {/* Heading */}
-                    <Text style={styles.heading}>Verification Code</Text>
+                    <Text className="text-3xl font-bold text-white text-center mb-3">
+                        Verification Code
+                    </Text>
 
                     {/* Subtext */}
-                    <Text style={styles.subText}>
-                        A code has been sent to your mobile number. Please enter it to continue.
+                    <Text className="text-xl text-gray-400 text-center mb-12 leading-6 px-2">
+                        A code has been sent to {params?.phone_number}. Please enter it to continue.
                     </Text>
 
                     {/* OTP Inputs */}
-                    <View style={styles.codeContainer}>
+                    <View className="flex-row justify-between mb-10 px-5">
                         {code.map((digit, index) => (
                             <TextInput
                                 key={index}
@@ -202,10 +247,8 @@ const Otp = () => {
                                         inputsRef.current[index] = ref;
                                     }
                                 }}
-                                style={[
-                                    styles.codeInput,
-                                    digit && styles.codeInputFilled
-                                ]}
+                                className={`w-14 h-14 bg-gray-800 text-white text-center rounded-xl text-2xl font-bold border-2 ${digit ? 'border-blue-400 bg-blue-900/30' : 'border-gray-700'
+                                    }`}
                                 keyboardType="number-pad"
                                 maxLength={1}
                                 value={digit}
@@ -213,19 +256,18 @@ const Otp = () => {
                                 onKeyPress={(e) => handleKeyPress(e, index)}
                                 selectTextOnFocus
                                 autoFocus={index === 0}
+                                editable={!isVerifying}
                             />
                         ))}
                     </View>
 
                     {/* Resend Code Section */}
-                    <View style={styles.resendContainer}>
-                        <Text style={styles.resendText}>
+                    <View className="items-center mb-10">
+                        <Text className="text-gray-400 text-base mb-2 text-center">
                             Didn't receive the code?{' '}
                             <Text
-                                style={[
-                                    styles.resendLink,
-                                    timer !== 0 && styles.resendLinkDisabled
-                                ]}
+                                className={`font-semibold ${timer !== 0 || isVerifying ? 'text-gray-600 line-through' : 'text-blue-400'
+                                    }`}
                                 onPress={handleResend}
                             >
                                 Resend code
@@ -233,7 +275,7 @@ const Otp = () => {
                         </Text>
 
                         {timer !== 0 && (
-                            <Text style={styles.timerText}>
+                            <Text className="text-blue-400 text-base font-medium text-center">
                                 Resend code in 00:{timer < 10 ? `0${timer}` : timer}
                             </Text>
                         )}
@@ -241,16 +283,23 @@ const Otp = () => {
 
                     {/* Continue Button */}
                     <TouchableOpacity
-                        style={[
-                            styles.continueBtn,
-                            isContinueDisabled && styles.continueBtnDisabled
-                        ]}
+                        className={`w-full py-4 rounded-xl items-center mb-5 flex-row justify-center ${isContinueDisabled ? 'bg-gray-700 opacity-60' : 'bg-blue-400'
+                            }`}
                         onPress={() => handleSubmit()}
                         disabled={isContinueDisabled}
                     >
-                        <Text style={styles.continueText}>
-                            Continue
-                        </Text>
+                        {isVerifying ? (
+                            <>
+                                <View className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                                <Text className="text-white font-bold text-lg">
+                                    Verifying...
+                                </Text>
+                            </>
+                        ) : (
+                            <Text className="text-white font-bold text-lg">
+                                Continue
+                            </Text>
+                        )}
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -268,111 +317,5 @@ const Otp = () => {
         </SafeAreaView>
     );
 };
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#000000',
-    },
-    header: {
-        paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 10,
-    },
-    backButton: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    content: {
-        flex: 1,
-        paddingHorizontal: 20,
-    },
-    logo: {
-        width: 80,
-        height: 80,
-        alignSelf: 'center',
-        marginBottom: 60,
-    },
-    heading: {
-        fontSize: 30,
-        fontWeight: 'bold',
-        color: '#fff',
-        marginBottom: 12,
-        textAlign: 'center',
-    },
-    subText: {
-        fontSize: 16,
-        color: '#9CA3AF',
-        textAlign: 'center',
-        marginBottom: 48,
-        lineHeight: 24,
-        paddingHorizontal: 8,
-    },
-    codeContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 40,
-        paddingHorizontal: 20,
-    },
-    codeInput: {
-        width: 64,
-        height: 64,
-        backgroundColor: '#1F2937',
-        color: '#fff',
-        textAlign: 'center',
-        borderRadius: 12,
-        fontSize: 24,
-        borderWidth: 2,
-        borderColor: '#374151',
-        fontWeight: 'bold',
-    },
-    codeInputFilled: {
-        borderColor: '#60A5FA',
-        backgroundColor: '#1e3a5f',
-    },
-    resendContainer: {
-        alignItems: 'center',
-        marginBottom: 40,
-    },
-    resendText: {
-        color: '#9CA3AF',
-        fontSize: 16,
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    resendLink: {
-        color: '#60A5FA',
-        fontWeight: '600',
-    },
-    resendLinkDisabled: {
-        color: '#6B7280',
-        textDecorationLine: 'line-through',
-    },
-    timerText: {
-        color: '#60A5FA',
-        fontSize: 16,
-        fontWeight: '500',
-        textAlign: 'center',
-    },
-    continueBtn: {
-        width: '100%',
-        paddingVertical: 16,
-        backgroundColor: '#60A5FA',
-        borderRadius: 12,
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    continueBtnDisabled: {
-        backgroundColor: '#374151',
-        opacity: 0.6,
-    },
-    continueText: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 18,
-    },
-});
 
 export default Otp;

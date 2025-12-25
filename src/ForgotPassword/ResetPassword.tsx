@@ -12,12 +12,12 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    ToastAndroid,
     TouchableOpacity,
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Images } from '../constants';
+import { Toast, useToast } from '../hooks/useToost'; // ✅ Toast hook import করুন
 
 const API_BASE_URL = IPA_BASE;
 const API_ENDPOINTS = {
@@ -36,45 +36,45 @@ const ResetPassword = () => {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const allNumberRegex = /^\+[1-9]\d{1,14}$/;
-
+    const toast = useToast(); // ✅ Toast hook ব্যবহার করুন
 
     const handleContinue = async () => {
         if (!phoneNumber) {
-            ToastAndroid.showWithGravity(
-                'Please enter your phone number.',
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,
-            );
+            toast.show({
+                message: 'Please enter your phone number.',
+                type: 'error',
+                style: 'center',
+                duration: 3000
+            });
             return;
         }
 
         if (!allNumberRegex.test(phoneNumber)) {
-            ToastAndroid.showWithGravity(
-                'Please enter a valid phone number with country code (e.g., +19844864234).',
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,
-            );
+            toast.show({
+                message: 'Please enter a valid phone number with country code (e.g., +19844864234).',
+                type: 'error',
+                style: 'center',
+                duration: 3000
+            });
             return;
         }
 
         // Simple check - just make sure there's some input
         if (phoneNumber.trim().length < 10) {
-            ToastAndroid.showWithGravity(
-                'Please enter a valid phone number',
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,);
+            toast.show({
+                message: 'Please enter a valid phone number',
+                type: 'error',
+                style: 'center',
+                duration: 3000
+            });
             return;
         }
 
         setIsLoading(true);
 
         try {
-
-            // Here you would call your actual SMS service
-
             const otpPayload = {
                 phone_number: phoneNumber,
-
             };
 
             console.log('Sending OTP verification:', otpPayload);
@@ -89,17 +89,28 @@ const ResetPassword = () => {
             });
 
             if (response.ok) {
-                ToastAndroid.showWithGravity('Verification code sent', ToastAndroid.SHORT,
-                    ToastAndroid.CENTER,);
+                toast.show({
+                    message: 'Verification code sent successfully!',
+                    type: 'success',
+                    style: 'center',
+                    duration: 3000
+                });
                 navigator.navigate('Otp', { phoneNumber: phoneNumber });
             } else {
-                ToastAndroid.showWithGravity('Failed to send verification code', ToastAndroid.SHORT,
-                    ToastAndroid.CENTER,);
+                toast.show({
+                    message: 'Failed to send verification code',
+                    type: 'error',
+                    style: 'center',
+                    duration: 3000
+                });
             }
         } catch (error) {
-            ToastAndroid.showWithGravity('Failed to send verification code. Please try again.', ToastAndroid.SHORT,
-                ToastAndroid.CENTER,);
-
+            toast.show({
+                message: 'Failed to send verification code. Please try again.',
+                type: 'error',
+                style: 'center',
+                duration: 3000
+            });
         } finally {
             setIsLoading(false);
         }
@@ -107,11 +118,10 @@ const ResetPassword = () => {
 
     const isFormValid = phoneNumber.trim().length > 0;
 
-
-
     return (
         <SafeAreaView style={styles.container} className='px-4'>
             <StatusBar barStyle="light-content" backgroundColor="#000000" />
+
             {/* Back Button */}
             <TouchableOpacity
                 onPress={() => navigator.navigate("Auth")}
@@ -119,17 +129,14 @@ const ResetPassword = () => {
             >
                 <Ionicons name="arrow-back" size={28} color="#fff" />
             </TouchableOpacity>
+
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.keyboardAvoidingView}
             >
                 <ScrollView>
-
-
-
                     {/* Logo */}
                     <View style={styles.logoContainer}>
-                        {/* <Text style={styles.logo}>Logo</Text> */}
                         <Image source={Images.Icon} resizeMode="contain" />
                     </View>
 
@@ -150,7 +157,7 @@ const ResetPassword = () => {
                                 style={styles.input}
                                 placeholder="e.g., +19844864234 with country code"
                                 placeholderTextColor="#6B7280"
-                                keyboardType="default"
+                                keyboardType="phone-pad"
                                 autoCapitalize="none"
                                 autoComplete="tel"
                                 autoCorrect={false}
@@ -185,6 +192,17 @@ const ResetPassword = () => {
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            {/* ✅ Toast Component */}
+            <Toast
+                style={toast.style}
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                fadeAnim={toast.fadeAnim}
+                buttons={toast.buttons}
+                onHide={toast.hide}
+            />
         </SafeAreaView>
     );
 };
@@ -205,11 +223,6 @@ const styles = StyleSheet.create({
     logoContainer: {
         alignItems: 'center',
         marginVertical: 50,
-    },
-    logo: {
-        fontSize: 56,
-        fontWeight: 'bold',
-        color: '#fff',
     },
     headerContainer: {
         marginBottom: 10,

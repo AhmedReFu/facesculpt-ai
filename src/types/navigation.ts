@@ -1,5 +1,4 @@
 // types/navigation.ts
-import { Image } from "react-native";
 export type RootStackParamList = {
   Auth: undefined;
   ResetPassword: undefined;
@@ -9,6 +8,7 @@ export type RootStackParamList = {
   DailyTrack: undefined;
   Home: undefined;
   FaceScan: undefined;
+  FaceScanWithDetection: undefined;
   FaceMetrics: undefined;
   ChooseGoal: undefined;
   UnlockFacialGym: undefined;
@@ -21,8 +21,6 @@ export type RootStackParamList = {
   };
   FaceCoach: { token: string };
 };
-
-
 
 // Declare global types for useNavigation
 declare global {

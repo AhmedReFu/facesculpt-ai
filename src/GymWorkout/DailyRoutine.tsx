@@ -1,4 +1,3 @@
-// screens/DailyRoutine.tsx - YOUR ORIGINAL CODE
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -41,17 +40,20 @@ const DailyRoutine = () => {
         }
     };
 
-    const handleBackPress = async () => {
-        navigation.navigate("DailyTrack");
+    const handleBackPress = () => {
+        navigation.navigate('DailyTrack');
     };
 
     const nextExercise = getNextIncompleteExercise();
     const allCompleted = isWorkoutCompleted;
 
-    // Calculate total sets progress
-    const totalSetsCompleted = exercises.reduce((sum, ex) => sum + (ex.completedSets || 0), 0);
+    const totalSetsCompleted = exercises.reduce(
+        (sum, ex) => sum + (ex.completedSets || 0),
+        0
+    );
     const totalSetsRequired = exercises.reduce((sum, ex) => sum + ex.sets, 0);
-    const progressPercentage = totalSetsRequired > 0 ? (totalSetsCompleted / totalSetsRequired) * 100 : 0;
+    const progressPercentage =
+        totalSetsRequired > 0 ? (totalSetsCompleted / totalSetsRequired) * 100 : 0;
 
     if (loading) {
         return (
@@ -65,7 +67,7 @@ const DailyRoutine = () => {
     if (exercises.length === 0) {
         return (
             <View className="flex-1 bg-[#000000] px-4">
-                <StatusBar style='light' />
+                <StatusBar style="light" />
                 <View className="flex-1 mt-14">
                     <View className="mb-2">
                         <View className="flex-row items-center">
@@ -95,7 +97,7 @@ const DailyRoutine = () => {
 
     return (
         <View className="flex-1 bg-[#000000] px-4">
-            <StatusBar style='light' />
+            <StatusBar style="light" />
             <View className="flex-1 mt-14">
                 <View className="mb-2">
                     <View className="flex-row items-center">
@@ -126,7 +128,8 @@ const DailyRoutine = () => {
 
                 {/* Sets Progress Text */}
                 <Text className="text-[#9CA3AF] text-sm mb-4">
-                    {totalSetsCompleted}/{totalSetsRequired} sets completed ({Math.round(progressPercentage)}%)
+                    {totalSetsCompleted}/{totalSetsRequired} sets completed (
+                    {Math.round(progressPercentage)}%)
                 </Text>
 
                 {allCompleted && (
@@ -155,10 +158,16 @@ const DailyRoutine = () => {
                     showsVerticalScrollIndicator={false}
                 >
                     <View className="flex-row bg-[#1D2229] rounded-xl p-4 my-3">
-                        <MaterialIcons name="auto-awesome" size={28} color="#60A5FB" className="mt-1" />
+                        <MaterialIcons
+                            name="auto-awesome"
+                            size={28}
+                            color="#60A5FB"
+                            className="mt-1"
+                        />
                         <View className="flex-1 ml-3">
                             <Text className="text-white text-lg leading-8">
-                                Based on your facial scan, these workouts were created to strengthen and balance your features.
+                                Based on your facial scan, these workouts were created to
+                                strengthen and balance your features.
                             </Text>
                         </View>
                     </View>
@@ -174,43 +183,50 @@ const DailyRoutine = () => {
                                 activeOpacity={0.8}
                                 disabled={isFullyComplete}
                             >
-                                <View className={`
-                                    flex-row justify-between items-center rounded-xl p-4 my-2
-                                    ${isFullyComplete
-                                        ? 'bg-[#1a3a2d] border border-[#4ade80]'
-                                        : index === currentExerciseIndex
-                                            ? 'bg-[#2A3A4F] border border-[#60A5FB]'
-                                            : 'bg-[#1D2229]'
-                                    }
-                                    ${isFullyComplete && 'opacity-70'}
-                                `}>
+                                <View
+                                    className={`
+                    flex-row justify-between items-center rounded-xl p-4 my-2
+                    ${isFullyComplete
+                                            ? 'bg-[#1a3a2d] border border-[#4ade80]'
+                                            : index === currentExerciseIndex
+                                                ? 'bg-[#2A3A4F] border border-[#60A5FB]'
+                                                : 'bg-[#1D2229]'
+                                        }
+                    ${isFullyComplete && 'opacity-70'}
+                  `}
+                                >
                                     <View className="flex-row items-center">
-                                        <View className={`
-                                            p-3 rounded-xl mr-4
-                                            ${isFullyComplete ? 'bg-[#2a5c46]' : 'bg-[#202F41]'}
-                                        `}>
+                                        <View
+                                            className={`
+                        p-3 rounded-xl mr-4
+                        ${isFullyComplete ? 'bg-[#2a5c46]' : 'bg-[#202F41]'}
+                      `}
+                                        >
                                             <MaterialCommunityIcons
                                                 name={exercise.icon as any}
                                                 size={28}
-                                                color={isFullyComplete ? "#4ade80" : "#60A5FB"}
+                                                color={isFullyComplete ? '#4ade80' : '#60A5FB'}
                                             />
                                         </View>
                                         <View>
-                                            <Text className={`
-                                                text-lg font-medium
-                                                ${isFullyComplete ? 'text-[#4ade80]' : 'text-white'}
-                                            `}>
+                                            <Text
+                                                className={`
+                          text-lg font-medium
+                          ${isFullyComplete ? 'text-[#4ade80]' : 'text-white'}
+                        `}
+                                            >
                                                 {exercise.name}
                                             </Text>
                                             <Text className="text-[#9CA3AF] text-base mt-1">
-                                                {exercise.displayText} • Sets: {setsProgress} {isFullyComplete ? '✓' : ''}
+                                                {exercise.displayText} • Sets: {setsProgress}{' '}
+                                                {isFullyComplete ? '✓' : ''}
                                             </Text>
                                         </View>
                                     </View>
                                     <MaterialIcons
                                         name="keyboard-arrow-right"
                                         size={30}
-                                        color={isFullyComplete ? "#4ade80" : "white"}
+                                        color={isFullyComplete ? '#4ade80' : 'white'}
                                     />
                                 </View>
                             </TouchableOpacity>
@@ -223,12 +239,14 @@ const DailyRoutine = () => {
                         onPress={handleStartWorkout}
                         activeOpacity={0.8}
                         className={`
-                            p-5 rounded-xl flex-row gap-2 items-center justify-center
-                            ${allCompleted ? 'bg-[#4ade80]' : 'bg-[#60A5FB]'}
-                        `}
+              p-5 rounded-xl flex-row gap-2 items-center justify-center
+              ${allCompleted ? 'bg-[#4ade80]' : 'bg-[#60A5FB]'}
+            `}
                     >
                         <Text className="text-white text-center text-xl font-semibold">
-                            {allCompleted ? 'View Progress in TrackGym' : `Start ${nextExercise?.name || 'Workout'}`}
+                            {allCompleted
+                                ? 'View Progress in TrackGym'
+                                : `Start ${nextExercise?.name || 'Workout'}`}
                         </Text>
                     </TouchableOpacity>
                 </View>

@@ -1,9 +1,11 @@
+import { IPA_BASE, RESET_PASSWORD } from '@env';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { BlurView } from 'expo-blur';
 import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Image,
     KeyboardAvoidingView,
     Platform,
@@ -17,10 +19,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Images } from '../constants';
 
+const API_BASE_URL = IPA_BASE;
+const API_ENDPOINTS = {
+    RESET_PASSWORD: RESET_PASSWORD,
+};
+
 type RootStackParamList = {
     Auth: undefined;
-    // Add other screens as needed
+    Otp: undefined | { phone_number?: string } | { otp?: number };
 };
+
+interface RouteParams {
+    phone_number?: string;
+    otp?: string;
+}
 
 type CreateNewPasswordScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -34,13 +46,16 @@ interface PasswordValidation {
 
 export default function CreateNewPassword() {
     const navigation = useNavigation<CreateNewPasswordScreenNavigationProp>();
+    const route = useRoute();
+    const params = route.params as RouteParams;
 
     const [newPassword, setNewPassword] = useState<string>('');
     const [confirmPassword, setConfirmPassword] = useState<string>('');
     const [showNewPassword, setShowNewPassword] = useState<boolean>(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
     const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
-    const [timer, setTimer] = useState<number>(60);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [errorMessage, setErrorMessage] = useState<string>('');
     const [spinnerRotation, setSpinnerRotation] = useState<number>(0);
 
     const validatePassword = (password: string): PasswordValidation => {
@@ -56,21 +71,6 @@ export default function CreateNewPassword() {
     const passwordChecks = validatePassword(newPassword);
     const allChecksPassed = Object.values(passwordChecks).every(check => check);
     const passwordsMatch = newPassword === confirmPassword && confirmPassword !== '';
-
-    // Timer effect
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-
-        if (timer > 0) {
-            interval = setInterval(() => {
-                setTimer(prev => prev - 1);
-            }, 1000);
-        }
-
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [timer]);
 
     // Success modal auto redirect effect with spinner animation
     useEffect(() => {
@@ -98,25 +98,56 @@ export default function CreateNewPassword() {
         };
     }, [showSuccessModal, navigation]);
 
-    const handleContinue = (): void => {
-        if (!allChecksPassed) {
+    const handleContinue = async (): Promise<void> => {
+        if (!allChecksPassed || !passwordsMatch) {
             return;
         }
 
-        if (!passwordsMatch) {
+        // Validate required params
+        if (!params?.phone_number || !params?.otp) {
+            setErrorMessage('Missing phone number or OTP. Please try again.');
             return;
         }
 
-        // Show success modal
-        setShowSuccessModal(true);
+        setIsLoading(true);
+        setErrorMessage('');
+
+        try {
+            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.RESET_PASSWORD}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    phone_number: params.phone_number,
+                    otp: params.otp,
+                    new_password: newPassword,
+                }),
+            });
+
+            const result = await response.json();
+            console.log('Reset Password Response:', result);
+
+            if (response.ok && result.success) {
+                // Show success modal
+                setShowSuccessModal(true);
+            } else {
+                // Handle error response
+                setErrorMessage(result.message || 'Failed to reset password. Please try again.');
+            }
+        } catch (error: any) {
+            console.error('Reset Password Error:', error);
+            setErrorMessage('Network error. Please check your connection and try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
-
 
     const handleBack = (): void => {
-        navigation.navigate('Auth');
+        navigation.goBack();
     };
 
-    const isContinueEnabled = allChecksPassed && passwordsMatch;
+    const isContinueEnabled = allChecksPassed && passwordsMatch && !isLoading;
 
     // Spinner dot positions (8 dots in a circle)
     const spinnerDots = [
@@ -129,184 +160,209 @@ export default function CreateNewPassword() {
         { angle: 270, size: 6, opacity: 0.2 },
         { angle: 315, size: 6, opacity: 0.1 },
     ];
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#000000" />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                className="flex-1"
+                style={{ flex: 1 }}
             >
-            <View style={styles.content}>
-                {/* Back Button */}
-                <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                    <Ionicons name="arrow-back" size={28} color="#fff" />
-                </TouchableOpacity>
+                <View style={styles.content}>
+                    {/* Back Button */}
+                    <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                        <Ionicons name="arrow-back" size={28} color="#fff" />
+                    </TouchableOpacity>
 
-                {/* Logo */}
-                <View style={styles.logoContainer}>
-                    {/* <Text style={styles.logoText}>Logo</Text> */}
-                    <Image source={Images.Icon} resizeMode="contain" />
-                </View>
+                    {/* Logo */}
+                    <View style={styles.logoContainer}>
+                        <Image source={Images.Icon} resizeMode="contain" />
+                    </View>
 
-                {/* Title and Description */}
-                <View style={styles.headerContainer}>
-                    <Text style={styles.title}>Create New Password</Text>
-                    <Text style={styles.description}>
-                        Your password must be different from previous used password.
-                    </Text>
-                </View>
+                    {/* Title and Description */}
+                    <View style={styles.headerContainer}>
+                        <Text style={styles.title}>Create New Password</Text>
+                        <Text style={styles.description}>
+                            Your password must be different from previous used password.
+                        </Text>
+                    </View>
 
-                {/* New Password Field */}
-                <View style={styles.inputContainer}>
-                    <Text style={styles.label}>New Password</Text>
-                    <View style={styles.inputWrapper}>
-                        <TextInput
-                            style={[
-                                styles.input,
-                                newPassword && !allChecksPassed && styles.inputError,
-                                newPassword && allChecksPassed && styles.inputSuccess
-                            ]}
-                            value={newPassword}
-                            onChangeText={setNewPassword}
-                            secureTextEntry={!showNewPassword}
-                            placeholder="Enter new password"
-                            placeholderTextColor="#6B7280"
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                        />
-                        <TouchableOpacity
-                            style={styles.eyeButton}
-                            onPress={() => setShowNewPassword(!showNewPassword)}
-                        >
-                            <Ionicons
-                                name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
-                                size={22}
-                                color="#9CA3AF"
+                    {/* Error Message */}
+                    {errorMessage ? (
+                        <View style={styles.errorContainer}>
+                            <Ionicons name="alert-circle" size={20} color="#EF4444" />
+                            <Text style={styles.errorText}>{errorMessage}</Text>
+                        </View>
+                    ) : null}
+
+                    {/* New Password Field */}
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.label}>New Password</Text>
+                        <View style={styles.inputWrapper}>
+                            <TextInput
+                                style={[
+                                    styles.input,
+                                    newPassword && !allChecksPassed && styles.inputError,
+                                    newPassword && allChecksPassed && styles.inputSuccess
+                                ]}
+                                value={newPassword}
+                                onChangeText={(text) => {
+                                    setNewPassword(text);
+                                    setErrorMessage('');
+                                }}
+                                secureTextEntry={!showNewPassword}
+                                placeholder="Enter new password"
+                                placeholderTextColor="#6B7280"
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                editable={!isLoading}
                             />
-                        </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.eyeButton}
+                                onPress={() => setShowNewPassword(!showNewPassword)}
+                                disabled={isLoading}
+                            >
+                                <Ionicons
+                                    name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                                    size={22}
+                                    color="#9CA3AF"
+                                />
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </View>
 
-                {/* Password Requirements */}
-                {newPassword.length > 0 && (
-                    <View style={styles.requirementsContainer}>
-                        <PasswordCheck met={passwordChecks.length} text="At least 8 characters" />
-                        <PasswordCheck met={passwordChecks.uppercase} text="One uppercase letter" />
-                        <PasswordCheck met={passwordChecks.lowercase} text="One lowercase letter" />
-                        <PasswordCheck met={passwordChecks.number} text="One number" />
-                        <PasswordCheck met={passwordChecks.special} text="One special character" />
-                    </View>
-                )}
-
-                {/* Confirm Password Field */}
-                <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Confirm Password</Text>
-                    <View style={styles.inputWrapper}>
-                        <TextInput
-                            style={[
-                                styles.input,
-                                confirmPassword && !passwordsMatch && styles.inputError,
-                                confirmPassword && passwordsMatch && styles.inputSuccess
-                            ]}
-                            value={confirmPassword}
-                            onChangeText={setConfirmPassword}
-                            secureTextEntry={!showConfirmPassword}
-                            placeholder="Re-enter password"
-                            placeholderTextColor="#6B7280"
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                        />
-                        <TouchableOpacity
-                            style={styles.eyeButton}
-                            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                        >
-                            <Ionicons
-                                name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-                                size={22}
-                                color="#9CA3AF"
-                            />
-                        </TouchableOpacity>
-                    </View>
-                    {confirmPassword && passwordsMatch && (
-                        <View style={styles.successContainer}>
-                            <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                            <Text style={styles.successText}>Passwords match</Text>
+                    {/* Password Requirements */}
+                    {newPassword.length > 0 && (
+                        <View style={styles.requirementsContainer}>
+                            <PasswordCheck met={passwordChecks.length} text="At least 8 characters" />
+                            <PasswordCheck met={passwordChecks.uppercase} text="One uppercase letter" />
+                            <PasswordCheck met={passwordChecks.lowercase} text="One lowercase letter" />
+                            <PasswordCheck met={passwordChecks.number} text="One number" />
+                            <PasswordCheck met={passwordChecks.special} text="One special character" />
                         </View>
                     )}
+
+                    {/* Confirm Password Field */}
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.label}>Confirm Password</Text>
+                        <View style={styles.inputWrapper}>
+                            <TextInput
+                                style={[
+                                    styles.input,
+                                    confirmPassword && !passwordsMatch && styles.inputError,
+                                    confirmPassword && passwordsMatch && styles.inputSuccess
+                                ]}
+                                value={confirmPassword}
+                                onChangeText={(text) => {
+                                    setConfirmPassword(text);
+                                    setErrorMessage('');
+                                }}
+                                secureTextEntry={!showConfirmPassword}
+                                placeholder="Re-enter password"
+                                placeholderTextColor="#6B7280"
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                editable={!isLoading}
+                            />
+                            <TouchableOpacity
+                                style={styles.eyeButton}
+                                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                                disabled={isLoading}
+                            >
+                                <Ionicons
+                                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                                    size={22}
+                                    color="#9CA3AF"
+                                />
+                            </TouchableOpacity>
+                        </View>
+                        {confirmPassword && passwordsMatch && (
+                            <View style={styles.successContainer}>
+                                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                                <Text style={styles.successText}>Passwords match</Text>
+                            </View>
+                        )}
+                    </View>
+
+                    {/* Continue Button */}
+                    <TouchableOpacity
+                        style={[
+                            styles.continueButton,
+                            !isContinueEnabled && styles.continueButtonDisabled
+                        ]}
+                        onPress={handleContinue}
+                        disabled={!isContinueEnabled}
+                        activeOpacity={0.8}
+                    >
+                        {isLoading ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                                <Text style={styles.continueButtonText}>Continue</Text>
+                        )}
+                    </TouchableOpacity>
                 </View>
 
-                {/* Continue Button */}
-                <TouchableOpacity
-                    style={[
-                        styles.continueButton,
-                        !isContinueEnabled && styles.continueButtonDisabled
-                    ]}
-                    onPress={handleContinue}
-                    disabled={!isContinueEnabled}
-                    activeOpacity={0.8}
-                >
-                    <Text style={styles.continueButtonText}>Continue</Text>
-                </TouchableOpacity>
-            </View>
+                {/* Success Modal */}
+                {showSuccessModal && (
+                    <BlurView
+                        intensity={70}
+                        tint="dark"
+                        style={styles.blurContainer}
+                    >
+                        <View style={styles.modalWrapper}>
+                            <View style={styles.modalContent}>
+                                {/* Success Icon */}
+                                <View style={styles.iconWrapper}>
+                                    <View style={styles.iconContainer}>
+                                        <MaterialCommunityIcons
+                                            name="check-decagram-outline"
+                                            size={80}
+                                            color="#60A5FA"
+                                        />
+                                    </View>
+                                </View>
 
-            {/* Success Modal */}
-            {showSuccessModal && (
-                <BlurView
-                    intensity={70}
-                    tint="dark"
-                    style={styles.blurContainer}
-                >
-                    <View style={styles.modalWrapper}>
-                        <View style={styles.modalContent}>
-                            {/* Success Icon with gradient border effect */}
-                            <View style={styles.iconWrapper}>
-                                <View style={styles.iconContainer}>
-                                    {/* <Ionicons name="checkmark" size={50} color="#60A5FA" /> */}
-                                    <MaterialCommunityIcons name="check-decagram-outline" size={80} color="#60A5FA" />
+                                {/* Success Title */}
+                                <Text style={styles.modalTitle}>
+                                    Successful!
+                                </Text>
+
+                                {/* Success Subtitle */}
+                                <Text style={styles.modalSubtitle}>
+                                    Your password has been reset{'\n'}successfully
+                                </Text>
+
+                                {/* Circular Spinner Animation */}
+                                <View style={styles.spinnerContainer}>
+                                    {spinnerDots.map((dot, index) => {
+                                        const angle = (dot.angle + spinnerRotation) * (Math.PI / 180);
+                                        const radius = 20;
+                                        const x = Math.cos(angle) * radius;
+                                        const y = Math.sin(angle) * radius;
+
+                                        return (
+                                            <View
+                                                key={index}
+                                                style={[
+                                                    styles.spinnerDot,
+                                                    {
+                                                        width: dot.size,
+                                                        height: dot.size,
+                                                        borderRadius: dot.size / 2,
+                                                        opacity: dot.opacity,
+                                                        transform: [
+                                                            { translateX: x },
+                                                            { translateY: y }
+                                                        ]
+                                                    }
+                                                ]}
+                                            />
+                                        );
+                                    })}
                                 </View>
                             </View>
-
-                            {/* Success Title */}
-                            <Text style={styles.modalTitle}>
-                                Successful!
-                            </Text>
-
-                            {/* Success Subtitle */}
-                            <Text style={styles.modalSubtitle}>
-                                Your registration was completed{'\n'}successfully
-                            </Text>
-
-                            {/* Circular Spinner Animation */}
-                            <View style={styles.spinnerContainer}>
-                                {spinnerDots.map((dot, index) => {
-                                    const angle = (dot.angle + spinnerRotation) * (Math.PI / 180);
-                                    const radius = 20;
-                                    const x = Math.cos(angle) * radius;
-                                    const y = Math.sin(angle) * radius;
-
-                                    return (
-                                        <View
-                                            key={index}
-                                            style={[
-                                                styles.spinnerDot,
-                                                {
-                                                    width: dot.size,
-                                                    height: dot.size,
-                                                    borderRadius: dot.size / 2,
-                                                    opacity: dot.opacity,
-                                                    transform: [
-                                                        { translateX: x },
-                                                        { translateY: y }
-                                                    ]
-                                                }
-                                            ]}
-                                        />
-                                    );
-                                })}
-                            </View>
                         </View>
-                    </View>
-                </BlurView>
+                    </BlurView>
                 )}
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -349,11 +405,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 40,
     },
-    logoText: {
-        fontSize: 56,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-    },
     headerContainer: {
         marginBottom: 32,
     },
@@ -369,6 +420,23 @@ const styles = StyleSheet.create({
         color: '#9CA3AF',
         lineHeight: 20,
         textAlign: 'center',
+    },
+    errorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        borderWidth: 1,
+        borderColor: '#EF4444',
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 16,
+        gap: 8,
+    },
+    errorText: {
+        flex: 1,
+        color: '#EF4444',
+        fontSize: 14,
+        fontWeight: '500',
     },
     inputContainer: {
         marginBottom: 24,
@@ -453,65 +521,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
-    // Modal Styles
-    modalOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.95)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 24,
-    },
-    successCard: {
-        backgroundColor: '#1F2937',
-        borderRadius: 24,
-        padding: 40,
-        alignItems: 'center',
-    },
-    successIconContainer: {
-        marginBottom: 24,
-    },
-    successIcon: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        borderWidth: 3,
-        borderColor: '#60A5FA',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(96, 165, 250, 0.1)',
-    },
-    successTitle: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#fff',
-        marginBottom: 12,
-        textAlign: 'center',
-    },
-    successSubtitle: {
-        fontSize: 16,
-        color: '#9CA3AF',
-        textAlign: 'center',
-        marginBottom: 32,
-        lineHeight: 22,
-    },
-    loadingDots: {
-        flexDirection: 'row',
-        gap: 6,
-        alignItems: 'center',
-    },
-    dot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: '#374151',
-    },
-    dotActive: {
-        backgroundColor: '#60A5FA',
-    },
     blurContainer: {
         position: 'absolute',
         top: 0,
@@ -538,14 +547,8 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     iconContainer: {
-        // width: 96,
-        // height: 96,
-        // borderRadius: 48,
-        // borderWidth: 4,
-        // borderColor: '#60A5FA',
         justifyContent: 'center',
         alignItems: 'center',
-        // backgroundColor: 'rgba(96, 165, 250, 0.1)',
     },
     modalTitle: {
         fontSize: 24,

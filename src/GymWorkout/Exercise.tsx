@@ -1,4 +1,3 @@
-// screens/Exercise.tsx - YOUR ORIGINAL CODE
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
@@ -16,9 +15,7 @@ interface InstructionItemProps {
 const InstructionItem = ({ text }: InstructionItemProps) => (
     <View className="flex-row items-start mb-3">
         <View className="w-1.5 h-1.5 rounded-full bg-white mt-2 mr-3" />
-        <Text className="text-[#9CA3AF] text-lg flex-1 leading-6">
-            {text}
-        </Text>
+        <Text className="text-[#9CA3AF] text-lg flex-1 leading-6">{text}</Text>
     </View>
 );
 
@@ -28,7 +25,17 @@ const Exercise = () => {
     const route = useRoute<ExerciseScreenRouteProp>();
     const exerciseId = route.params.exerciseId;
 
-    const exercise = exercises.find(ex => ex.id === exerciseId) || exercises[0];
+    const exercise =
+        exercises.find(ex => ex.id === exerciseId) || exercises[0] || null;
+
+    if (!exercise) {
+        return (
+            <View className="flex-1 bg-[#000000] justify-center items-center">
+                <StatusBar style="light" />
+                <Text className="text-white text-lg">No exercise found</Text>
+            </View>
+        );
+    }
 
     const handleStartExercise = () => {
         navigation.navigate('Sessions', {
@@ -38,7 +45,7 @@ const Exercise = () => {
 
     return (
         <View className="flex-1 bg-[#000000]">
-            <StatusBar style='light' />
+            <StatusBar style="light" />
 
             <View className="px-4 mt-14">
                 <View className="mb-2">
@@ -68,9 +75,7 @@ const Exercise = () => {
                     <View className="bg-[#202F41] p-4 rounded-xl mr-4">
                         <Ionicons name="image" size={32} color="#60A5FB" />
                     </View>
-                    <Text className="text-white text-base">
-                        Diagram coming soon
-                    </Text>
+                    <Text className="text-white text-base">Diagram coming soon</Text>
                 </View>
 
                 <Text className="text-white text-lg font-semibold mb-4">
@@ -78,9 +83,11 @@ const Exercise = () => {
                 </Text>
 
                 <View className="mb-6">
-                    {exercise.instructions.map((instruction: string, index: number) => (
-                        <InstructionItem key={index} text={instruction} />
-                    ))}
+                    {(exercise.instructions || []).map(
+                        (instruction: string, index: number) => (
+                            <InstructionItem key={index} text={instruction} />
+                        )
+                    )}
                 </View>
 
                 <View className="h-24" />

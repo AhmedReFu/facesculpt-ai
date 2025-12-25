@@ -8,60 +8,69 @@
     "userInterfaceStyle": "light",
     "jsEngine": "hermes",
     "newArchEnabled": true,
+
     "ios": {
       "icon": "./assets/logo.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.AhmedReFu.facesculptai",
+      "deploymentTarget": "15.5",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Allow camera access to scan your face"
+        "NSCameraUsageDescription": "Allow camera access to scan your face",
+        "NSLocationWhenInUseUsageDescription": "We use your location only for camera metadata needed for secure and accurate face scanning. Your location is not stored or tracked."
       }
     },
+
     "android": {
-  "edgeToEdgeEnabled": true,
-  "predictiveBackGestureEnabled": false,
-  "package": "com.AhmedReFu.facesculptai",
-  "minSdkVersion": 26,            // ⬅️ ADD THIS
-  "permissions": [
-    "android.permission.CAMERA",
-    "android.permission.RECORD_AUDIO"
-  ]
-},
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.AhmedReFu.facesculptai",
+      "minSdkVersion": 26,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+
     "web": {
       "bundler": "metro"
     },
+
     "plugins": [
-  [
-    "expo-camera",
-    {
-      "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera"
-    }
-  ],
-  "expo-camera",
-  [
-    "expo-dev-client",
-    {
-      "launchMode": "most-recent"
-    }
-  ],
-  [
-    "expo-build-properties",
-    {
-      "android": {
-        "enableHermes": true,
-        "minSdkVersion": 26
-      },
-      "ios": {
-        "enableHermes": true
-      }
-    }
-  ],
-  "expo-font"
-],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera"
+        }
+      ],
+      [
+        "expo-dev-client",
+        {
+          "launchMode": "most-recent"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableHermes": true,
+            "minSdkVersion": 26
+          },
+          "ios": {
+            "enableHermes": true,
+            "deploymentTarget": "15.5"
+          }
+        }
+      ],
+      "expo-font"
+    ],
+
     "extra": {
       "eas": {
         "projectId": "d338a77b-0e1c-4893-a3e6-5c0fd0fd94b7"
-      }
+      },
+      "owner": "bdcalling"
+
     }
   }
 }

@@ -56,34 +56,38 @@ const FaceScanWithDetection = () => {
 
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+    // ---- Face detector options (simple like your first version) ----
     const faceDetectionOptions = useRef<any>({
         performanceMode: 'fast',
         landmarkMode: 'all',
-        contourMode: 'none',
+        contourMode: 'none',     // no extra contour strictness
         classificationMode: 'all',
         minFaceSize: 0.2,
         trackingEnabled: true,
     }).current;
 
-    // auto ask permission
+    // ---- Camera permission ----
     useEffect(() => {
         if (!hasPermission) {
             requestPermission();
         }
     }, [hasPermission, requestPermission]);
 
+    // ---- Helpers ----
     const probOk = (value: number | null | undefined, min = 0.3) => {
         if (value == null) return false;
         return value >= min;
     };
 
+    // Just like your original: eyes + nose + mouth + ears + basic eye-open check
     const isFaceClear = (face: Face) => {
         const lm: any = face.landmarks;
         if (!lm) return false;
 
         const hasEyes = lm.LEFT_EYE && lm.RIGHT_EYE;
         const hasNose = lm.NOSE_BASE;
-        const hasMouth = lm.MOUTH_LEFT && lm.MOUTH_RIGHT;
+        const hasMouth =
+            lm.MOUTH_LEFT && lm.MOUTH_RIGHT && (lm.MOUTH_BOTTOM || lm.MOUTH_TOP);
         const hasEars = lm.LEFT_EAR && lm.RIGHT_EAR;
 
         if (!hasEyes || !hasNose || !hasMouth || !hasEars) {
@@ -93,8 +97,8 @@ const FaceScanWithDetection = () => {
         const leftEyeOpen = (face as any).leftEyeOpenProbability;
         const rightEyeOpen = (face as any).rightEyeOpenProbability;
 
-        if (!probOk(leftEyeOpen, 0.3)) return false;
-        if (!probOk(rightEyeOpen, 0.3)) return false;
+        if (!probOk(leftEyeOpen, 0.4)) return false;
+        if (!probOk(rightEyeOpen, 0.4)) return false;
 
         return true;
     };
@@ -114,6 +118,7 @@ const FaceScanWithDetection = () => {
         setCircleProgress(0);
     };
 
+    // ---- Face detection callback ----
     const handleFacesDetection = (facesDetected: Face[], frame: Frame) => {
         if (!isScanning) return;
 
@@ -134,6 +139,7 @@ const FaceScanWithDetection = () => {
 
             const face = facesDetected[0];
 
+            // Only basic clear-face check (eyes, nose, lips, ears + eye-open)
             if (!isFaceClear(face)) {
                 setFaceStatus('FACE_NOT_CLEAR');
                 resetProgress();
@@ -141,13 +147,13 @@ const FaceScanWithDetection = () => {
             }
 
             const distanceStatus = evaluateFaceDistance(face, frame);
-
             if (distanceStatus !== 'OK') {
                 setFaceStatus(distanceStatus);
                 resetProgress();
                 return;
             }
 
+            // All conditions satisfied
             setFaceStatus('OK');
         } catch (e) {
             console.error('face detection error:', e);
@@ -156,7 +162,7 @@ const FaceScanWithDetection = () => {
         }
     };
 
-    // circle animation
+    // ---- Progress ring animation (unchanged behaviour) ----
     useEffect(() => {
         if (!isScanning) {
             if (intervalRef.current) {
@@ -201,13 +207,14 @@ const FaceScanWithDetection = () => {
         setFaceStatus('NO_FACE');
         setIsScanning(true);
         toast.show({
-            message: 'Position your face and hold still...',
+            message: 'Center your face in the frame and hold still.',
             type: 'warning',
             style: 'top',
             duration: 2000,
         });
     }, []);
 
+    // ---- Capture + upload ----
     const takePicture = async () => {
         if (!cameraRef.current) return;
 
@@ -219,7 +226,7 @@ const FaceScanWithDetection = () => {
 
             if (!accessToken) {
                 toast.show({
-                    message: 'Authentication Required. Please log in to continue.',
+                    message: 'Authentication required. Please sign in to continue.',
                     type: 'warning',
                     style: 'center',
                     buttons: [
@@ -234,22 +241,20 @@ const FaceScanWithDetection = () => {
                 return;
             }
 
-            // 1) photo capture
             const photo = await cameraRef.current.takePhoto({
                 quality: 80,
                 enableShutterSound: false,
             });
 
             if (!photo) {
-                throw new Error('Failed to capture photo');
+                throw new Error('Failed to capture photo. Please try again.');
             }
 
             console.log('Photo captured:', photo.path);
 
-            // 2) 1–3 sec wait before API call (ekhane 1.2s)
+            // small delay, UX only
             await new Promise(resolve => setTimeout(resolve, 1200));
 
-            // 3) API hit
             const formData = new FormData();
             formData.append(
                 'image',
@@ -278,7 +283,7 @@ const FaceScanWithDetection = () => {
             if (response.status === 401) {
                 await AsyncStorage.removeItem('token');
                 toast.show({
-                    message: 'Session Expired. Please log in again.',
+                    message: 'Session expired. Please sign in again.',
                     type: 'error',
                     style: 'center',
                     buttons: [
@@ -295,7 +300,7 @@ const FaceScanWithDetection = () => {
 
             if (response.ok && result.success) {
                 toast.show({
-                    message: 'Face scan completed successfully! ✓',
+                    message: 'Face scan completed successfully. ✓',
                     type: 'success',
                     style: 'top',
                     duration: 2000,
@@ -306,14 +311,14 @@ const FaceScanWithDetection = () => {
                     (navigation as any).replace('FaceMetrics');
                 }, 1000);
             } else {
-                throw new Error(result.message || 'Upload failed');
+                throw new Error(result.message || 'Failed to upload image.');
             }
         } catch (error: any) {
             console.error('Error in takePicture:', error);
             setUploading(false);
 
             toast.show({
-                message: `${error?.message}`,
+                message: error?.message || 'Something went wrong. Please try again.',
                 type: 'error',
                 style: 'center',
                 buttons: [{ text: 'OK', action: 'dismiss' }],
@@ -321,16 +326,36 @@ const FaceScanWithDetection = () => {
         }
     };
 
-    const statusTextMap: Record<FaceStatus, string> = {
-        NO_FACE: 'Face dekha jacche na',
-        MULTIPLE_FACES: 'Shudhu tomar ekta face rekho',
-        TOO_FAR: 'Ar ektu kache asho',
-        TOO_CLOSE: 'Ektu dure giye thako',
-        FACE_NOT_CLEAR: 'Full face clear rakho: chokh, naak, lips, ear visible',
-        OK: 'Perfect! Hold still... ✅',
+    // ---- Status texts in clean English ----
+    const statusTextMap: Record<FaceStatus, { text: string; color: string }> = {
+        NO_FACE: {
+            text: 'No face detected. Please move your face into the frame.',
+            color: '#ff4d4d',
+        },
+        MULTIPLE_FACES: {
+            text: 'More than one face detected. Make sure only your face is visible.',
+            color: '#ff4d4d',
+        },
+        TOO_FAR: {
+            text: 'You are too far from the camera. Move a little closer.',
+            color: '#ffcc00',
+        },
+        TOO_CLOSE: {
+            text: 'You are too close to the camera. Move slightly back.',
+            color: '#ffcc00',
+        },
+        FACE_NOT_CLEAR: {
+            text:
+                'Your face is not clear. Keep your eyes, nose, lips and both ears fully visible with nothing covering your face.',
+            color: '#ff4d4d',
+        },
+        OK: {
+            text: 'Great! Hold still while we scan your face. ✅',
+            color: '#00ff5e',
+        },
     };
 
-    // loading / permission / device
+    // ---- Loading / permission / device ----
     if (!device) {
         return (
             <View style={styles.container}>
@@ -343,19 +368,20 @@ const FaceScanWithDetection = () => {
         return (
             <View style={styles.container}>
                 <Text style={styles.message}>
-                    We need your permission to use the camera
+                    Camera access is required to perform a face scan.
                 </Text>
-                <Button title="Grant Permission" onPress={requestPermission} />
+                <Button title="Grant Camera Permission" onPress={requestPermission} />
             </View>
         );
     }
 
+    // ---- Main UI ----
     return (
         <View style={styles.fullScreen}>
             <StatusBar style="light" />
 
             <View style={styles.overlay}>
-                {/* Header / top texts */}
+                {/* Header */}
                 <View style={tw`bg-black`}>
                     <View style={styles.header}>
                         <Text style={tw`text-white text-2xl font-bold`}>Face Scan</Text>
@@ -367,22 +393,22 @@ const FaceScanWithDetection = () => {
                         </TouchableOpacity>
                     </View>
                     <Text style={styles.instructions}>
-                        Position your face within the outline{'\n'}and hold still
+                        Align your face inside the circle{'\n'}and keep it steady.
                     </Text>
 
                     {isScanning && (
                         <Text
                             style={[
                                 styles.progressText,
-                                faceStatus === 'OK' && { color: '#00FF00' },
+                                { color: statusTextMap[faceStatus].color },
                             ]}
                         >
-                            {statusTextMap[faceStatus]}
+                            {statusTextMap[faceStatus].text}
                         </Text>
                     )}
                 </View>
 
-                {/* 🔹 Camera as background */}
+                {/* Camera preview */}
                 <FaceCamera
                     ref={cameraRef}
                     style={styles.camera}
@@ -393,7 +419,7 @@ const FaceScanWithDetection = () => {
                     faceDetectionOptions={faceDetectionOptions}
                 />
 
-                {/* 🔹 Circle ring + center dot as overlay (always on top) */}
+                {/* Ring + center dot overlay */}
                 <View style={StyleSheet.absoluteFill} pointerEvents="none">
                     <View style={styles.faceOutlineContainer}>
                         <View style={styles.circleProgressContainer}>
@@ -426,7 +452,7 @@ const FaceScanWithDetection = () => {
                         </View>
                     </View>
 
-                    {/* percentage text */}
+                    {/* Percentage text */}
                     {isScanning && (
                         <View style={styles.progressContainer}>
                             {circleProgress < 100 && faceStatus === 'OK' && (
@@ -438,7 +464,7 @@ const FaceScanWithDetection = () => {
                     )}
                 </View>
 
-                {/* Bottom button */}
+                {/* Bottom capture button */}
                 <View style={styles.bottomSection}>
                     <TouchableOpacity
                         style={[
@@ -476,7 +502,6 @@ const FaceScanWithDetection = () => {
             />
         </View>
     );
-
 };
 
 const styles = StyleSheet.create({
@@ -531,7 +556,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: -20,
     },
-    // Circular Progress Animation Styles
     circleProgressContainer: {
         width: 350,
         height: 350,

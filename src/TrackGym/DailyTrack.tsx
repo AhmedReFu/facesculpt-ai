@@ -38,9 +38,7 @@ type RootStackParamList = {
   Auth: undefined;
   FaceScanWithDetection: undefined;
   DailyRoutine: undefined;
-  NewFaceDetection: undefined;
   UnlockFacialGym: undefined;
-  FaceScan: undefined;
   FaceCoach: { token: string };
 };
 

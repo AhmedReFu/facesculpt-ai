@@ -25,7 +25,7 @@ type RootStackParamList = {
     DailyTrack: undefined;
     ChooseGoal: undefined;
     Auth: undefined;
-    FaceScan: undefined;
+    FaceScanWithDetection: undefined;
 };
 
 type FaceMetricsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -144,7 +144,7 @@ const FaceMetrics = () => {
                                 action: 'custom',
                                 onPress: () => {
                                     setRetryCount(0);
-                                    navigation.navigate('FaceScan');
+                                    navigation.navigate('FaceScanWithDetection');
                                 }
                             },
                             { text: 'Cancel', action: 'dismiss' }
@@ -166,7 +166,7 @@ const FaceMetrics = () => {
                         {
                             text: 'Scan Again',
                             action: 'custom',
-                            onPress: () => navigation.navigate('FaceScan')
+                            onPress: () => navigation.navigate('FaceScanWithDetection')
                         }
                     ]
                 });
@@ -200,7 +200,7 @@ const FaceMetrics = () => {
                             {
                                 text: 'Scan Again',
                                 action: 'custom',
-                                onPress: () => navigation.navigate('FaceScan')
+                                onPress: () => navigation.navigate('FaceScanWithDetection')
                             }
                         ]
                     });

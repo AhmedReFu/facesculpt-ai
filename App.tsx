@@ -3,10 +3,10 @@ import NetInfo from '@react-native-community/netinfo';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as React from 'react';
 import { BackHandler, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Purchases from "react-native-purchases";
+import Purchases from 'react-native-purchases';
 import 'react-native-reanimated';
 
-import "./global.css";
+import './global.css';
 
 import { REVENUE_API_ANDROID, REVENUE_API_APPLE } from '@env';
 import ChooseGoal from './src/FaceScan/ChooseGoal';
@@ -32,7 +32,9 @@ import { WorkoutProvider } from './src/utils/WorkoutProvider';
 
 const Stack = createStackNavigator();
 
-// No Internet Screen Component
+// ======================
+// No Internet Screen
+// ======================
 const NoInternetScreen = ({ onRetry }: { onRetry: () => void }) => {
   return (
     <View style={styles.noInternetContainer}>
@@ -70,11 +72,7 @@ const NoInternetScreen = ({ onRetry }: { onRetry: () => void }) => {
 
         {/* Buttons */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={onRetry}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={styles.retryButton} onPress={onRetry} activeOpacity={0.8}>
             <Ionicons name="refresh-outline" size={24} color="#fff" />
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
@@ -93,21 +91,21 @@ const NoInternetScreen = ({ onRetry }: { onRetry: () => void }) => {
   );
 };
 
+// ======================
+// RootStack
+// ======================
 function RootStack() {
   const toast = useToast();
   const [isConnected, setIsConnected] = React.useState<boolean | null>(null);
   const [showNoInternet, setShowNoInternet] = React.useState(false);
   const [isChecking, setIsChecking] = React.useState(true);
 
-  // Check internet connection
+  // Check internet connection + configure RevenueCat
   const checkConnection = React.useCallback(async () => {
-
-
     if (Platform.OS === 'android') {
-      Purchases.configure({ apiKey: REVENUE_API_ANDROID })
-    }
-    else if (Platform.OS === 'ios') {
-      Purchases.configure({ apiKey: REVENUE_API_APPLE })
+      Purchases.configure({ apiKey: REVENUE_API_ANDROID });
+    } else if (Platform.OS === 'ios') {
+      Purchases.configure({ apiKey: REVENUE_API_APPLE });
     }
 
     try {
@@ -115,8 +113,9 @@ function RootStack() {
       const state = await NetInfo.fetch();
       console.log('Connection state:', state.isConnected);
 
-      setIsConnected(state.isConnected ?? false);
-      setShowNoInternet(!(state.isConnected ?? false));
+      const connected = state.isConnected ?? false;
+      setIsConnected(connected);
+      setShowNoInternet(!connected);
       setIsChecking(false);
     } catch (error) {
       console.error('Error checking connection:', error);
@@ -126,12 +125,10 @@ function RootStack() {
     }
   }, []);
 
-  // Initial connection check
   React.useEffect(() => {
     checkConnection();
   }, [checkConnection]);
 
-  // Listen for connection changes
   React.useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
       const connected = state.isConnected ?? false;
@@ -142,10 +139,11 @@ function RootStack() {
       if (!connected) {
         setShowNoInternet(true);
         toast.show({
-          message: 'Connection Lost. Your internet connection was lost. Please reconnect to continue using the app.',
+          message:
+            'Connection Lost. Your internet connection was lost. Please reconnect to continue using the app.',
           type: 'warning',
           style: 'center',
-          buttons: [{ text: 'OK', action: 'dismiss' }]
+          buttons: [{ text: 'OK', action: 'dismiss' }],
         });
       } else if (showNoInternet) {
         setShowNoInternet(false);
@@ -153,20 +151,18 @@ function RootStack() {
           message: 'Connection Restored. Your internet connection has been restored.',
           type: 'success',
           style: 'top',
-          duration: 3000
+          duration: 3000,
         });
       }
     });
 
     return () => unsubscribe();
-  }, [showNoInternet]);
+  }, [showNoInternet, toast]);
 
-  // Handle retry
   const handleRetry = () => {
     checkConnection();
   };
 
-  // Show loading while checking initial connection
   if (isChecking) {
     return (
       <View style={styles.loadingContainer}>
@@ -175,14 +171,12 @@ function RootStack() {
     );
   }
 
-  // Show no internet screen if not connected
   if (showNoInternet || isConnected === false) {
     return <NoInternetScreen onRetry={handleRetry} />;
   }
 
-  // Show main app if connected
+  // 🔥 IMPORTANT: ekhane full app ke WorkoutProvider diye wrap korlam
   return (
-    // Single WorkoutProvider wraps the entire navigation
     <WorkoutProvider>
       <AppNavigationContainer>
         <Stack.Navigator
@@ -192,10 +186,14 @@ function RootStack() {
             gestureEnabled: false,
             gestureDirection: 'horizontal',
           }}
-          initialRouteName='Home'
+          initialRouteName="Home"
         >
           <Stack.Screen name="Home" component={Home} />
-          <Stack.Screen name="Auth" component={AuthScreen} options={{ animation: "slide_from_left" }} />
+          <Stack.Screen
+            name="Auth"
+            component={AuthScreen}
+            options={{ animation: 'slide_from_left' }}
+          />
           <Stack.Screen name="OtpAuth" component={OtpAuth} />
           <Stack.Screen name="ResetPassword" component={ResetPassword} />
           <Stack.Screen name="Otp" component={Otp} />
@@ -207,7 +205,7 @@ function RootStack() {
           />
           <Stack.Screen name="FaceCoach" component={FaceCoach} />
 
-          {/* Workout screens - all share the same WorkoutProvider */}
+          {/* Workout screens – ekhon direct useWorkout use korte পারবে */}
           <Stack.Screen name="DailyRoutine" component={DailyRoutine} />
           <Stack.Screen name="Exercise" component={Exercise} />
           <Stack.Screen name="Sessions" component={Sessions} />
@@ -235,6 +233,9 @@ function RootStack() {
   );
 }
 
+// ======================
+// Styles
+// ======================
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
@@ -345,6 +346,9 @@ const styles = StyleSheet.create({
   },
 });
 
+// ======================
+// App entry
+// ======================
 export default function App() {
   return <RootStack />;
 }
