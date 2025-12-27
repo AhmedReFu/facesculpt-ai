@@ -659,7 +659,7 @@ const DailyTrack = () => {
       <ScrollView style={tw`flex-1`} contentContainerStyle={{ paddingBottom: 4 }} showsVerticalScrollIndicator={false}>
         <View style={tw`pt-2`}>
           <View style={tw`bg-[#000000] my-4`}>
-            <View style={tw`flex-row gap-4`}>
+            <View style={tw`flex-row gap-2`}>
               <TouchableOpacity
                 onPress={() => navigation.navigate("DailyRoutine")}
                 style={tw`flex-1 bg-[#60A5FB] py-5 rounded-2xl`}>

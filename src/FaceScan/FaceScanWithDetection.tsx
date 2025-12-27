@@ -30,7 +30,7 @@ const API_ENDPOINTS = {
     IMAGE_UPLOAD: IMAGE_UPLOAD,
 };
 
-const MIN_FACE_RATIO = 0.2;
+const MIN_FACE_RATIO = 0.20;
 const MAX_FACE_RATIO = 0.35;
 
 type FaceStatus =

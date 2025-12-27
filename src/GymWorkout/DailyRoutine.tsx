@@ -41,6 +41,7 @@ const DailyRoutine = () => {
     };
 
     const handleBackPress = () => {
+        // restartWorkout()
         navigation.navigate('DailyTrack');
     };
 

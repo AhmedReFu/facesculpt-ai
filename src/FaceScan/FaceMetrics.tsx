@@ -19,7 +19,7 @@ const API_ENDPOINTS = {
 };
 
 const MAX_RETRY_ATTEMPTS = 10;
-const RETRY_DELAY = 1000; // 5 seconds
+const RETRY_DELAY = 5000; // 5 seconds
 
 type RootStackParamList = {
     DailyTrack: undefined;
@@ -50,7 +50,9 @@ const FaceMetrics = () => {
     const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        getImageData();
+        setTimeout(() => {
+            getImageData();
+        }, 20000)
 
         return () => {
             if (retryTimeoutRef.current) {

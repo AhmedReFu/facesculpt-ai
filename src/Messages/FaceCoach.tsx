@@ -408,7 +408,7 @@ const FaceCoach: React.FC = () => {
         <KeyboardAvoidingView
             className="flex-1"
             behavior={Platform.OS === "ios" ? "padding" : undefined}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
         >
             <SafeAreaView className="flex-1 bg-[#0D0F14]" edges={['top']}>
                 <StatusBar style="light" />

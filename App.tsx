@@ -175,7 +175,7 @@ function RootStack() {
     return <NoInternetScreen onRetry={handleRetry} />;
   }
 
-  // 🔥 IMPORTANT: ekhane full app ke WorkoutProvider diye wrap korlam
+
   return (
     <WorkoutProvider>
       <AppNavigationContainer>
@@ -203,12 +203,12 @@ function RootStack() {
             name="DailyTrack"
             component={DailyTrack}
           />
-          <Stack.Screen name="FaceCoach" component={FaceCoach} />
+          <Stack.Screen name="FaceCoach" options={{ gestureEnabled: false }} component={FaceCoach} />
 
-          {/* Workout screens – ekhon direct useWorkout use korte পারবে */}
-          <Stack.Screen name="DailyRoutine" component={DailyRoutine} />
-          <Stack.Screen name="Exercise" component={Exercise} />
-          <Stack.Screen name="Sessions" component={Sessions} />
+
+          <Stack.Screen name="DailyRoutine" options={{ gestureEnabled: false }} component={DailyRoutine} />
+          <Stack.Screen name="Exercise" options={{ gestureEnabled: false }} component={Exercise} />
+          <Stack.Screen name="Sessions" options={{ gestureEnabled: false }} component={Sessions} />
 
           <Stack.Screen name="FaceScan" component={FaceScan} />
           <Stack.Screen name="FaceScanWithDetection" component={FaceScanWithDetection} />
@@ -218,7 +218,7 @@ function RootStack() {
           <Stack.Screen name="UnlockFacialGym" component={UnlockFacialGym} />
         </Stack.Navigator>
 
-        {/* Toast Component */}
+
         <Toast
           style={toast.style}
           visible={toast.visible}
