@@ -299,10 +299,10 @@ const AuthScreen = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [showCountryPicker, setShowCountryPicker] = useState(false);
 
-    // Default to India
+    // Default to Bangladesh
     const [selectedCountry, setSelectedCountry] = useState<Country>(() => {
-        const india = countryData.find(c => c.iso === 'IN') || countryData[0];
-        return india;
+        const bangladesh = countryData.find(c => c.iso === 'US') || countryData[0];
+        return bangladesh;
     });
 
     const [name, setName] = useState('');
