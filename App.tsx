@@ -26,9 +26,9 @@ import Home from './src/Home/Home';
 import OtpAuth from './src/Home/OtpAuth';
 import { Toast, useToast } from './src/hooks/useToost';
 import FaceCoach from './src/Messages/FaceCoach';
+import { WorkoutProvider } from './src/providers/WorkoutProvider';
 import DailyTrack from './src/TrackGym/DailyTrack';
 import AppNavigationContainer from './src/utils/useNavigationCleaner';
-import { WorkoutProvider } from './src/utils/WorkoutProvider';
 
 const Stack = createStackNavigator();
 
@@ -192,7 +192,7 @@ function RootStack() {
           <Stack.Screen
             name="Auth"
             component={AuthScreen}
-            options={{ animation: 'slide_from_left' }}
+            options={{ animation: 'slide_from_right' }}
           />
           <Stack.Screen name="OtpAuth" component={OtpAuth} />
           <Stack.Screen name="ResetPassword" component={ResetPassword} />

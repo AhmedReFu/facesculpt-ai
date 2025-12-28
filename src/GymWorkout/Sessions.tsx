@@ -5,8 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Toast, useToast } from '../hooks/useToost';
+import { useWorkout } from '../providers/WorkoutProvider';
 import { RootStackParamList } from '../types/navigation';
-import { useWorkout } from '../utils/WorkoutProvider';
 
 type SessionsScreenRouteProp = RouteProp<RootStackParamList, 'Sessions'>;
 

@@ -5,8 +5,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useWorkout } from '../providers/WorkoutProvider';
 import { RootStackParamList } from '../types/navigation';
-import { useWorkout } from '../utils/WorkoutProvider';
 
 type DailyRoutineNavigationProp = StackNavigationProp<RootStackParamList, 'DailyRoutine'>;
 

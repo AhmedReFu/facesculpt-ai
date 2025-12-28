@@ -3,8 +3,8 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useWorkout } from '../providers/WorkoutProvider';
 import { RootStackParamList } from '../types/navigation';
-import { useWorkout } from '../utils/WorkoutProvider';
 
 type ExerciseScreenRouteProp = RouteProp<RootStackParamList, 'Exercise'>;
 

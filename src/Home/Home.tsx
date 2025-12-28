@@ -10,8 +10,8 @@ import { useEffect, useState } from 'react';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Images } from '../constants';
+import { useNavigationReset } from '../hooks/useNavigationReset';
 import { Toast, useToast } from '../hooks/useToost';
-import { useNavigationReset } from '../lib/useNavigationReset';
 import { RootStackParamList } from '../types/navigation';
 
 const API_BASE_URL = IPA_BASE;

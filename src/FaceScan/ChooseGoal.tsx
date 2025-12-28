@@ -9,7 +9,7 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import tw from 'twrnc'
 import { Toast, useToast } from '../hooks/useToost'
-import { useWorkout } from '../utils/WorkoutProvider'
+import { useWorkout } from '../providers/WorkoutProvider'
 
 const API_BASE_URL = IPA_BASE;
 const API_ENDPOINTS = {

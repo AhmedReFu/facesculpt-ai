@@ -10,8 +10,8 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from "twrnc";
 import CustomButton from '../Components/CustomButton';
+import { useNavigationReset } from '../hooks/useNavigationReset';
 import { Toast, useToast } from '../hooks/useToost';
-import { useNavigationReset } from '../lib/useNavigationReset';
 
 const API_BASE_URL = IPA_BASE;
 const API_ENDPOINTS = {

@@ -19,4 +19,5 @@ declare module "@env" {
   export const LOG_OUT: string;
   export const RESEND_OTP: string;
   export const RESET_PASSWORD: string;
+  export const IP_FIND: string;
 }

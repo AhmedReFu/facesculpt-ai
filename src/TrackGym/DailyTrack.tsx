@@ -18,8 +18,9 @@ import { LineChart } from 'react-native-chart-kit';
 import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from 'twrnc';
+import apiClient from '../api/apiClient';
+import { useBackHandler } from '../hooks/useBackHandler';
 import { Toast, useToast } from '../hooks/useToost';
-import { useBackHandler } from '../lib/useBackHandler';
 
 const API_BASE_URL = IPA_BASE;
 const API_ENDPOINTS = {
@@ -452,6 +453,8 @@ const DailyTrack = () => {
     loadDashboardData();
   }, []);
 
+
+
   const loadDashboardData = async () => {
     try {
       setLoading(true);
@@ -489,6 +492,7 @@ const DailyTrack = () => {
       if (!netState.isConnected) {
         throw new Error('No internet connection');
       }
+
 
       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DAILY_TRACK}`, {
         method: 'GET',
