@@ -1,0 +1,19 @@
+User 1
+Phone Number:- +1-7854648765
+Password:- Test@1234
+
+User 2
+Phone Number:- +1-4864508058 
+Password:- Test@1234
+
+User 3
+Phone Number:- +1-7348050568
+Password:- Test@1234
+
+User 4
+Phone Number:- +1-7578586489
+Password:- Test@1234
+
+User 5
+Phone Number:- +1-1837046470
+Password:- Test@1234

@@ -1,3 +1,4 @@
+import { IPA_BASE, PAYMENT_REQUIRED } from '@env';
 import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -9,6 +10,11 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import Purchases, { PurchasesPackage } from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Toast, useToast } from '../hooks/useToost';
+
+const API_BASE_URL = IPA_BASE;
+const API_ENDPOINTS = {
+  PAYMENT_REQUIRED: PAYMENT_REQUIRED,
+};
 
 interface PlanProps {
   id: string
@@ -152,7 +158,7 @@ const UnlockFacialGym = () => {
           await Purchases.logIn(user.phone_number);
           console.log("RevenueCat User Identified:", user.phone_number);
         } catch (loginError) {
-          console.log("RevenueCat login error:", loginError);
+          // console.log("RevenueCat login error:", loginError);
           // Continue without login if it fails
         }
       }
@@ -164,7 +170,7 @@ const UnlockFacialGym = () => {
       // console.log("Premium offering:", JSON.stringify(premium, null, 2));
 
       if (!premium || !premium.availablePackages || premium.availablePackages.length === 0) {
-        console.log("No premium offering or packages found - using demo data");
+        // console.log("No premium offering or packages found - using demo data");
 
         // Use demo data with USD prices
         const demoPlans: FormattedPackage[] = [
@@ -237,14 +243,14 @@ const UnlockFacialGym = () => {
           isTrialAvailable
         });
 
-        console.log(`Package ${id}:`, {
-          displayPrice: displayPrice.price,
-          localPrice: product.priceString,
-          hasTrial: isTrialAvailable,
-          productId: product.identifier,
-          introPrice: product.introPrice,
-          subscriptionOptions: product.subscriptionOptions
-        });
+        // console.log(`Package ${id}:`, {
+        //   displayPrice: displayPrice.price,
+        //   localPrice: product.priceString,
+        //   hasTrial: isTrialAvailable,
+        //   productId: product.identifier,
+        //   introPrice: product.introPrice,
+        //   subscriptionOptions: product.subscriptionOptions
+        // });
       }
 
       // Sort plans: Popular first, then by order (monthly, sixmonthly, yearly)
@@ -320,9 +326,9 @@ const UnlockFacialGym = () => {
     // Optional: Add listener for purchases restored from outside the app
     const setupPurchaseListeners = () => {
       Purchases.addCustomerInfoUpdateListener((customerInfo) => {
-        console.log("Customer info updated:", customerInfo);
+        // console.log("Customer info updated:", customerInfo);
         if (customerInfo.entitlements.active?.premium) {
-          console.log("User has active premium subscription");
+          // console.log("User has active premium subscription");
         }
       });
     };
@@ -336,8 +342,39 @@ const UnlockFacialGym = () => {
 
   const handleSelectPlan = (planId: string) => {
     setSelectedPlan(planId)
-    console.log('Selected plan:', planId)
+    // console.log('Selected plan:', planId)
   }
+
+  // Helper function to call payment required API
+  const callPaymentRequiredAPI = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        console.warn('No token found for API call');
+        return false;
+      }
+
+      console.log('📡 Calling payment required API...');
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.PAYMENT_REQUIRED}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        console.log('✅ Payment required API called successfully');
+        return true;
+      } else {
+        console.warn('⚠️ Payment required API call failed:', response.status);
+        return false;
+      }
+    } catch (apiError) {
+      console.error('❌ API call error:', apiError);
+      return false;
+    }
+  };
 
   const handleSubscribe = async () => {
     if (purchasing) return;
@@ -361,13 +398,13 @@ const UnlockFacialGym = () => {
       // Check if we have a real RevenueCat package
       if (!selectedPlanData.package) {
         // Demo mode - simulate purchase
-        console.log('Demo mode: Simulating purchase for', selectedPlan);
-
-        // Simulate network delay
         await new Promise(resolve => setTimeout(resolve, 1500));
 
         await AsyncStorage.setItem("subscribe", "true");
         await AsyncStorage.setItem("current_plan", selectedPlan);
+
+        // ✅ Demo mode-এ API কল করুন
+        const apiSuccess = await callPaymentRequiredAPI();
 
         toast.show({
           message: '🎉 Your 7-day free trial has started. Welcome to FaceSculpt AI Premium!',
@@ -381,37 +418,29 @@ const UnlockFacialGym = () => {
             }
           ]
         });
+
         return;
       }
 
       // Real purchase with RevenueCat
-      console.log('Purchasing package:', selectedPlanData.package.identifier);
-      console.log('Product details:', JSON.stringify({
-        id: selectedPlanData.package.product.identifier,
-        price: selectedPlanData.package.product.price,
-        currency: selectedPlanData.package.product.currencyCode,
-        priceString: selectedPlanData.package.product.priceString,
-        title: selectedPlanData.package.product.title,
-        introPrice: selectedPlanData.package.product.introPrice,
-        subscriptionOptions: selectedPlanData.package.product.subscriptionOptions
-      }, null, 2));
-
-      // Make the purchase
       const makePurchaseResult = await Purchases.purchasePackage(
         selectedPlanData.package,
-        null, // upgradeInfo (optional)
-        null, // googleProductChangeInfo (optional)
-        null  // googleIsPersonalizedPrice (optional)
+        null,
+        null,
+        null
       );
 
       // Check if purchase was successful
       if (makePurchaseResult.customerInfo.entitlements.active?.premium) {
-        console.log('Purchase successful!', makePurchaseResult.customerInfo);
+        console.log('✅ Purchase successful!', makePurchaseResult.customerInfo);
 
         // Store subscription info
         await AsyncStorage.setItem("subscribe", "true");
         await AsyncStorage.setItem("current_plan", selectedPlan);
         await AsyncStorage.setItem("revenuecat_customer_info", JSON.stringify(makePurchaseResult.customerInfo));
+
+        // ✅ সফল Purchase হলে API কল করুন
+        await callPaymentRequiredAPI();
 
         toast.show({
           message: '🎉 Purchase successful! Welcome to FaceSculpt AI Premium!',
@@ -432,6 +461,9 @@ const UnlockFacialGym = () => {
         await AsyncStorage.setItem("current_plan", selectedPlan);
         await AsyncStorage.setItem("revenuecat_customer_info", JSON.stringify(makePurchaseResult.customerInfo));
 
+        // ✅ এখানেও API কল করুন
+        await callPaymentRequiredAPI();
+
         toast.show({
           message: '🎉 Purchase successful! Welcome to FaceSculpt AI Premium!',
           type: 'success',
@@ -444,16 +476,21 @@ const UnlockFacialGym = () => {
             }
           ]
         });
-        // throw new Error('Purchase was not successful');
       }
 
     } catch (error: any) {
-      // console.error('Purchase Error:',);
-      console.log(error.code)
+      console.log('Purchase error code:', error.code);
+
       if (error.code === "ProductAlreadyPurchasedError") {
-        await AsyncStorage.setItem("subscribe", "true")
+        // ✅ ProductAlreadyPurchasedError হলে API কল করুন
+        await AsyncStorage.setItem("subscribe", "true");
+        await AsyncStorage.setItem("current_plan", selectedPlan);
+
+        // API কল করুন
+        await callPaymentRequiredAPI();
+
         toast.show({
-          message: error,
+          message: "You're already subscribed!",
           type: "success",
           style: 'top',
           buttons: [{
@@ -462,43 +499,49 @@ const UnlockFacialGym = () => {
             onPress: () => navigator.navigate('DailyTrack')
           }]
         });
-      }
-
-      // Check error codes
-      const errorCode = Purchases.PURCHASES_ERROR_CODE;
-
-      if (error.code === errorCode.PURCHASE_CANCELLED_ERROR) {
-        console.log('User cancelled purchase');
-        // Don't show error for cancellation
       } else if (error.message === 'This product is already active for the user.') {
-        await AsyncStorage.setItem("subscribe", "true")
+        // ✅ Active product এর ক্ষেত্রেও API কল করুন
+        await AsyncStorage.setItem("subscribe", "true");
+        await AsyncStorage.setItem("current_plan", selectedPlan);
+
+        // API কল করুন
+        await callPaymentRequiredAPI();
+
         toast.show({
-          message: error.message,
+          message: "You're already subscribed!",
           type: 'success',
           style: 'center',
           buttons: [
             {
               text: 'OK',
               action: 'custom',
-              onPress: () => navigator.navigate('FaceScanWithDetection')
+              onPress: () => navigator.navigate('DailyTrack')
             }
           ]
         });
       }
-      else if (error.code === errorCode.NETWORK_ERROR) {
-        toast.show({
-          message: 'Network error. Please check your internet connection and try again.',
-          type: 'error',
-          style: 'center',
-          buttons: [{ text: 'OK', action: 'dismiss' }]
-        });
-      } else {
-        toast.show({
-          message: error.message || 'Something went wrong. Please try again.',
-          type: 'error',
-          style: 'center',
-          buttons: [{ text: 'OK', action: 'dismiss' }]
-        });
+      // Check other error codes
+      else {
+        const errorCode = Purchases.PURCHASES_ERROR_CODE;
+
+        if (error.code === errorCode.PURCHASE_CANCELLED_ERROR) {
+          console.log('User cancelled purchase');
+          // Don't show error for cancellation
+        } else if (error.code === errorCode.NETWORK_ERROR) {
+          toast.show({
+            message: 'Network error. Please check your internet connection and try again.',
+            type: 'error',
+            style: 'center',
+            buttons: [{ text: 'OK', action: 'dismiss' }]
+          });
+        } else {
+          toast.show({
+            message: error.message || 'Something went wrong. Please try again.',
+            type: 'error',
+            style: 'center',
+            buttons: [{ text: 'OK', action: 'dismiss' }]
+          });
+        }
       }
     } finally {
       setPurchasing(false);
@@ -525,15 +568,15 @@ const UnlockFacialGym = () => {
         const isActive = facesculptSubscription.isActive === true;
         const isSandbox = facesculptSubscription.isSandbox === true;
 
-        console.log("📱 Facesculpt AI Subscription Details:", {
-          productIdentifier: facesculptSubscription.productIdentifier,
-          isActive,
-          isSandbox,
-          expiresDate: facesculptSubscription.expiresDate,
-          purchaseDate: facesculptSubscription.purchaseDate,
-          willRenew: facesculptSubscription.willRenew,
-          store: facesculptSubscription.store
-        });
+        // console.log("📱 Facesculpt AI Subscription Details:", {
+        //   productIdentifier: facesculptSubscription.productIdentifier,
+        //   isActive,
+        //   isSandbox,
+        //   expiresDate: facesculptSubscription.expiresDate,
+        //   purchaseDate: facesculptSubscription.purchaseDate,
+        //   willRenew: facesculptSubscription.willRenew,
+        //   store: facesculptSubscription.store
+        // });
 
         // Validate if subscription is valid (active and not expired)
         if (isActive) {
@@ -553,12 +596,12 @@ const UnlockFacialGym = () => {
           });
         } else {
           console.log("❌ Subscription invalid - Restrict access");
-          if (!isActive) console.log("   Reason: Subscription is not active");
+          // if (!isActive) console.log("   Reason: Subscription is not active");
         }
 
         // Check if it's a sandbox purchase (testing)
         if (isSandbox) {
-          console.log("🔧 Note: This is a SANDBOX purchase (testing environment)");
+          // console.log("🔧 Note: This is a SANDBOX purchase (testing environment)");
           toast.show({
             message: 'Your purchases have been restored successfully!',
             type: 'success',
@@ -573,16 +616,19 @@ const UnlockFacialGym = () => {
           });
         }
       } else {
-        console.log("❌ No facesclupt_ai subscription found in subscriptionsByProductIdentifier");
+        // console.log("❌ No facesclupt_ai subscription found in subscriptionsByProductIdentifier");
       }
 
 
       if (customerInfo.entitlements.active?.premium) {
-        console.log('Restore successful:', customerInfo);
+        // console.log('Restore successful:', customerInfo);
 
         // Store updated customer info
         await AsyncStorage.setItem("subscribe", "true");
         await AsyncStorage.setItem("revenuecat_customer_info", JSON.stringify(customerInfo));
+
+        // ⚠️ Restore-এর ক্ষেত্রে API কল করবেন না (আপনার requirement অনুযায়ী)
+        // await callPaymentRequiredAPI(); // ❌ এটা রিমুভ করে দিয়েছি
 
         toast.show({
           message: 'Your purchases have been restored successfully!',

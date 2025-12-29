@@ -23,7 +23,7 @@
       }
     },
     "production": {
-      "autoIncrement": true,
+      "autoIncrement": false,
       "env": {
         "ENVIRONMENT": "production"
       },
