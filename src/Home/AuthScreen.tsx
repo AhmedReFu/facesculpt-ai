@@ -43,7 +43,7 @@ const API_ENDPOINTS = {
 };
 const IP_API = IP_FIND;
 
-const { height, width } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
 type RootStackParamList = {
     DailyTrack: undefined;
@@ -86,21 +86,21 @@ const CountryPickerComponent: React.FC<CountryPickerProps> = ({
     const [filteredCountries, setFilteredCountries] = useState<Country[]>(countryData);
     const animationDriver = React.useRef(new Animated.Value(0)).current;
     const panY = React.useRef(new Animated.Value(height)).current;
-    const lastOffsetY = React.useRef(height);
-    const [modalHeight, setModalHeight] = useState(height * 0.7); // Default to 70% of screen
+    const [modalHeight, setModalHeight] = useState(0.80); // default 800
 
-    // Calculate modal height based on screen size
+    const searchInputRef = useRef<TextInput>(null);
+
+    // Calculate modal height (responsive, max 800)
     useEffect(() => {
         const calculateModalHeight = () => {
             const screenHeight = Dimensions.get('window').height;
-            // Use 80% of screen for larger screens, 90% for smaller screens
-            const calculatedHeight = screenHeight < 700 ? screenHeight * 0.85 : screenHeight * 0.75;
-            setModalHeight(Math.min(calculatedHeight, 650)); // Cap at 650
+            const availableHeight = screenHeight * 0.9; // use up to 90% of screen
+            const finalHeight = Math.min(800, availableHeight); // cap at 800
+            setModalHeight(finalHeight);
         };
 
         calculateModalHeight();
 
-        // Update on screen rotation
         const subscription = Dimensions.addEventListener('change', calculateModalHeight);
         return () => subscription?.remove();
     }, []);
@@ -120,6 +120,16 @@ const CountryPickerComponent: React.FC<CountryPickerProps> = ({
                 duration: 300,
                 useNativeDriver: true,
             }).start();
+        }
+    }, [visible]);
+
+    // Auto-focus search input AFTER animation on iOS so keyboard + sheet behave nicely
+    useEffect(() => {
+        if (visible && Platform.OS === 'ios') {
+            const timer = setTimeout(() => {
+                searchInputRef.current?.focus();
+            }, 350);
+            return () => clearTimeout(timer);
         }
     }, [visible]);
 
@@ -176,11 +186,14 @@ const CountryPickerComponent: React.FC<CountryPickerProps> = ({
         }
     }, [search]);
 
-    const modalPosition = Animated.add(panY, animationDriver.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, height],
-        extrapolate: 'clamp',
-    }));
+    const modalPosition = Animated.add(
+        panY,
+        animationDriver.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, height],
+            extrapolate: 'clamp',
+        }),
+    );
 
     const modalBackdropFade = panY.interpolate({
         inputRange: [0, height],
@@ -220,69 +233,91 @@ const CountryPickerComponent: React.FC<CountryPickerProps> = ({
             onRequestClose={onClose}
             statusBarTranslucent
         >
-            <View style={styles.container}>
-                <TouchableWithoutFeedback onPress={onClose}>
-                    <Animated.View style={[
-                        styles.backdrop,
-                        { opacity: modalBackdropFade }
-                    ]} />
-                </TouchableWithoutFeedback>
+            {/* KeyboardAvoidingView makes the bottom sheet move above the keyboard */}
+            <KeyboardAvoidingView
+                style={{ flex: 1, justifyContent: 'flex-end' }}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+            >
+                <View style={styles.container}>
+                    {/* Backdrop: tap outside modal -> close + dismiss keyboard */}
+                    <TouchableWithoutFeedback
+                        onPress={() => {
+                            Keyboard.dismiss();
+                            onClose();
+                        }}
+                    >
+                        <Animated.View style={[
+                            styles.backdrop,
+                            { opacity: modalBackdropFade }
+                        ]} />
+                    </TouchableWithoutFeedback>
 
-                <Animated.View
-                    {...panResponder.panHandlers}
-                    style={[
-                        styles.modal as any,
-                        {
-                            transform: [{ translateY: modalPosition }],
-                            maxHeight: modalHeight,
-                            minHeight: Math.min(height * 0.75, 750), // Minimum 50% of screen or 400
-                        }
-                    ]}
-                >
-                    {/* Drag Handle */}
-                    <View style={styles.dragHandleContainer}>
-                        <View style={styles.dragHandle} />
-                    </View>
-
-                    <View style={styles.header}>
-                        <Text style={styles.title}>Select Country</Text>
-                        <TouchableOpacity
-                            onPress={onClose}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    <Animated.View
+                        {...panResponder.panHandlers}
+                        style={[
+                            styles.modal as any,
+                            {
+                                transform: [{ translateY: modalPosition }],
+                                maxHeight: modalHeight, // flexible, up to modalHeight
+                                minHeight: modalHeight * 0.8, // at least half modalHeight
+                            }
+                        ]}
+                    >
+                        {/* This View catches touches inside modal to dismiss keyboard */}
+                        <View
+                            style={{ flex: 1 }}
+                            onStartShouldSetResponder={() => true}
+                            onResponderGrant={() => Keyboard.dismiss()}
                         >
-                            <Text style={styles.closeButton}>✕</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search country..."
-                        placeholderTextColor="#999"
-                        value={search}
-                        onChangeText={setSearch}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        autoFocus={Platform.OS === 'ios'}
-                    />
-
-                    <FlatList
-                        data={filteredCountries}
-                        renderItem={renderItem}
-                        keyExtractor={(item) => item.iso}
-                        showsVerticalScrollIndicator={false}
-                        keyboardShouldPersistTaps="handled"
-                        style={styles.list}
-                        ListEmptyComponent={
-                            <View style={styles.emptyContainer}>
-                                <Text style={styles.emptyText}>No countries found</Text>
+                            {/* Drag Handle */}
+                            <View style={styles.dragHandleContainer}>
+                                <View style={styles.dragHandle} />
                             </View>
-                        }
-                        contentContainerStyle={{ paddingBottom: 20 }}
-                        bounces={true}
-                        nestedScrollEnabled
-                    />
-                </Animated.View>
-            </View>
+
+                            <View style={styles.header}>
+                                <Text style={styles.title}>Select Country</Text>
+                                <TouchableOpacity
+                                    onPress={onClose}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                    <Text style={styles.closeButton}>✕</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <TextInput
+                                ref={searchInputRef}
+                                style={styles.searchInput}
+                                placeholder="Search country..."
+                                placeholderTextColor="#999"
+                                value={search}
+                                onChangeText={setSearch}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                autoFocus={false}
+                                returnKeyType="done"
+                            />
+
+                            <FlatList
+                                data={filteredCountries}
+                                renderItem={renderItem}
+                                keyExtractor={(item) => item.iso}
+                                showsVerticalScrollIndicator={false}
+                                keyboardShouldPersistTaps="never" // tap closes keyboard + presses items
+                                style={styles.list}
+                                ListEmptyComponent={
+                                    <View style={styles.emptyContainer}>
+                                        <Text style={styles.emptyText}>No countries found</Text>
+                                    </View>
+                                }
+                                contentContainerStyle={{ paddingBottom: 20 }}
+                                bounces
+                                nestedScrollEnabled
+                            />
+                        </View>
+                    </Animated.View>
+                </View>
+            </KeyboardAvoidingView>
         </Modal>
     );
 };
@@ -301,7 +336,7 @@ const AuthScreen = () => {
 
     // Default to Bangladesh
     const [selectedCountry, setSelectedCountry] = useState<Country>(() => {
-        const bangladesh = countryData.find(c => c.iso === 'US') || countryData[0];
+        const bangladesh = countryData.find(c => c.iso === 'BD') || countryData[0];
         return bangladesh;
     });
 
@@ -470,7 +505,7 @@ const AuthScreen = () => {
     const scrollToInput = (inputRef: React.RefObject<TextInput | null>) => {
         setTimeout(() => {
             inputRef.current?.measure(
-                (_fx, _fy, _w, h, _px, py) => {
+                (_fx, _fy, _w, _h, _px, py) => {
                     scrollViewRef.current?.scrollTo({
                         y: py - 40,
                         animated: true,
@@ -836,7 +871,10 @@ const AuthScreen = () => {
                                 <View className="flex-row items-center border-2 border-gray-600 rounded-xl overflow-hidden">
                                     <TouchableOpacity
                                         className="flex-row items-center px-4 py-4 bg-gray-800 min-w-[100]"
-                                        onPress={() => setShowCountryPicker(true)}
+                                        onPress={() => {
+                                            Keyboard.dismiss();
+                                            setShowCountryPicker(true);
+                                        }}
                                         disabled={isLoading}
                                     >
                                         <Text className="text-white text-lg mr-2">
@@ -1053,8 +1091,8 @@ const styles = {
         backgroundColor: '#f5f5f5',
         borderRadius: 10,
         paddingHorizontal: 16,
-        paddingVertical: 12,
-        fontSize: 16,
+        paddingVertical: 14,
+        fontSize: 18,
         marginBottom: 16,
         color: '#000',
     },
