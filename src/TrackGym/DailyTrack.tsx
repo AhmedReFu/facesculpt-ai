@@ -18,7 +18,6 @@ import { LineChart } from 'react-native-chart-kit';
 import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from 'twrnc';
-import apiClient from '../api/apiClient';
 import { useBackHandler } from '../hooks/useBackHandler';
 import { Toast, useToast } from '../hooks/useToost';
 
@@ -38,6 +37,7 @@ const CHART_WIDTH = WINDOW_WIDTH - CHART_MARGIN_HORIZONTAL * 2;
 type RootStackParamList = {
   Auth: undefined;
   FaceScanWithDetection: undefined;
+  FaceScan: undefined;
   DailyRoutine: undefined;
   UnlockFacialGym: undefined;
   FaceCoach: { token: string };
@@ -669,6 +669,11 @@ const DailyTrack = () => {
                 style={tw`flex-1 bg-[#60A5FB] py-5 rounded-2xl`}>
                 <Text style={tw`text-white font-bold text-center text-base`}>Start Today's Session</Text>
               </TouchableOpacity>
+              {/* <TouchableOpacity
+                onPress={() => navigation.navigate("FaceScan")}
+                style={tw`flex-1 bg-[#60A5FB] py-5 rounded-2xl`}>
+                <Text style={tw`text-white font-bold text-center text-base`}>Start Today's Session</Text>
+              </TouchableOpacity> */}
               <TouchableOpacity
                 onPress={() => navigation.navigate("FaceScanWithDetection")}
                 style={tw`flex-1 bg-[#1C1E26] border border-white/20 py-5 rounded-2xl`}>

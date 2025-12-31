@@ -55,7 +55,7 @@ type ScanStep = 'CENTER' | 'LEFT' | 'RIGHT' | 'UP' | 'DOWN' | 'DONE';
 
 const STEP_ORDER: ScanStep[] = ['CENTER', 'LEFT', 'RIGHT', 'UP', 'DOWN'];
 
-const FaceScanWithDetection = () => {
+const FaceScan = () => {
     const navigation = useNavigation();
     const device = useCameraDevice('front');
     const { hasPermission, requestPermission } = useCameraPermission();
@@ -895,4 +895,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default FaceScanWithDetection;
+export default FaceScan;

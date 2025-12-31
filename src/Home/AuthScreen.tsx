@@ -44,6 +44,7 @@ const API_ENDPOINTS = {
 const IP_API = IP_FIND;
 
 const { height } = Dimensions.get('window');
+const SHEET_MAX_HEIGHT = Math.min(700, height * 0.9);
 
 type RootStackParamList = {
     DailyTrack: undefined;
@@ -55,9 +56,7 @@ type RootStackParamList = {
     FaceScanWithDetection: undefined;
 };
 
-type AuthScreenNavigationProp = StackNavigationProp<
-    RootStackParamList
->;
+type AuthScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 interface Country {
     name: string;
@@ -83,86 +82,76 @@ const CountryPickerComponent: React.FC<CountryPickerProps> = ({
     selectedCountry,
 }) => {
     const [search, setSearch] = useState('');
-    const [filteredCountries, setFilteredCountries] = useState<Country[]>(countryData);
-    const animationDriver = React.useRef(new Animated.Value(0)).current;
-    const panY = React.useRef(new Animated.Value(height)).current;
-    const [modalHeight, setModalHeight] = useState(0.80); // default 800
+    const [filteredCountries, setFilteredCountries] =
+        useState<Country[]>(countryData);
 
+    // Bottom sheet transform
+    const translateY = useRef(new Animated.Value(height)).current;
     const searchInputRef = useRef<TextInput>(null);
 
-    // Calculate modal height (responsive, max 800)
-    useEffect(() => {
-        const calculateModalHeight = () => {
-            const screenHeight = Dimensions.get('window').height;
-            const availableHeight = screenHeight * 0.9; // use up to 90% of screen
-            const finalHeight = Math.min(800, availableHeight); // cap at 800
-            setModalHeight(finalHeight);
-        };
+    // Backdrop opacity
+    const backdropOpacity = translateY.interpolate({
+        inputRange: [0, height],
+        outputRange: [0.5, 0],
+        extrapolate: 'clamp',
+    });
 
-        calculateModalHeight();
-
-        const subscription = Dimensions.addEventListener('change', calculateModalHeight);
-        return () => subscription?.remove();
-    }, []);
-
+    // Open / close animation
     useEffect(() => {
         if (visible) {
-            panY.setValue(height);
-            Animated.spring(panY, {
+            setSearch('');
+            setFilteredCountries(countryData);
+
+            translateY.setValue(height);
+            Animated.timing(translateY, {
                 toValue: 0,
+                duration: 220,
                 useNativeDriver: true,
-                tension: 50,
-                friction: 12,
             }).start();
+
+            if (Platform.OS === 'ios') {
+                const t = setTimeout(() => {
+                    searchInputRef.current?.focus();
+                }, 300);
+                return () => clearTimeout(t);
+            }
         } else {
-            Animated.timing(panY, {
+            Animated.timing(translateY, {
                 toValue: height,
-                duration: 300,
+                duration: 220,
                 useNativeDriver: true,
             }).start();
         }
-    }, [visible]);
+    }, [visible, translateY]);
 
-    // Auto-focus search input AFTER animation on iOS so keyboard + sheet behave nicely
-    useEffect(() => {
-        if (visible && Platform.OS === 'ios') {
-            const timer = setTimeout(() => {
-                searchInputRef.current?.focus();
-            }, 350);
-            return () => clearTimeout(timer);
-        }
-    }, [visible]);
+    const closeSheet = () => {
+        Keyboard.dismiss();
+        Animated.timing(translateY, {
+            toValue: height,
+            duration: 200,
+            useNativeDriver: true,
+        }).start(() => {
+            onClose();
+        });
+    };
 
-    // PanResponder for swipe gestures
-    const panResponder = React.useRef(
+    // Drag handle er PanResponder – শুধু ছোট handle এ
+    const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
-            onMoveShouldSetPanResponder: (_, gestureState) => {
-                // Only respond to vertical swipes
-                return Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 2;
-            },
-            onPanResponderMove: (_, gestureState) => {
-                if (gestureState.dy > 0) { // Only allow dragging down
-                    panY.setValue(gestureState.dy);
+            onMoveShouldSetPanResponder: (_, g) =>
+                Math.abs(g.dy) > Math.abs(g.dx),
+            onPanResponderMove: (_, g) => {
+                if (g.dy > 0) {
+                    translateY.setValue(g.dy);
                 }
             },
-            onPanResponderRelease: (_, gestureState) => {
-                const dragThreshold = height * 0.25;
-                const gestureDistance = gestureState.dy;
-
-                if (gestureDistance > dragThreshold || gestureState.vy > 0.5) {
-                    // Swipe down to close
-                    Animated.timing(panY, {
-                        toValue: height,
-                        duration: 200,
-                        useNativeDriver: true,
-                    }).start(() => {
-                        onClose();
-                        panY.setValue(height);
-                    });
+            onPanResponderRelease: (_, g) => {
+                const dragDistance = g.dy;
+                if (dragDistance > SHEET_MAX_HEIGHT * 0.25 || g.vy > 0.5) {
+                    closeSheet();
                 } else {
-                    // Return to original position
-                    Animated.spring(panY, {
+                    Animated.spring(translateY, {
                         toValue: 0,
                         useNativeDriver: true,
                         tension: 50,
@@ -170,47 +159,34 @@ const CountryPickerComponent: React.FC<CountryPickerProps> = ({
                     }).start();
                 }
             },
-        })
+        }),
     ).current;
 
+    // Search filter
     useEffect(() => {
         if (search.trim() === '') {
             setFilteredCountries(countryData);
         } else {
+            const q = search.toLowerCase();
             const filtered = countryData.filter(country =>
-                country.name.toLowerCase().includes(search.toLowerCase()) ||
+                country.name.toLowerCase().includes(q) ||
                 country.code.includes(search) ||
-                country.iso.toLowerCase().includes(search.toLowerCase())
+                country.iso.toLowerCase().includes(q),
             );
             setFilteredCountries(filtered);
         }
     }, [search]);
 
-    const modalPosition = Animated.add(
-        panY,
-        animationDriver.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, height],
-            extrapolate: 'clamp',
-        }),
-    );
-
-    const modalBackdropFade = panY.interpolate({
-        inputRange: [0, height],
-        outputRange: [1, 0],
-        extrapolate: 'clamp'
-    });
-
     const handleSelect = (country: Country) => {
         onSelect(country);
-        onClose();
+        closeSheet();
     };
 
     const renderItem = ({ item }: { item: Country }) => (
         <TouchableOpacity
             style={[
                 styles.countryItem,
-                selectedCountry?.code === item.code && styles.selectedCountryItem
+                selectedCountry?.code === item.code && styles.selectedCountryItem,
             ]}
             onPress={() => handleSelect(item)}
         >
@@ -230,55 +206,48 @@ const CountryPickerComponent: React.FC<CountryPickerProps> = ({
             visible={visible}
             transparent
             animationType="fade"
-            onRequestClose={onClose}
             statusBarTranslucent
+            onRequestClose={closeSheet}
         >
-            {/* KeyboardAvoidingView makes the bottom sheet move above the keyboard */}
-            <KeyboardAvoidingView
-                style={{ flex: 1, justifyContent: 'flex-end' }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
-            >
-                <View style={styles.container}>
-                    {/* Backdrop: tap outside modal -> close + dismiss keyboard */}
-                    <TouchableWithoutFeedback
-                        onPress={() => {
-                            Keyboard.dismiss();
-                            onClose();
-                        }}
-                    >
-                        <Animated.View style={[
-                            styles.backdrop,
-                            { opacity: modalBackdropFade }
-                        ]} />
-                    </TouchableWithoutFeedback>
-
+            <View style={styles.container}>
+                {/* Backdrop */}
+                <TouchableWithoutFeedback onPress={closeSheet}>
                     <Animated.View
-                        {...panResponder.panHandlers}
                         style={[
-                            styles.modal as any,
-                            {
-                                transform: [{ translateY: modalPosition }],
-                                maxHeight: modalHeight, // flexible, up to modalHeight
-                                minHeight: modalHeight * 0.8, // at least half modalHeight
-                            }
+                            styles.backdrop,
+                            { opacity: backdropOpacity },
                         ]}
+                    />
+                </TouchableWithoutFeedback>
+
+                {/* Bottom sheet */}
+                <Animated.View
+                    style={[
+                        styles.modal as any,
+                        {
+                            transform: [{ translateY }],
+                            height: SHEET_MAX_HEIGHT,
+                        },
+                    ]}
+                >
+                    <KeyboardAvoidingView
+                        style={{ flex: 1 }}
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
                     >
-                        {/* This View catches touches inside modal to dismiss keyboard */}
-                        <View
-                            style={{ flex: 1 }}
-                            onStartShouldSetResponder={() => true}
-                            onResponderGrant={() => Keyboard.dismiss()}
-                        >
-                            {/* Drag Handle */}
-                            <View style={styles.dragHandleContainer}>
+                        <View style={{ flex: 1 }}>
+                            {/* Drag handle – eita dhore tanle niche jabe */}
+                            <View
+                                style={styles.dragHandleContainer}
+                                {...panResponder.panHandlers}
+                            >
                                 <View style={styles.dragHandle} />
                             </View>
 
                             <View style={styles.header}>
                                 <Text style={styles.title}>Select Country</Text>
                                 <TouchableOpacity
-                                    onPress={onClose}
+                                    onPress={closeSheet}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 >
                                     <Text style={styles.closeButton}>✕</Text>
@@ -294,30 +263,30 @@ const CountryPickerComponent: React.FC<CountryPickerProps> = ({
                                 onChangeText={setSearch}
                                 autoCapitalize="none"
                                 autoCorrect={false}
-                                autoFocus={false}
-                                returnKeyType="done"
+                                returnKeyType="search"
+                                onSubmitEditing={() => Keyboard.dismiss()}
                             />
 
                             <FlatList
                                 data={filteredCountries}
                                 renderItem={renderItem}
-                                keyExtractor={(item) => item.iso}
-                                showsVerticalScrollIndicator={false}
-                                keyboardShouldPersistTaps="never" // tap closes keyboard + presses items
+                                keyExtractor={item => item.iso}
                                 style={styles.list}
+                                showsVerticalScrollIndicator
+                                keyboardShouldPersistTaps="always"
+                                onScrollBeginDrag={() => Keyboard.dismiss()}
+                                scrollEventThrottle={16}
                                 ListEmptyComponent={
                                     <View style={styles.emptyContainer}>
                                         <Text style={styles.emptyText}>No countries found</Text>
                                     </View>
                                 }
                                 contentContainerStyle={{ paddingBottom: 20 }}
-                                bounces
-                                nestedScrollEnabled
                             />
                         </View>
-                    </Animated.View>
-                </View>
-            </KeyboardAvoidingView>
+                    </KeyboardAvoidingView>
+                </Animated.View>
+            </View>
         </Modal>
     );
 };
@@ -336,7 +305,8 @@ const AuthScreen = () => {
 
     // Default to Bangladesh
     const [selectedCountry, setSelectedCountry] = useState<Country>(() => {
-        const bangladesh = countryData.find(c => c.iso === 'BD') || countryData[0];
+        const bangladesh =
+            countryData.find(c => c.iso === 'BD') || countryData[0];
         return bangladesh;
     });
 
@@ -357,12 +327,16 @@ const AuthScreen = () => {
     useEffect(() => {
         const detectCountryFromIP = async () => {
             try {
-                const response = await fetch(`https://api.ipfind.com/me?auth=${IP_API}`);
+                const response = await fetch(
+                    `https://api.ipfind.com/me?auth=${IP_API}`,
+                );
                 if (!response.ok) return;
 
                 const data = await response.json();
                 if (data.country_code) {
-                    const country = countryData.find(c => c.iso === data.country_code);
+                    const country = countryData.find(
+                        c => c.iso === data.country_code,
+                    );
                     if (country) {
                         setSelectedCountry(country);
                     }
@@ -379,23 +353,17 @@ const AuthScreen = () => {
     useEffect(() => {
         const loadRememberedData = async () => {
             try {
-                // Load remember me preference
                 const savedRememberMe = await AsyncStorage.getItem('rememberMe');
                 if (savedRememberMe !== null) {
                     const rememberMeValue = JSON.parse(savedRememberMe);
                     setRememberMe(rememberMeValue);
 
-                    // Load saved data if remember me is enabled
                     if (rememberMeValue) {
                         const savedPhone = await AsyncStorage.getItem('rememberedPhone');
-                        if (savedPhone) {
-                            setPhoneNumber(savedPhone);
-                        }
+                        if (savedPhone) setPhoneNumber(savedPhone);
 
                         const savedCountry = await AsyncStorage.getItem('rememberedCountry');
-                        if (savedCountry) {
-                            setSelectedCountry(JSON.parse(savedCountry));
-                        }
+                        if (savedCountry) setSelectedCountry(JSON.parse(savedCountry));
                     }
                 }
             } catch (error) {
@@ -406,7 +374,7 @@ const AuthScreen = () => {
         loadRememberedData();
     }, []);
 
-    // Save remember me data when it changes
+    // Save remember me data
     const handleRememberMeChange = async (value: boolean) => {
         setRememberMe(value);
 
@@ -414,11 +382,12 @@ const AuthScreen = () => {
             await AsyncStorage.setItem('rememberMe', JSON.stringify(value));
 
             if (value && phoneNumber.trim()) {
-                // Save current data
                 await AsyncStorage.setItem('rememberedPhone', phoneNumber);
-                await AsyncStorage.setItem('rememberedCountry', JSON.stringify(selectedCountry));
+                await AsyncStorage.setItem(
+                    'rememberedCountry',
+                    JSON.stringify(selectedCountry),
+                );
             } else if (!value) {
-                // Clear saved data
                 await AsyncStorage.removeItem('rememberedPhone');
                 await AsyncStorage.removeItem('rememberedCountry');
             }
@@ -433,10 +402,10 @@ const AuthScreen = () => {
             const loadRememberedNumber = async () => {
                 try {
                     if (rememberMe) {
-                        const savedNumber = await AsyncStorage.getItem('rememberedPhone');
-                        if (savedNumber) {
-                            setPhoneNumber(savedNumber);
-                        }
+                        const savedNumber = await AsyncStorage.getItem(
+                            'rememberedPhone',
+                        );
+                        if (savedNumber) setPhoneNumber(savedNumber);
                     }
                 } catch (error) {
                     console.error('Error loading remembered number:', error);
@@ -444,21 +413,21 @@ const AuthScreen = () => {
             };
 
             loadRememberedNumber();
-        }, [rememberMe])
+        }, [rememberMe]),
     );
 
     // Keyboard handling
     useEffect(() => {
-        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+        const showEvent =
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent =
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-        const keyboardShowSub = Keyboard.addListener(
-            showEvent,
-            e => setKeyboardHeight(e.endCoordinates.height)
+        const keyboardShowSub = Keyboard.addListener(showEvent, e =>
+            setKeyboardHeight(e.endCoordinates.height),
         );
-        const keyboardHideSub = Keyboard.addListener(
-            hideEvent,
-            () => setKeyboardHeight(0)
+        const keyboardHideSub = Keyboard.addListener(hideEvent, () =>
+            setKeyboardHeight(0),
         );
 
         return () => {
@@ -479,18 +448,29 @@ const AuthScreen = () => {
 
     // Helper functions
     const getFullPhoneNumber = () => {
-        const cleanPhoneNumber = phoneNumber.replace(/\s/g, '').replace(/^0+/, '');
-        return selectedCountry.code + cleanPhoneNumber;
+        // country code theke shob non-digit remove kore nichi
+        // "+1-264" -> "1264"
+        const countryDigits = selectedCountry.code.replace(/\D/g, '');
+
+        // always "+<digits>" format banabo
+        const normalizedCountryCode = `+${countryDigits}`;
+
+        // user input theke space, dash sob hataiye number nichi
+        const cleanPhoneNumber = phoneNumber
+            .replace(/\D/g, '')     // digit chara sob remove
+            .replace(/^0+/, '');    // leading 0 gula kete dicchi
+
+        return normalizedCountryCode + cleanPhoneNumber;
     };
 
     const validatePhoneOrToast = () => {
         const fullPhoneNumber = getFullPhoneNumber();
-        // Remove + sign and any non-digits for validation
         const phoneForValidation = fullPhoneNumber.replace(/\D/g, '');
 
         if (!phoneRegex.test(phoneForValidation)) {
             toast.show({
-                message: 'Please enter a valid phone number (6-15 digits without country code).',
+                message:
+                    'Please enter a valid phone number (6-15 digits without country code).',
                 type: 'warning',
                 style: 'top',
             });
@@ -499,33 +479,33 @@ const AuthScreen = () => {
         return { ok: true, phone: fullPhoneNumber };
     };
 
-    const isSignInValid = phoneNumber.trim().length > 0 && password.trim().length >= 6;
-    const isSignUpValid = name.trim().length >= 2 && phoneNumber.trim().length > 0 && password.trim().length >= 6 && agreeTerms;
+    const isSignInValid =
+        phoneNumber.trim().length > 0 && password.trim().length >= 6;
+    const isSignUpValid =
+        name.trim().length >= 2 &&
+        phoneNumber.trim().length > 0 &&
+        password.trim().length >= 6 &&
+        agreeTerms;
 
     const scrollToInput = (inputRef: React.RefObject<TextInput | null>) => {
         setTimeout(() => {
-            inputRef.current?.measure(
-                (_fx, _fy, _w, _h, _px, py) => {
-                    scrollViewRef.current?.scrollTo({
-                        y: py - 40,
-                        animated: true,
-                    });
-                }
-            );
+            inputRef.current?.measure((_fx, _fy, _w, _h, _px, py) => {
+                scrollViewRef.current?.scrollTo({
+                    y: py - 40,
+                    animated: true,
+                });
+            });
         }, 100);
     };
 
-    // Handle country selection
     const handleCountrySelect = (country: Country) => {
         setSelectedCountry(country);
-
-        // Save selected country if remember me is enabled
         if (rememberMe) {
             AsyncStorage.setItem('rememberedCountry', JSON.stringify(country));
         }
     };
 
-    // Sign In function
+    // Sign In
     const handleSignIn = async () => {
         if (!phoneNumber || !password) {
             toast.show({
@@ -551,12 +531,7 @@ const AuthScreen = () => {
         setIsLoading(true);
 
         try {
-            const loginPayload = {
-                phone_number: phone,
-                password,
-            };
-
-            console.log('Login payload:', loginPayload);
+            const loginPayload = { phone_number: phone, password };
 
             const response = await fetch(
                 `${API_BASE_URL}${API_ENDPOINTS.LOGIN}`,
@@ -564,43 +539,48 @@ const AuthScreen = () => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json',
+                        Accept: 'application/json',
                     },
                     body: JSON.stringify(loginPayload),
-                }
+                },
             );
-
-            console.log('Response status:', response.status);
 
             let data;
             try {
                 data = await response.json();
-                console.log('Response data:', data);
             } catch (parseError) {
-                console.error('Failed to parse JSON:', parseError);
                 throw new Error('Invalid server response');
             }
 
             if (response.ok && data.success) {
-                // Save remember me data
                 if (rememberMe) {
                     await AsyncStorage.setItem('rememberedPhone', phoneNumber);
-                    await AsyncStorage.setItem('rememberedCountry', JSON.stringify(selectedCountry));
+                    await AsyncStorage.setItem(
+                        'rememberedCountry',
+                        JSON.stringify(selectedCountry),
+                    );
                 }
 
-                // Save auth tokens
                 await AsyncStorage.setItem('token', data.data.token);
-                await AsyncStorage.setItem('refresh_token', data.data.refresh_token);
+                await AsyncStorage.setItem(
+                    'refresh_token',
+                    data.data.refresh_token,
+                );
                 await AsyncStorage.setItem('isLoggedIn', 'true');
-                await AsyncStorage.setItem('user', JSON.stringify({
-                    phone_number: phone,
-                    name: data.data.name || '',
-                    timestamp: Date.now(),
-                }));
+                await AsyncStorage.setItem(
+                    'user',
+                    JSON.stringify({
+                        phone_number: phone,
+                        name: data.data.name || '',
+                        timestamp: Date.now(),
+                    }),
+                );
 
-                // Handle subscription
                 if (data.data.subscribe !== undefined) {
-                    await AsyncStorage.setItem('subscribe', data.data.subscribe ? 'true' : 'false');
+                    await AsyncStorage.setItem(
+                        'subscribe',
+                        data.data.subscribe ? 'true' : 'false',
+                    );
                 } else {
                     await AsyncStorage.setItem('subscribe', 'false');
                 }
@@ -624,7 +604,10 @@ const AuthScreen = () => {
                     }
                 }, 1000);
             } else {
-                const errorMessage = data.message || data.error || 'Invalid phone number or password.';
+                const errorMessage =
+                    data.message ||
+                    data.error ||
+                    'Invalid phone number or password.';
                 toast.show({
                     message: errorMessage,
                     type: 'error',
@@ -632,8 +615,9 @@ const AuthScreen = () => {
                 });
             }
         } catch (error: any) {
-            console.error('Sign-in error:', error);
-            const errorMessage = error.message || 'Network error. Please check your connection and try again.';
+            const errorMessage =
+                error.message ||
+                'Network error. Please check your connection and try again.';
             toast.show({
                 message: errorMessage,
                 type: 'error',
@@ -644,7 +628,7 @@ const AuthScreen = () => {
         }
     };
 
-    // Sign Up function
+    // Sign Up
     const handleSignUp = async () => {
         if (!name || !phoneNumber || !password) {
             toast.show({
@@ -694,37 +678,33 @@ const AuthScreen = () => {
                 password,
             };
 
-            console.log('Signup payload:', signupPayload);
-
             const response = await fetch(
                 `${API_BASE_URL}${API_ENDPOINTS.REGISTER}`,
                 {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json',
+                        Accept: 'application/json',
                     },
                     body: JSON.stringify(signupPayload),
-                }
+                },
             );
-
-            console.log('Response status:', response.status);
 
             let data;
             try {
                 data = await response.json();
-                console.log('Response data:', data);
-            } catch (parseError) {
-                console.error('Failed to parse JSON:', parseError);
+            } catch {
                 throw new Error('Invalid server response');
             }
 
             if (response.ok && data.success) {
-                // Save temp user data for OTP verification
-                await AsyncStorage.setItem('tempUser', JSON.stringify({
-                    name: name.trim(),
-                    phone_number: phone,
-                }));
+                await AsyncStorage.setItem(
+                    'tempUser',
+                    JSON.stringify({
+                        name: name.trim(),
+                        phone_number: phone,
+                    }),
+                );
 
                 toast.show({
                     message: 'Account created successfully! Please verify OTP.',
@@ -741,13 +721,15 @@ const AuthScreen = () => {
                     });
                 }, 500);
 
-                // Clear form
                 setName('');
                 setPhoneNumber('');
                 setPassword('');
                 setAgreeTerms(false);
             } else {
-                const errorMessage = data.message || data.error || 'Sign up failed. Please try again.';
+                const errorMessage =
+                    data.message ||
+                    data.error ||
+                    'Sign up failed. Please try again.';
                 toast.show({
                     message: errorMessage,
                     type: 'error',
@@ -755,8 +737,9 @@ const AuthScreen = () => {
                 });
             }
         } catch (error: any) {
-            console.error('Sign-up error:', error);
-            const errorMessage = error.message || 'Network error. Please check your connection and try again.';
+            const errorMessage =
+                error.message ||
+                'Network error. Please check your connection and try again.';
             toast.show({
                 message: errorMessage,
                 type: 'error',
@@ -786,7 +769,10 @@ const AuthScreen = () => {
 
     return (
         <SafeAreaProvider>
-            <SafeAreaView className="flex-1 bg-[#000000]" edges={['top']}>
+            <SafeAreaView
+                className="flex-1 bg-[#000000]"
+                edges={['top']}
+            >
                 <StatusBar barStyle="light-content" />
                 <KeyboardAvoidingView
                     className="flex-1"
@@ -798,7 +784,10 @@ const AuthScreen = () => {
                         className="flex-1"
                         contentContainerStyle={{
                             paddingHorizontal: 16,
-                            paddingBottom: Platform.OS === 'android' ? keyboardHeight + 20 : 20,
+                            paddingBottom:
+                                Platform.OS === 'android'
+                                    ? keyboardHeight + 20
+                                    : 20,
                             flexGrow: 1,
                         }}
                         showsVerticalScrollIndicator={false}
@@ -816,25 +805,37 @@ const AuthScreen = () => {
                         {/* Tab Switcher */}
                         <View className="flex-row border-2 border-white rounded-full p-1 mb-8">
                             <TouchableOpacity
-                                className={`flex-1 py-3 rounded-full items-center ${activeTab === 'signin' ? 'bg-blue-400' : 'bg-transparent'}`}
+                                className={`flex-1 py-3 rounded-full items-center ${activeTab === 'signin'
+                                    ? 'bg-blue-400'
+                                    : 'bg-transparent'
+                                    }`}
                                 onPress={() => switchTab('signin')}
                                 disabled={isLoading}
                             >
-                                <Text className="text-lg font-bold text-white">Sign In</Text>
+                                <Text className="text-lg font-bold text-white">
+                                    Sign In
+                                </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                className={`flex-1 py-3 rounded-full items-center ${activeTab === 'signup' ? 'bg-blue-400' : 'bg-transparent'}`}
+                                className={`flex-1 py-3 rounded-full items-center ${activeTab === 'signup'
+                                    ? 'bg-blue-400'
+                                    : 'bg-transparent'
+                                    }`}
                                 onPress={() => switchTab('signup')}
                                 disabled={isLoading}
                             >
-                                <Text className="text-lg font-bold text-white">Sign Up</Text>
+                                <Text className="text-lg font-bold text-white">
+                                    Sign Up
+                                </Text>
                             </TouchableOpacity>
                         </View>
 
                         {/* Welcome Section */}
                         <View className="mb-8">
                             <Text className="text-2xl font-bold text-white mb-3">
-                                {activeTab === 'signin' ? 'Welcome!' : 'Create Your Account'}
+                                {activeTab === 'signin'
+                                    ? 'Welcome!'
+                                    : 'Create Your Account'}
                             </Text>
                             <Text className="text-lg text-white leading-5">
                                 {activeTab === 'signin'
@@ -848,7 +849,9 @@ const AuthScreen = () => {
                             {/* Name (Sign Up only) */}
                             {activeTab === 'signup' && (
                                 <View className="mb-4">
-                                    <Text className="text-lg font-semibold text-white mb-3">Full Name</Text>
+                                    <Text className="text-lg font-semibold text-white mb-3">
+                                        Full Name
+                                    </Text>
                                     <TextInput
                                         ref={nameInputRef}
                                         className="bg-transparent border-2 border-gray-600 rounded-xl px-4 py-4 text-lg text-white"
@@ -860,14 +863,18 @@ const AuthScreen = () => {
                                         editable={!isLoading}
                                         onFocus={() => scrollToInput(nameInputRef)}
                                         returnKeyType="next"
-                                        onSubmitEditing={() => phoneInputRef.current?.focus()}
+                                        onSubmitEditing={() =>
+                                            phoneInputRef.current?.focus()
+                                        }
                                     />
                                 </View>
                             )}
 
                             {/* Phone Number with Country Code */}
                             <View className="mb-4">
-                                <Text className="text-lg font-semibold text-white mb-3">Phone Number</Text>
+                                <Text className="text-lg font-semibold text-white mb-3">
+                                    Phone Number
+                                </Text>
                                 <View className="flex-row items-center border-2 border-gray-600 rounded-xl overflow-hidden">
                                     <TouchableOpacity
                                         className="flex-row items-center px-4 py-4 bg-gray-800 min-w-[100]"
@@ -883,7 +890,12 @@ const AuthScreen = () => {
                                         <Text className="text-white text-lg">
                                             {selectedCountry.code}
                                         </Text>
-                                        <Ionicons name="chevron-down" size={20} color="#fff" style={{ marginLeft: 8 }} />
+                                        <Ionicons
+                                            name="chevron-down"
+                                            size={20}
+                                            color="#fff"
+                                            style={{ marginLeft: 8 }}
+                                        />
                                     </TouchableOpacity>
                                     <TextInput
                                         ref={phoneInputRef}
@@ -898,17 +910,21 @@ const AuthScreen = () => {
                                         editable={!isLoading}
                                         onFocus={() => scrollToInput(phoneInputRef)}
                                         returnKeyType="next"
-                                        onSubmitEditing={() => passwordInputRef.current?.focus()}
+                                        onSubmitEditing={() =>
+                                            passwordInputRef.current?.focus()
+                                        }
                                     />
                                 </View>
                                 <Text className="text-gray-400 text-sm mt-1">
-                                    Full number: {selectedCountry.code} {phoneNumber}
+                                    Full number: {getFullPhoneNumber()}
                                 </Text>
                             </View>
 
                             {/* Password */}
                             <View className="mb-4">
-                                <Text className="text-lg font-semibold text-white mb-3">Password</Text>
+                                <Text className="text-lg font-semibold text-white mb-3">
+                                    Password
+                                </Text>
                                 <View className="relative">
                                     <TextInput
                                         ref={passwordInputRef}
@@ -921,17 +937,29 @@ const AuthScreen = () => {
                                         autoCapitalize="none"
                                         autoComplete="password"
                                         editable={!isLoading}
-                                        onFocus={() => scrollToInput(passwordInputRef)}
+                                        onFocus={() =>
+                                            scrollToInput(passwordInputRef)
+                                        }
                                         returnKeyType="done"
-                                        onSubmitEditing={activeTab === 'signin' ? handleSignIn : handleSignUp}
+                                        onSubmitEditing={
+                                            activeTab === 'signin'
+                                                ? handleSignIn
+                                                : handleSignUp
+                                        }
                                     />
                                     <TouchableOpacity
                                         className="absolute right-4 top-5"
-                                        onPress={() => setShowPassword(prev => !prev)}
+                                        onPress={() =>
+                                            setShowPassword(prev => !prev)
+                                        }
                                         disabled={isLoading}
                                     >
                                         <Ionicons
-                                            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                                            name={
+                                                showPassword
+                                                    ? 'eye-off-outline'
+                                                    : 'eye-outline'
+                                            }
                                             size={24}
                                             color="#9CA3AF"
                                         />
@@ -944,15 +972,23 @@ const AuthScreen = () => {
                                 <View className="flex-row justify-between items-center mb-6">
                                     <TouchableOpacity
                                         className="flex-row items-center"
-                                        onPress={() => handleRememberMeChange(!rememberMe)}
+                                        onPress={() =>
+                                            handleRememberMeChange(!rememberMe)
+                                        }
                                         disabled={isLoading}
                                     >
-                                        <View className={`w-6 h-6 mr-2 border-2 rounded items-center justify-center ${rememberMe
-                                            ? 'bg-blue-400 border-blue-400'
-                                            : 'border-gray-600'
-                                            }`}>
+                                        <View
+                                            className={`w-6 h-6 mr-2 border-2 rounded items-center justify-center ${rememberMe
+                                                ? 'bg-blue-400 border-blue-400'
+                                                : 'border-gray-600'
+                                                }`}
+                                        >
                                             {rememberMe && (
-                                                <Ionicons name="checkmark" size={18} color="#fff" />
+                                                <Ionicons
+                                                    name="checkmark"
+                                                    size={18}
+                                                    color="#fff"
+                                                />
                                             )}
                                         </View>
                                         <Text className="text-base text-gray-400">
@@ -977,35 +1013,56 @@ const AuthScreen = () => {
                                     onPress={() => setAgreeTerms(!agreeTerms)}
                                     disabled={isLoading}
                                 >
-                                    <View className={`w-6 h-6 border-2 rounded items-center justify-center mr-2 mt-0.5 ${agreeTerms
-                                        ? 'bg-blue-400 border-blue-400'
-                                        : 'border-gray-600'
-                                        }`}>
+                                    <View
+                                        className={`w-6 h-6 border-2 rounded items-center justify-center mr-2 mt-0.5 ${agreeTerms
+                                            ? 'bg-blue-400 border-blue-400'
+                                            : 'border-gray-600'
+                                            }`}
+                                    >
                                         {agreeTerms && (
-                                            <Ionicons name="checkmark" size={18} color="#fff" />
+                                            <Ionicons
+                                                name="checkmark"
+                                                size={18}
+                                                color="#fff"
+                                            />
                                         )}
                                     </View>
                                     <Text className="text-sm text-gray-400 flex-1 leading-5">
-                                        I agree to the Terms & Conditions and Privacy Policy
+                                        I agree to the Terms & Conditions and
+                                        Privacy Policy
                                     </Text>
                                 </TouchableOpacity>
                             )}
 
                             {/* Submit Button */}
                             <TouchableOpacity
-                                className={`py-5 rounded-xl items-center mb-8 ${isLoading || (activeTab === 'signin' ? !isSignInValid : !isSignUpValid)
+                                className={`py-5 rounded-xl items-center mb-8 ${isLoading ||
+                                    (activeTab === 'signin'
+                                        ? !isSignInValid
+                                        : !isSignUpValid)
                                     ? 'bg-gray-700 opacity-60'
                                     : 'bg-blue-400'
                                     }`}
-                                onPress={activeTab === 'signin' ? handleSignIn : handleSignUp}
-                                disabled={isLoading || (activeTab === 'signin' ? !isSignInValid : !isSignUpValid)}
+                                onPress={
+                                    activeTab === 'signin'
+                                        ? handleSignIn
+                                        : handleSignUp
+                                }
+                                disabled={
+                                    isLoading ||
+                                    (activeTab === 'signin'
+                                        ? !isSignInValid
+                                        : !isSignUpValid)
+                                }
                                 activeOpacity={0.8}
                             >
                                 {isLoading ? (
                                     <ActivityIndicator size="small" color="#fff" />
                                 ) : (
                                     <Text className="text-white text-xl font-semibold">
-                                            {activeTab === 'signin' ? 'Log In' : 'Sign Up'}
+                                            {activeTab === 'signin'
+                                                ? 'Log In'
+                                                : 'Sign Up'}
                                     </Text>
                                 )}
                             </TouchableOpacity>
