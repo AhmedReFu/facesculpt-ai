@@ -4,7 +4,7 @@
 
 ![Face Scan](assets/icon.png)
 
-FaceSculpt AI is a cross-platform **AI-powered face scanning and facial structure analysis application** built with **React Native **.  
+FaceSculpt AI is a cross-platform **AI-powered face scanning and facial structure analysis application** built with **React Native**.  
 The app analyzes facial features in real time and provides **personalized jawline, posture, and face-fitness guidance** using AI-driven insights.
 
 ---
