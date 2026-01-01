@@ -669,11 +669,6 @@ const DailyTrack = () => {
                 style={tw`flex-1 bg-[#60A5FB] py-5 rounded-2xl`}>
                 <Text style={tw`text-white font-bold text-center text-base`}>Start Today's Session</Text>
               </TouchableOpacity>
-              {/* <TouchableOpacity
-                onPress={() => navigation.navigate("FaceScan")}
-                style={tw`flex-1 bg-[#60A5FB] py-5 rounded-2xl`}>
-                <Text style={tw`text-white font-bold text-center text-base`}>Start Today's Session</Text>
-              </TouchableOpacity> */}
               <TouchableOpacity
                 onPress={() => navigation.navigate("FaceScanWithDetection")}
                 style={tw`flex-1 bg-[#1C1E26] border border-white/20 py-5 rounded-2xl`}>
