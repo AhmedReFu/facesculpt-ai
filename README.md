@@ -1,95 +1,121 @@
 # FaceSculpt AI 🤖📸
 
+## 📱 Android • 🍎 iOS • ⚛️ React Native
+
 ![Face Scan](assets/icon.png)
 
-FaceSculpt AI is an AI-powered face scanning and facial structure analysis application built with **React Native (Expo)**.  
-It analyzes facial features in real time and provides **personalized fitness, jawline, and posture improvement guidance** using AI-driven insights.
+FaceSculpt AI is a cross-platform **AI-powered face scanning and facial structure analysis application** built with **React Native **.  
+The app analyzes facial features in real time and provides **personalized jawline, posture, and face-fitness guidance** using AI-driven insights.
+
+---
+## Get it on Google Play
+
+  <a href="https://play.google.com/store/apps/details?id=com.AhmedReFu.facesculptai">
+    <img 
+      src="https://developer.android.com/static/images/logos/google-play.svg" 
+      alt="Get it on Google Play" 
+      height="80"
+      style="vertical-align: middle; margin-right: 12px;" />
+  </a>
+  
+  ## Download on the App Store
+  <a href="https://apps.apple.com/app/com.AhmedReFu.facesculptai">
+    <img 
+      src="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/2c/9f/cc/2c9fcc3c-fdaf-2a82-7f5e-359a02fabe9f/AppIcon-Release-0-1x_U007epad-0-0-0-11-0-0-0-85-220-0.png/200x200ia-75.webp" 
+      alt="Download on the App Store"
+      height="65"
+      style="vertical-align: middle;" />
+  </a>
+
 
 ---
 
 ## 🚀 Features
 
 ### 🔍 AI Face Detection
-- Real-time face detection using live camera input
-- Automatically checks face position, distance, and visibility
-- Ensures accurate capture before starting analysis
+- Real-time face detection using live camera feed
+- Ensures face is centered, visible, and at correct distance
+- Prevents capture if face conditions are not met
 
 ---
 
 ### 📐 Facial Structure Analysis
-- Analyzes key facial attributes:
-  - Jawline definition
+- Analyzes:
+  - Jawline structure
   - Facial symmetry
-  - Face width-to-height ratio
-  - Head and neck posture alignment
-- Converts face scan into structured AI-readable data
-- Prepares facial metrics for backend AI processing
+  - Face alignment & proportions
+  - Head & neck posture
+- Converts face scan into structured data for AI analysis
 
 ---
 
 ### 🏋️ Face Fitness & Jawline Improvement
-- AI-driven recommendations for:
-  - Jawline definition workouts
-  - Neck and posture correction exercises
-  - Facial muscle toning routines
-- Helps users understand how fitness and lifestyle affect facial appearance
-- Focuses on **natural improvement**, not artificial edits
+- AI-generated recommendations for:
+  - Jawline definition exercises
+  - Neck & posture correction
+  - Facial muscle activation
+- Focuses on **natural improvement through workouts**
+- No artificial or misleading face alterations
 
 ---
 
 ### 🤖 AI Face Coach
-- Chat-based AI assistant for:
-  - Face fitness guidance
-  - Jawline and posture exercises
-  - General fitness and wellness questions
-- Uses user face scan data for **context-aware recommendations**
-- Acts as a personalized face fitness coach
+- Smart AI chat assistant
+- Provides:
+  - Face workout guidance
+  - Jawline improvement tips
+  - General fitness & wellness advice
+- Uses user face data for **context-aware responses**
 
 ---
 
-### 🎥 Live Camera Preview
-- Front camera optimized for face scanning
-- Smooth scanning animation with progress indicator
-- Real-time visual guidance for proper face alignment
+### 🎥 Live Camera Experience
+- Optimized front camera scanning
+- Smooth circular scan animation
+- Real-time progress indicator for user guidance
 
 ---
 
-### 🔐 Secure Image Processing
-- Face images uploaded using authenticated requests (Bearer token)
-- Encrypted communication with backend AI services
-- Images used **only for analysis**, never shared with third parties
+### 🔐 Secure Image Handling
+- Authenticated image upload (Bearer token)
+- Encrypted API communication
+- Images used only for analysis, never sold or shared
 
 ---
 
-### 📱 Modern User Interface
-- Circular scan progress animation
-- Clean, minimal, and distraction-free UI
-- Designed for ease of use and clarity
-
----
-
-### 🌱 Philosophy
-- Encourages healthy habits and consistency
-- Focuses on long-term facial improvement
-- Avoids unrealistic or misleading transformations
+### 📱 Cross-Platform UI
+- Consistent experience on Android & iOS
+- Clean, minimal, and distraction-free design
+- Optimized for multiple screen sizes
 
 ---
 
 ## 🛠 Tech Stack
 
-- React Native (Expo)
-- Expo Camera
-- AsyncStorage
-- REST API (Secure Image Upload)
-- AI / Machine Learning (Backend)
+- ⚛️ React Native
+- 📷 Vision Camera
+- 🧠 AI / ML (Backend Processing)
+- 🔐 Secure REST APIs
+- 💾 AsyncStorage
 
 ---
 
-## 🔒 Privacy
+## 🌍 Platform Support
 
-- No permanent storage of face images on device
+| Platform | Status |
+|--------|--------|
+| 🤖 Android | ✅ Live (https://play.google.com/apps/test/com.AhmedReFu.facesculptai) | 
+| 🍎 iOS | ✅ Live (https://testflight.apple.com/join/9VT15vYq) |
+| 📱 Tablets | ✅ Supported |
+
+---
+
+## 🔒 Privacy & Compliance
+- No permanent face image storage on device
 - Secure HTTPS communication
-- Fully aligned with Apple App Store privacy guidelines
+- Compliant with:
+  - Apple App Store Privacy Guidelines
+  - GDPR & CCPA principles
 
 ---
 
