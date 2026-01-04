@@ -110,6 +110,7 @@ const FaceCoach: React.FC = () => {
 
     const wsRef = useRef<WebSocket | null>(null);
     const flatListRef = useRef<FlatList>(null);
+    const isNearBottomRef = { current: true };
 
     // Animation setup for three dots
     const dot1 = useRef(new Animated.Value(0)).current;
@@ -406,15 +407,15 @@ const FaceCoach: React.FC = () => {
 
     return (
         <KeyboardAvoidingView
-            className="flex-1"
+            className="flex-1 "
             behavior={Platform.OS === "ios" ? "padding" : undefined}
             keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
         >
             <SafeAreaView className="flex-1 bg-[#0D0F14]" edges={['top']}>
-                <StatusBar style="light" />
+                <StatusBar style="light" backgroundColor='bg-[#0D0F14]' />
 
                 {/* Header */}
-                <View className="flex-row items-center justify-between px-4 py-3 bg-[#0D0F14]">
+                <View className="flex-row  items-center justify-between px-4 py-3 bg-[#0D0F14]">
                     <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
                         <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
                     </TouchableOpacity>
@@ -429,7 +430,7 @@ const FaceCoach: React.FC = () => {
 
                 {/* Suggested Questions */}
                 {!isLoadingHistory && (
-                    <View className="py-3 border-b border-gray-800">
+                    <View className="bg-[#0D0F14] py-3 border-b border-gray-800">
                         <ScrollView
                             horizontal
                             showsHorizontalScrollIndicator={false}
@@ -467,19 +468,26 @@ const FaceCoach: React.FC = () => {
                     </View>
                 ) : (
                     /* Messages List */
-                    <FlatList
-                        data={isTyping ? [...messages, { id: 'typing', text: '', isUser: false, timestamp: new Date() }] : messages}
-                        ref={flatListRef}
-                        renderItem={({ item }) =>
-                            item.id === 'typing' ? renderTypingIndicator() : renderMessage({ item })
-                        }
-                        keyExtractor={(item) => item.id}
-                        className="flex-1"
+                            <FlatList
+                                data={isTyping ? [...messages, { id: 'typing', text: '', isUser: false, timestamp: new Date() }] : messages}
+                                ref={flatListRef}
+                                renderItem={({ item }) => item.id === 'typing' ? renderTypingIndicator() : renderMessage({ item })}
+                                keyExtractor={(item) => item.id}
                                 showsVerticalScrollIndicator={false}
                                 contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 16 }}
                                 keyboardShouldPersistTaps="handled"
-                        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-                    />
+                                onScroll={(e) => {
+                                    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                                    const distanceFromBottom = contentSize.height - (layoutMeasurement.height + contentOffset.y);
+                                    isNearBottomRef.current = distanceFromBottom < 80; // 80px threshold
+                                }}
+                                scrollEventThrottle={16}
+                                onContentSizeChange={() => {
+                                    if (isNearBottomRef.current) {
+                                        flatListRef.current?.scrollToEnd({ animated: true });
+                                    }
+                                }}
+                            />
                 )}
 
                 {/* Input Area */}
@@ -487,7 +495,9 @@ const FaceCoach: React.FC = () => {
                     className="bg-[#0D0F14] px-4 py-3 border-t border-gray-800 mb-8"
                     style={{ paddingBottom: Platform.OS === 'android' ? keyboardHeight : 15 }}
                 >
-                    <View className="flex-row items-center bg-[#1F2937] rounded-full px-4 py-2 border border-gray-700">
+                    <View className="flex-row items-center rounded-full px-4 py-2 border border-gray-700" style={{
+
+                    }}>
                         <TextInput
                             className="flex-1 text-white text-base py-2"
                             value={inputText}

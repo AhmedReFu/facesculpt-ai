@@ -2,26 +2,20 @@ import { IMAGE_UPLOAD, IPA_BASE } from '@env';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    BackHandler,
     Button,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
-import {
-    Frame,
-    useCameraDevice,
-    useCameraPermission,
-} from 'react-native-vision-camera';
-import {
-    Face,
-    Camera as FaceCamera,
-} from 'react-native-vision-camera-face-detector';
+import { Frame, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { Face, Camera as FaceCamera } from 'react-native-vision-camera-face-detector';
 import tw from 'twrnc';
 import { Toast, useToast } from '../hooks/useToost';
 
@@ -56,11 +50,32 @@ const FaceScanWithDetection = () => {
 
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    // ---- Face detector options (simple like your first version) ----
+    // ✅ Hardware back should go DailyTrack (NOT Auth)
+    useFocusEffect(
+        useCallback(() => {
+            const onBackPress = () => {
+                // Option A (recommended): reset stack so Auth is not behind
+                (navigation as any).reset({
+                    index: 0,
+                    routes: [{ name: 'DailyTrack' }],
+                });
+
+                // Option B (if you want only navigate):
+                // (navigation as any).navigate('DailyTrack');
+
+                return true; // block default back
+            };
+
+            const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+            return () => sub.remove();
+        }, [navigation])
+    );
+
+    // ---- Face detector options ----
     const faceDetectionOptions = useRef<any>({
         performanceMode: 'fast',
         landmarkMode: 'all',
-        contourMode: 'none',     // no extra contour strictness
+        contourMode: 'none',
         classificationMode: 'all',
         minFaceSize: 0.2,
         trackingEnabled: true,
@@ -74,12 +89,11 @@ const FaceScanWithDetection = () => {
     }, [hasPermission, requestPermission]);
 
     // ---- Helpers ----
-    const probOk = (value: number | null | undefined, min = 0.3) => {
+    const probOk = (value: number | null | undefined, min = 0.2) => {
         if (value == null) return false;
         return value >= min;
     };
 
-    // Just like your original: eyes + nose + mouth + ears + basic eye-open check
     const isFaceClear = (face: Face) => {
         const lm: any = face.landmarks;
         if (!lm) return false;
@@ -139,7 +153,6 @@ const FaceScanWithDetection = () => {
 
             const face = facesDetected[0];
 
-            // Only basic clear-face check (eyes, nose, lips, ears + eye-open)
             if (!isFaceClear(face)) {
                 setFaceStatus('FACE_NOT_CLEAR');
                 resetProgress();
@@ -153,7 +166,6 @@ const FaceScanWithDetection = () => {
                 return;
             }
 
-            // All conditions satisfied
             setFaceStatus('OK');
         } catch (e) {
             console.error('face detection error:', e);
@@ -162,7 +174,7 @@ const FaceScanWithDetection = () => {
         }
     };
 
-    // ---- Progress ring animation (unchanged behaviour) ----
+    // ---- Progress ring animation ----
     useEffect(() => {
         if (!isScanning) {
             if (intervalRef.current) {
@@ -212,7 +224,7 @@ const FaceScanWithDetection = () => {
             style: 'top',
             duration: 2000,
         });
-    }, []);
+    }, [toast]);
 
     // ---- Capture + upload ----
     const takePicture = async () => {
@@ -252,7 +264,6 @@ const FaceScanWithDetection = () => {
 
             console.log('Photo captured:', photo.path);
 
-            // small delay, UX only
             await new Promise(resolve => setTimeout(resolve, 1200));
 
             const formData = new FormData();
@@ -265,17 +276,14 @@ const FaceScanWithDetection = () => {
                 } as any,
             );
 
-            const response = await fetch(
-                `${API_BASE_URL}${API_ENDPOINTS.IMAGE_UPLOAD}`,
-                {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                        'Content-Type': 'multipart/form-data',
-                    },
-                    body: formData,
+            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.IMAGE_UPLOAD}`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'multipart/form-data',
                 },
-            );
+                body: formData,
+            });
 
             const result = await response.json();
             console.log('Upload response:', result);
@@ -326,7 +334,7 @@ const FaceScanWithDetection = () => {
         }
     };
 
-    // ---- Status texts in clean English ----
+    // ---- Status texts ----
     const statusTextMap: Record<FaceStatus, { text: string; color: string }> = {
         NO_FACE: {
             text: 'No face detected. Please move your face into the frame.',
@@ -385,24 +393,27 @@ const FaceScanWithDetection = () => {
                 <View style={tw`bg-black`}>
                     <View style={styles.header}>
                         <Text style={tw`text-white text-2xl font-bold`}>Face Scan</Text>
+
+                        {/* Close button -> DailyTrack */}
                         <TouchableOpacity
-                            onPress={() => (navigation as any).navigate('DailyTrack')}
+                            onPress={() =>
+                                (navigation as any).reset({
+                                    index: 0,
+                                    routes: [{ name: 'DailyTrack' }],
+                                })
+                            }
                             style={styles.closeButton}
                         >
                             <Ionicons name="close" size={28} color="white" />
                         </TouchableOpacity>
                     </View>
+
                     <Text style={styles.instructions}>
                         Align your face inside the circle{'\n'}and keep it steady.
                     </Text>
 
                     {isScanning && (
-                        <Text
-                            style={[
-                                styles.progressText,
-                                { color: statusTextMap[faceStatus].color },
-                            ]}
-                        >
+                        <Text style={[styles.progressText, { color: statusTextMap[faceStatus].color }]}>
                             {statusTextMap[faceStatus].text}
                         </Text>
                     )}
@@ -425,8 +436,7 @@ const FaceScanWithDetection = () => {
                         <View style={styles.circleProgressContainer}>
                             {Array.from({ length: 60 }).map((_, index) => {
                                 const angle = index * 6 - 90;
-                                const isActive =
-                                    isScanning && (index / 60) * 100 <= circleProgress;
+                                const isActive = isScanning && (index / 60) * 100 <= circleProgress;
 
                                 return (
                                     <View
@@ -434,20 +444,14 @@ const FaceScanWithDetection = () => {
                                         style={[
                                             styles.progressSegment,
                                             {
-                                                transform: [
-                                                    { rotate: `${angle}deg` },
-                                                    { translateX: 140 },
-                                                ],
-                                                backgroundColor: isActive
-                                                    ? '#00FF00'
-                                                    : 'rgba(255,255,255,0.2)',
+                                                transform: [{ rotate: `${angle}deg` }, { translateX: 140 }],
+                                                backgroundColor: isActive ? '#00FF00' : 'rgba(255,255,255,0.2)',
                                             },
                                         ]}
                                     />
                                 );
                             })}
 
-                            {/* center dot */}
                             <View style={styles.centerDot} />
                         </View>
                     </View>
@@ -456,9 +460,7 @@ const FaceScanWithDetection = () => {
                     {isScanning && (
                         <View style={styles.progressContainer}>
                             {circleProgress < 100 && faceStatus === 'OK' && (
-                                <Text style={styles.progressPercent}>
-                                    {Math.round(circleProgress)}%
-                                </Text>
+                                <Text style={styles.progressPercent}>{Math.round(circleProgress)}%</Text>
                             )}
                         </View>
                     )}
@@ -467,10 +469,7 @@ const FaceScanWithDetection = () => {
                 {/* Bottom capture button */}
                 <View style={styles.bottomSection}>
                     <TouchableOpacity
-                        style={[
-                            styles.captureButton,
-                            (uploading || isScanning) && styles.captureButtonDisabled,
-                        ]}
+                        style={[styles.captureButton, (uploading || isScanning) && styles.captureButtonDisabled]}
                         onPress={startScan}
                         disabled={uploading || isScanning}
                     >

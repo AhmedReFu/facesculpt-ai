@@ -62,7 +62,6 @@
     "@types/react-native-dotenv": "^0.2.2",
     "babel-preset-expo": "^54.0.7",
     "prettier": "^3.7.4",
-    "react-native": "~0.81.5",
     "react-refresh": "^0.18.0",
     "typescript": "~5.9.2"
   },

@@ -55,6 +55,7 @@ const Home = () => {
                 setTimeout(() => {
                     navigator.navigate("Auth");
                 }, 1000);
+                clearTimeout(0);
             } finally {
                 setIsLoading(false);
             }

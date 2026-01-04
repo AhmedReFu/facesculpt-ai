@@ -180,7 +180,7 @@ function RootStack() {
         <Stack.Navigator
           screenOptions={{
             headerShown: false,
-            animation: 'default',
+            animation: "fade",
             gestureEnabled: false,
             gestureDirection: 'horizontal',
           }}

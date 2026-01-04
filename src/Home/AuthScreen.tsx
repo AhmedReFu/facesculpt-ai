@@ -600,7 +600,7 @@ const AuthScreen = () => {
                     if (subscribe === 'true') {
                         navigator.navigate('DailyTrack');
                     } else {
-                        navigator.navigate('FaceScanWithDetection');
+                        navigator.replace('FaceScanWithDetection');
                     }
                 }, 1000);
             } else {

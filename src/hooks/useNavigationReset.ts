@@ -22,7 +22,17 @@ export const useNavigationReset = () => {
     );
   };
 
+  const resetToFacescan = (exerciseId: number) => {
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "FaceScanWithDetection" as never }],
+      })
+    );
+  };
+
   return {
+    resetToFacescan,
     resetToDailyRoutine,
     resetToExercise,
   };

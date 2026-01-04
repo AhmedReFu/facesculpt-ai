@@ -40,8 +40,8 @@ const DailyRoutine = () => {
         }
     };
 
-    const handleBackPress = () => {
-        // restartWorkout()
+    const handleBackPress = async () => {
+
         navigation.navigate('DailyTrack');
     };
 
@@ -66,6 +66,7 @@ const DailyRoutine = () => {
     }
 
     if (exercises.length === 0) {
+        useWorkout()
         return (
             <View className="flex-1 bg-[#000000] px-4">
                 <StatusBar style="light" />

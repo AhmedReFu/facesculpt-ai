@@ -196,11 +196,11 @@ const Sessions = () => {
         <View className="flex-1 bg-[#000000] px-4">
             <StatusBar style="light" />
 
-            <View className="pt-12 pb-4 bg-[#000000]">
-                <View className="flex-row items-center py-4">
+            <View className="mt-14 pb-4 bg-[#000000]">
+                <View className="flex-row items-center">
                     <TouchableOpacity
                         onPress={() => navigation.goBack()}
-                        className="absolute left-2 z-10"
+                        className="absolute left-0 z-10"
                     >
                         <Ionicons name="arrow-back" size={28} color="white" />
                     </TouchableOpacity>
@@ -212,7 +212,7 @@ const Sessions = () => {
             </View>
 
             <ScrollView
-                className="flex-1 bg-[#000000]"
+                className="flex-1 bg-[#000000] py-2"
                 showsVerticalScrollIndicator={false}
             >
                 <Text className="text-white text-2xl font-bold mb-3">

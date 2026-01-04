@@ -173,96 +173,99 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
                 console.log('⚠️ No token found, skipping API call');
                 setLoading(false);
                 return;
-            }
-
-            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.GET_PLAN}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            const result = await response.json();
-
-            if (response.ok && result.success && result.data) {
-                const apiData = result.data;
-                const newWorkoutPlanId = apiData.id;
-                const isNewPlan = workoutPlanId !== newWorkoutPlanId;
-
-                setWorkoutPlanId(newWorkoutPlanId);
-
-                // ✅ SAFE mapping here
-                const transformedExercises: Exercise[] = apiData.exercises.map((item: any, index: number) => {
-                    const exerciseData = item?.exercise || {};
-
-                    const reps = Number(item?.reps) || 0;
-                    const duration = Number(item?.duration) || 0;
-                    const sets = Number(item?.sets) || 1;
-
-                    const isRepBased = reps > 0;
-                    const displayValue = isRepBased ? reps : duration;
-                    const displayUnit = isRepBased ? 'reps' : 's';
-                    const cooldown = isCooldownExercise(item);
-
-                    return {
-                        id: item?.order || index + 1,
-                        name: exerciseData?.name || `Exercise ${index + 1}`,
-                        reps,
-                        duration,
-                        sets,
-                        completedSets: 0,
-                        isRepBased,
-                        displayText: `${displayValue} ${displayUnit}`,
-                        icon: getIconForMetric(exerciseData?.target_metric || '', index),
-                        completed: false,
-                        description: exerciseData?.description || '',
-                        instructions: exerciseData?.instructions || [],
-                        order: item?.order ?? index + 1,
-                        target_metric: exerciseData?.target_metric || '',
-                        isCooldown: cooldown,
-                    };
-                });
-
-                transformedExercises.sort((a, b) => a.order - b.order);
-
-                const cooldownExercises = transformedExercises.filter(ex => ex.isCooldown);
-                const regularExercises = transformedExercises.filter(ex => !ex.isCooldown);
-
-                const finalExercises = [...regularExercises, ...cooldownExercises];
-
-                finalExercises.forEach((ex, idx) => {
-                    ex.order = idx + 1;
-                    ex.id = idx + 1;
-                });
-
-                const calculatedMaxSets =
-                    regularExercises.length > 0 ? Math.max(...regularExercises.map(ex => ex.sets), 1) : 1;
-
-                setExercises(finalExercises);
-                setMaxSets(calculatedMaxSets);
-
-                console.log('✅ Workout plan loaded:', {
-                    planId: newWorkoutPlanId,
-                    totalExercises: finalExercises.length,
-                    regularExercises: regularExercises.length,
-                    cooldownExercises: cooldownExercises.length,
-                    maxSets: calculatedMaxSets,
-                    cooldownNames: cooldownExercises.map(ex => ex.name),
-                });
-
-                if (isNewPlan) {
-                    console.log('🆕 NEW workout plan detected - Resetting progress');
-                    setCurrentExerciseIndex(0);
-                    setCurrentSetNumber(1);
-                    workoutCompletionCalledRef.current = false;
-                    await clearWorkoutState();
-                } else {
-                    console.log('♻️ Same workout plan - Keeping progress');
-                }
             } else {
-                throw new Error(result.message || 'Failed to load workout plan');
+                const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.GET_PLAN}`, {
+                    method: 'GET',
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                const result = await response.json(); 
+                if (response.ok && result.success && result.data) {
+                    const apiData = result.data;
+                    const newWorkoutPlanId = apiData.id;
+                    const isNewPlan = workoutPlanId !== newWorkoutPlanId;
+
+                    setWorkoutPlanId(newWorkoutPlanId);
+
+                    // ✅ SAFE mapping here
+                    const transformedExercises: Exercise[] = apiData.exercises.map((item: any, index: number) => {
+                        const exerciseData = item?.exercise || {};
+
+                        const reps = Number(item?.reps) || 0;
+                        const duration = Number(item?.duration) || 0;
+                        const sets = Number(item?.sets) || 1;
+
+                        const isRepBased = reps > 0;
+                        const displayValue = isRepBased ? reps : duration;
+                        const displayUnit = isRepBased ? 'reps' : 's';
+                        const cooldown = isCooldownExercise(item);
+
+                        return {
+                            id: item?.order || index + 1,
+                            name: exerciseData?.name || `Exercise ${index + 1}`,
+                            reps,
+                            duration,
+                            sets,
+                            completedSets: 0,
+                            isRepBased,
+                            displayText: `${displayValue} ${displayUnit}`,
+                            icon: getIconForMetric(exerciseData?.target_metric || '', index),
+                            completed: false,
+                            description: exerciseData?.description || '',
+                            instructions: exerciseData?.instructions || [],
+                            order: item?.order ?? index + 1,
+                            target_metric: exerciseData?.target_metric || '',
+                            isCooldown: cooldown,
+                        };
+                    });
+
+                    transformedExercises.sort((a, b) => a.order - b.order);
+
+                    const cooldownExercises = transformedExercises.filter(ex => ex.isCooldown);
+                    const regularExercises = transformedExercises.filter(ex => !ex.isCooldown);
+
+                    const finalExercises = [...regularExercises, ...cooldownExercises];
+
+                    finalExercises.forEach((ex, idx) => {
+                        ex.order = idx + 1;
+                        ex.id = idx + 1;
+                    });
+
+                    const calculatedMaxSets =
+                        regularExercises.length > 0 ? Math.max(...regularExercises.map(ex => ex.sets), 1) : 1;
+
+                    setExercises(finalExercises);
+                    setMaxSets(calculatedMaxSets);
+
+                    console.log('✅ Workout plan loaded:', {
+                        planId: newWorkoutPlanId,
+                        totalExercises: finalExercises.length,
+                        regularExercises: regularExercises.length,
+                        cooldownExercises: cooldownExercises.length,
+                        maxSets: calculatedMaxSets,
+                        cooldownNames: cooldownExercises.map(ex => ex.name),
+                    });
+
+                    if (isNewPlan) {
+                        console.log('🆕 NEW workout plan detected - Resetting progress');
+                        setCurrentExerciseIndex(0);
+                        setCurrentSetNumber(1);
+                        workoutCompletionCalledRef.current = false;
+                        await clearWorkoutState();
+                    } else {
+                        console.log('♻️ Same workout plan - Keeping progress');
+                    }
+                } else {
+                    throw new Error(result.message || 'Failed to load workout plan');
+                }
             }
+
+
+
+
         } catch (error) {
             console.error('❌ Failed to fetch workout plan:', error);
             if (exercises.length === 0) {
@@ -547,7 +550,10 @@ export const WorkoutProvider = ({ children }: { children: ReactNode }) => {
         getCurrentSetInfo,
     };
 
-    return <WorkoutContext.Provider value={contextValue}>{children}</WorkoutContext.Provider>;
+    return (
+        <WorkoutContext.Provider value={contextValue}>
+            {children}
+        </WorkoutContext.Provider>)
 };
 
 export const useWorkout = () => {
