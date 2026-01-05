@@ -111,8 +111,8 @@ const FaceScanWithDetection = () => {
         const leftEyeOpen = (face as any).leftEyeOpenProbability;
         const rightEyeOpen = (face as any).rightEyeOpenProbability;
 
-        if (!probOk(leftEyeOpen, 0.4)) return false;
-        if (!probOk(rightEyeOpen, 0.4)) return false;
+        if (!probOk(leftEyeOpen, 0.6)) return false;
+        if (!probOk(rightEyeOpen, 0.6)) return false;
 
         return true;
     };
@@ -254,7 +254,7 @@ const FaceScanWithDetection = () => {
             }
 
             const photo = await cameraRef.current.takePhoto({
-                quality: 80,
+                quality: 0.8,
                 enableShutterSound: false,
             });
 

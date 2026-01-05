@@ -1,0 +1,789 @@
+import { IMAGE_UPLOAD, IPA_BASE } from '@env';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
+import { StatusBar } from 'expo-status-bar';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Animated,
+    BackHandler,
+    Button,
+    Easing,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
+} from 'react-native';
+import { Frame, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { Face, Camera as FaceCamera } from 'react-native-vision-camera-face-detector';
+import { Toast, useToast } from '../hooks/useToost';
+
+const API_BASE_URL = IPA_BASE;
+const API_ENDPOINTS = { IMAGE_UPLOAD };
+
+const MIN_FACE_RATIO = 0.20;
+const MAX_FACE_RATIO = 0.35;
+
+// Head turn thresholds (based on your logs yaw negative on RIGHT)
+const YAW_CENTER_MAX = 12;  // |yaw| <= 12 = center facing
+const YAW_LEFT_MIN = 18;    // yaw >= 18  = turn LEFT
+const YAW_RIGHT_MAX = -18;  // yaw <= -18 = turn RIGHT
+
+type FaceStatus =
+    | 'NO_FACE'
+    | 'MULTIPLE_FACES'
+    | 'TOO_FAR'
+    | 'TOO_CLOSE'
+    | 'FACE_NOT_CLEAR'
+    | 'NOT_CENTERED'
+    | 'TURN_LEFT'
+    | 'TURN_RIGHT'
+    | 'OK';
+
+type ScanStep = 'IDLE' | 'CENTER' | 'LEFT' | 'RIGHT' | 'DONE';
+
+const FaceScanWithDetection = () => {
+    const navigation = useNavigation();
+    const device = useCameraDevice('front');
+    const { hasPermission, requestPermission } = useCameraPermission();
+    const cameraRef = useRef<any>(null);
+    const toast = useToast();
+
+    const { width } = useWindowDimensions();
+    const CIRCLE_SIZE = useMemo(() => Math.min(width * 0.78, 360), [width]);
+
+    const [uploading, setUploading] = useState(false);
+    const [isScanning, setIsScanning] = useState(false);
+    const [faceStatus, setFaceStatus] = useState<FaceStatus>('NO_FACE');
+    const [scanStep, setScanStep] = useState<ScanStep>('IDLE');
+    const [progress, setProgress] = useState(0);
+
+    // stable timers
+    const stableTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // center smoothing to avoid jitter
+    const centerAvgRef = useRef({ dx: 0, dy: 0 });
+
+    // sweep line animation
+    const sweep = useRef(new Animated.Value(0)).current;
+
+    // Face detector options
+    const faceDetectionOptions = useRef<any>({
+        performanceMode: 'fast',
+        landmarkMode: 'all',
+        contourMode: 'none',
+        classificationMode: 'all',
+        minFaceSize: 0.2,
+        trackingEnabled: true,
+    }).current;
+
+    // ✅ Android hardware back -> DailyTrack
+    useFocusEffect(
+        useCallback(() => {
+            const onBackPress = () => {
+                (navigation as any).reset({ index: 0, routes: [{ name: 'DailyTrack' }] });
+                return true;
+            };
+            const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+            return () => sub.remove();
+        }, [navigation])
+    );
+
+    useEffect(() => {
+        if (!hasPermission) requestPermission();
+    }, [hasPermission, requestPermission]);
+
+    const clearStableTimer = () => {
+        if (stableTimerRef.current) {
+            clearTimeout(stableTimerRef.current);
+            stableTimerRef.current = null;
+        }
+    };
+
+    // Sweep animation when scanning
+    useEffect(() => {
+        if (!isScanning) {
+            sweep.stopAnimation();
+            sweep.setValue(0);
+            return;
+        }
+
+        const loop = Animated.loop(
+            Animated.timing(sweep, {
+                toValue: 1,
+                duration: 1400,
+                easing: Easing.inOut(Easing.quad),
+                useNativeDriver: true,
+            })
+        );
+
+        loop.start();
+        return () => {
+            loop.stop();
+            sweep.setValue(0);
+        };
+    }, [isScanning, sweep]);
+
+    // ====== Local save & share (download idea) ======
+    const saveToGallery = async (photoPath: string) => {
+        try {
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== 'granted') {
+                toast.show({
+                    message: 'Gallery permission denied.',
+                    type: 'warning',
+                    style: 'top',
+                    duration: 1500,
+                });
+                return;
+            }
+
+            const asset = await MediaLibrary.createAssetAsync(`file://${photoPath}`);
+            await MediaLibrary.createAlbumAsync('FaceScan', asset, false);
+
+            toast.show({
+                message: 'Saved to Gallery ✅',
+                type: 'success',
+                style: 'top',
+                duration: 1200,
+            });
+        } catch (e) {
+            console.log('saveToGallery error', e);
+        }
+    };
+
+    const shareFile = async (photoPath: string) => {
+        try {
+            const uri = `file://${photoPath}`;
+            const canShare = await Sharing.isAvailableAsync();
+            if (!canShare) return;
+            await Sharing.shareAsync(uri);
+        } catch (e) {
+            console.log('shareFile error', e);
+        }
+    };
+
+    // ====== Helpers ======
+    const probOk = (value: number | null | undefined, min = 0.25) => {
+        if (value == null) return true; // tolerate null (better in low light)
+        return value >= min;
+    };
+
+    const isFaceClear = (face: Face) => {
+        const lm: any = face.landmarks;
+        if (!lm) return false;
+
+        const hasEyes = lm.LEFT_EYE && lm.RIGHT_EYE;
+        const hasNose = lm.NOSE_BASE;
+        const hasMouth =
+            lm.MOUTH_LEFT && lm.MOUTH_RIGHT && (lm.MOUTH_BOTTOM || lm.MOUTH_TOP);
+        const hasEars = lm.LEFT_EAR && lm.RIGHT_EAR;
+
+        if (!hasEyes || !hasNose || !hasMouth || !hasEars) return false;
+
+        const leftEyeOpen = (face as any).leftEyeOpenProbability;
+        const rightEyeOpen = (face as any).rightEyeOpenProbability;
+
+        if (!probOk(leftEyeOpen, 0.25)) return false;
+        if (!probOk(rightEyeOpen, 0.25)) return false;
+
+        return true;
+    };
+
+    const evaluateFaceDistance = (face: Face, frame: Frame): FaceStatus => {
+        const { width: w, height: h } = face.bounds;
+        const faceArea = w * h;
+        const frameArea = frame.width * frame.height;
+        const ratio = faceArea / frameArea;
+
+        if (ratio < MIN_FACE_RATIO) return 'TOO_FAR';
+        if (ratio > MAX_FACE_RATIO) return 'TOO_CLOSE';
+        return 'OK';
+    };
+
+    // Step-based thresholds (CENTER strict, LEFT/RIGHT relaxed)
+    const getCenterThreshold = (step: ScanStep, frame: Frame) => {
+        if (step === 'CENTER') return { tx: frame.width * 0.18, ty: frame.height * 0.18 };
+        if (step === 'LEFT' || step === 'RIGHT') return { tx: frame.width * 0.32, ty: frame.height * 0.28 };
+        return { tx: frame.width * 0.40, ty: frame.height * 0.40 };
+    };
+
+    const isCenteredSmooth = (face: Face, frame: Frame, step: ScanStep) => {
+        const cx = face.bounds.x + face.bounds.width / 2;
+        const cy = face.bounds.y + face.bounds.height / 2;
+        const fx = frame.width / 2;
+        const fy = frame.height / 2;
+
+        const dx = cx - fx;
+        const dy = cy - fy;
+
+        // faster smoothing on turns
+        const alpha = step === 'CENTER' ? 0.25 : 0.35;
+        centerAvgRef.current.dx = centerAvgRef.current.dx * (1 - alpha) + dx * alpha;
+        centerAvgRef.current.dy = centerAvgRef.current.dy * (1 - alpha) + dy * alpha;
+
+        const adx = Math.abs(centerAvgRef.current.dx);
+        const ady = Math.abs(centerAvgRef.current.dy);
+
+        const { tx, ty } = getCenterThreshold(step, frame);
+
+        // debug logs (keep)
+        console.log(
+            '[CENTER DEBUG]',
+            'step=', step,
+            'raw(dx,dy)=', dx.toFixed(1), dy.toFixed(1),
+            'avg(dx,dy)=', centerAvgRef.current.dx.toFixed(1), centerAvgRef.current.dy.toFixed(1),
+            'thr=', tx.toFixed(1), ty.toFixed(1),
+            'frame=', frame.width, frame.height
+        );
+
+        return adx < tx && ady < ty;
+    };
+
+    const getYaw = (face: Face) => {
+        const yaw = (face as any).headEulerAngleY ?? (face as any).yawAngle ?? 0;
+        return yaw as number;
+    };
+
+    const setProgressForStep = (step: ScanStep) => {
+        if (step === 'IDLE') setProgress(0);
+        if (step === 'CENTER') setProgress(10);
+        if (step === 'LEFT') setProgress(45);
+        if (step === 'RIGHT') setProgress(75);
+        if (step === 'DONE') setProgress(100);
+    };
+
+    const startScan = useCallback(() => {
+        clearStableTimer();
+        centerAvgRef.current = { dx: 0, dy: 0 };
+
+        setIsScanning(true);
+        setScanStep('CENTER');
+        setProgressForStep('CENTER');
+        setFaceStatus('NO_FACE');
+
+        toast.show({
+            message: 'Center your face and hold still.',
+            type: 'warning',
+            style: 'top',
+            duration: 1200,
+        });
+    }, [toast]);
+
+    const handleFacesDetection = (facesDetected: Face[], frame: Frame) => {
+        if (!isScanning) return;
+
+        try {
+            if (!facesDetected || facesDetected.length === 0) {
+                setFaceStatus('NO_FACE');
+                clearStableTimer();
+                return;
+            }
+
+            if (facesDetected.length !== 1) {
+                setFaceStatus('MULTIPLE_FACES');
+                clearStableTimer();
+                return;
+            }
+
+            const face = facesDetected[0];
+
+            if (!isFaceClear(face)) {
+                setFaceStatus('FACE_NOT_CLEAR');
+                clearStableTimer();
+                return;
+            }
+
+            const distanceStatus = evaluateFaceDistance(face, frame);
+            if (distanceStatus !== 'OK') {
+                setFaceStatus(distanceStatus);
+                clearStableTimer();
+                return;
+            }
+
+            // ✅ Step-based centering
+            const centered = isCenteredSmooth(face, frame, scanStep);
+            if (!centered) {
+                setFaceStatus('NOT_CENTERED');
+                clearStableTimer();
+                return;
+            }
+
+            const yaw = getYaw(face);
+            console.log('[YAW DEBUG]', yaw.toFixed(1), 'step=', scanStep);
+
+            if (scanStep === 'CENTER') {
+                // must face forward first
+                if (Math.abs(yaw) <= YAW_CENTER_MAX) {
+                    setFaceStatus('OK');
+
+                    if (!stableTimerRef.current) {
+                        stableTimerRef.current = setTimeout(() => {
+                            stableTimerRef.current = null;
+                            setScanStep('LEFT');
+                            setProgressForStep('LEFT');
+                            setFaceStatus('TURN_LEFT');
+                        }, 650);
+                    }
+                } else {
+                    setFaceStatus('NOT_CENTERED');
+                    clearStableTimer();
+                }
+                return;
+            }
+
+            if (scanStep === 'LEFT') {
+                setFaceStatus('TURN_LEFT');
+
+                if (yaw >= YAW_LEFT_MIN) {
+                    if (!stableTimerRef.current) {
+                        stableTimerRef.current = setTimeout(() => {
+                            stableTimerRef.current = null;
+                            setScanStep('RIGHT');
+                            setProgressForStep('RIGHT');
+                            setFaceStatus('TURN_RIGHT');
+                        }, 520);
+                    }
+                } else {
+                    clearStableTimer();
+                }
+                return;
+            }
+
+            if (scanStep === 'RIGHT') {
+                setFaceStatus('TURN_RIGHT');
+
+                if (yaw <= YAW_RIGHT_MAX) {
+                    if (!stableTimerRef.current) {
+                        stableTimerRef.current = setTimeout(() => {
+                            stableTimerRef.current = null;
+                            setScanStep('DONE');
+                            setProgressForStep('DONE');
+                            setFaceStatus('OK');
+
+                            setTimeout(() => {
+                                takePicture(); // auto capture
+                            }, 250);
+                        }, 520);
+                    }
+                } else {
+                    clearStableTimer();
+                }
+                return;
+            }
+        } catch (e) {
+            console.error('face detection error:', e);
+            setFaceStatus('FACE_NOT_CLEAR');
+            clearStableTimer();
+        }
+    };
+
+    const takePicture = async () => {
+        if (!cameraRef.current) return;
+
+        try {
+            clearStableTimer();
+            setUploading(true);
+            setIsScanning(false);
+
+            const accessToken = await AsyncStorage.getItem('token');
+
+            if (!accessToken) {
+                toast.show({
+                    message: 'Authentication required. Please sign in to continue.',
+                    type: 'warning',
+                    style: 'center',
+                    buttons: [
+                        { text: 'OK', action: 'custom', onPress: () => (navigation as any).navigate('Auth') },
+                    ],
+                });
+                setUploading(false);
+                setScanStep('IDLE');
+                setProgressForStep('IDLE');
+                return;
+            }
+
+            const photo = await cameraRef.current.takePhoto({
+                quality: 80,
+                enableShutterSound: false,
+            });
+
+            if (!photo) throw new Error('Failed to capture photo. Please try again.');
+
+            console.log('Captured file URI:', `file://${photo.path}`);
+
+            // ✅ Save locally to Gallery + Open Share (download idea)
+            await saveToGallery(photo.path);
+            await shareFile(photo.path);
+
+            // UX delay
+            await new Promise(resolve => setTimeout(resolve, 400));
+
+            // ✅ upload same photo
+            const formData = new FormData();
+            formData.append(
+                'image',
+                {
+                    uri: `file://${photo.path}`,
+                    type: 'image/jpeg',
+                    name: 'face-scan.jpg',
+                } as any
+            );
+
+            const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.IMAGE_UPLOAD}`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'multipart/form-data',
+                },
+                body: formData,
+            });
+
+            const result = await response.json();
+            console.log('Upload response:', result);
+
+            if (response.status === 401) {
+                await AsyncStorage.removeItem('token');
+                toast.show({
+                    message: 'Session expired. Please sign in again.',
+                    type: 'error',
+                    style: 'center',
+                    buttons: [
+                        { text: 'OK', action: 'custom', onPress: () => (navigation as any).navigate('Auth') },
+                    ],
+                });
+                setUploading(false);
+                setScanStep('IDLE');
+                setProgressForStep('IDLE');
+                return;
+            }
+
+            if (response.ok && result.success) {
+                toast.show({
+                    message: 'Face scan completed successfully. ✓',
+                    type: 'success',
+                    style: 'top',
+                    duration: 1400,
+                });
+
+                setTimeout(() => {
+                    setUploading(false);
+                    setScanStep('IDLE');
+                    setProgressForStep('IDLE');
+                    (navigation as any).replace('FaceMetrics');
+                }, 700);
+            } else {
+                throw new Error(result.message || 'Failed to upload image.');
+            }
+        } catch (error: any) {
+            console.error('Error in takePicture:', error);
+            setUploading(false);
+            setScanStep('IDLE');
+            setProgressForStep('IDLE');
+
+            toast.show({
+                message: error?.message || 'Something went wrong. Please try again.',
+                type: 'error',
+                style: 'center',
+                buttons: [{ text: 'OK', action: 'dismiss' }],
+            });
+        }
+    };
+
+    const statusText = useMemo(() => {
+        switch (faceStatus) {
+            case 'NO_FACE':
+                return { text: 'No face detected', color: '#ff4d4d' };
+            case 'MULTIPLE_FACES':
+                return { text: 'Only one face should be visible', color: '#ff4d4d' };
+            case 'TOO_FAR':
+                return { text: 'Move closer', color: '#ffcc00' };
+            case 'TOO_CLOSE':
+                return { text: 'Move slightly back', color: '#ffcc00' };
+            case 'FACE_NOT_CLEAR':
+                return { text: 'Face not clear (eyes, nose, mouth, ears visible)', color: '#ff4d4d' };
+            case 'NOT_CENTERED':
+                return { text: 'Center your face inside the frame', color: '#ffcc00' };
+            case 'TURN_LEFT':
+                return { text: 'Turn your head LEFT', color: '#60A5FA' };
+            case 'TURN_RIGHT':
+                return { text: 'Turn your head RIGHT', color: '#60A5FA' };
+            case 'OK':
+            default:
+                if (scanStep === 'CENTER') return { text: 'Hold still…', color: '#00ff5e' };
+                if (scanStep === 'DONE') return { text: 'Perfect ✅', color: '#00ff5e' };
+                return { text: 'Good…', color: '#00ff5e' };
+        }
+    }, [faceStatus, scanStep]);
+
+    if (!device) {
+        return (
+            <View style={styles.container}>
+                <Text style={styles.message}>Loading camera...</Text>
+            </View>
+        );
+    }
+
+    if (!hasPermission) {
+        return (
+            <View style={styles.container}>
+                <Text style={styles.message}>Camera access is required to perform a face scan.</Text>
+                <Button title="Grant Camera Permission" onPress={requestPermission} />
+            </View>
+        );
+    }
+
+    const sweepTranslate = sweep.interpolate({
+        inputRange: [0, 1],
+        outputRange: [-CIRCLE_SIZE / 2 + 24, CIRCLE_SIZE / 2 - 24],
+    });
+
+    return (
+        <View style={styles.fullScreen}>
+            <StatusBar style="light" />
+
+            <View style={styles.previewWrap}>
+                <FaceCamera
+                    ref={cameraRef}
+                    style={StyleSheet.absoluteFill}
+                    device={device}
+                    isActive={true}
+                    photo={true}
+                    faceDetectionCallback={handleFacesDetection}
+                    faceDetectionOptions={faceDetectionOptions}
+                />
+
+                {/* top/bottom fades */}
+                <LinearGradient
+                    colors={['rgba(0,0,0,0.75)', 'rgba(0,0,0,0)']}
+                    style={[StyleSheet.absoluteFillObject, { height: 170 }]}
+                />
+                <LinearGradient
+                    colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.90)']}
+                    style={[StyleSheet.absoluteFillObject, { top: undefined, bottom: 0, height: 240 }]}
+                />
+
+                {/* top bar */}
+                <View style={styles.topBar}>
+                    <TouchableOpacity
+                        onPress={() => (navigation as any).reset({ index: 0, routes: [{ name: 'DailyTrack' }] })}
+                        style={styles.closeChip}
+                        activeOpacity={0.85}
+                    >
+                        <Ionicons name="close" size={18} color="white" />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Face Scan</Text>
+                </View>
+
+                <Text style={styles.subtitle}>Center your face and slowly turn left then right.</Text>
+
+                {/* status pill */}
+                {(isScanning || uploading) && (
+                    <View style={styles.statusPill}>
+                        <View style={[styles.dot, { backgroundColor: statusText.color }]} />
+                        <Text style={styles.statusText}>{statusText.text}</Text>
+                    </View>
+                )}
+
+                {/* scan area */}
+                <View style={styles.centerOverlay} pointerEvents="none">
+                    <View
+                        style={[
+                            styles.scanArea,
+                            { width: CIRCLE_SIZE, height: CIRCLE_SIZE, borderRadius: CIRCLE_SIZE / 2 },
+                        ]}
+                    >
+                        <View style={[styles.corner, styles.tl]} />
+                        <View style={[styles.corner, styles.tr]} />
+                        <View style={[styles.corner, styles.bl]} />
+                        <View style={[styles.corner, styles.br]} />
+
+                        <View
+                            style={[
+                                styles.thinRing,
+                                { width: CIRCLE_SIZE, height: CIRCLE_SIZE, borderRadius: CIRCLE_SIZE / 2 },
+                            ]}
+                        />
+
+                        {isScanning && (
+                            <Animated.View
+                                style={[
+                                    styles.sweepLine,
+                                    { transform: [{ translateY: sweepTranslate }], width: CIRCLE_SIZE * 0.78 },
+                                ]}
+                            />
+                        )}
+
+                        <View style={styles.centerDot} />
+                    </View>
+
+                    {(isScanning || uploading) && (
+                        <View style={styles.progressRow}>
+                            <Text style={styles.progressText}>{Math.round(progress)}%</Text>
+                            <View style={styles.stepRow}>
+                                <View style={[styles.stepPill, progress >= 10 && styles.stepPillOn]} />
+                                <View style={[styles.stepPill, progress >= 45 && styles.stepPillOn]} />
+                                <View style={[styles.stepPill, progress >= 75 && styles.stepPillOn]} />
+                                <View style={[styles.stepPill, progress >= 100 && styles.stepPillOn]} />
+                            </View>
+                        </View>
+                    )}
+                </View>
+
+                {/* bottom actions */}
+                <View style={styles.bottomArea}>
+                    <TouchableOpacity
+                        style={[styles.captureOuter, (uploading || isScanning) && { opacity: 0.65 }]}
+                        onPress={startScan}
+                        disabled={uploading || isScanning}
+                        activeOpacity={0.85}
+                    >
+                        <View style={styles.captureInner}>
+                            {uploading || isScanning ? (
+                                <ActivityIndicator size="small" color="white" />
+                            ) : (
+                                    <MaterialIcons name="camera-alt" size={22} color="white" />
+                            )}
+                        </View>
+                    </TouchableOpacity>
+
+                    <Text style={styles.bottomHint}>
+                        {uploading ? 'Analyzing…' : isScanning ? 'Follow the instruction' : 'Tap to start scan'}
+                    </Text>
+                </View>
+            </View>
+
+            <Toast
+                style={toast.style}
+                visible={toast.visible}
+                message={toast.message}
+                type={toast.type}
+                fadeAnim={toast.fadeAnim}
+                buttons={toast.buttons}
+                onHide={toast.hide}
+            />
+        </View>
+    );
+};
+
+const styles = StyleSheet.create({
+    fullScreen: { flex: 1, backgroundColor: '#000' },
+    container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f1418' },
+    message: { textAlign: 'center', paddingBottom: 10, color: 'white', fontSize: 16 },
+
+    previewWrap: { flex: 1, position: 'relative', backgroundColor: '#000' },
+
+    topBar: {
+        position: 'absolute',
+        top: 44,
+        left: 16,
+        right: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    closeChip: {
+        position: 'absolute',
+        left: 0,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.10)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.18)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    title: { color: 'white', fontSize: 20, fontWeight: '700', letterSpacing: 0.2 },
+    subtitle: {
+        position: 'absolute',
+        top: 96,
+        left: 16,
+        right: 16,
+        textAlign: 'center',
+        color: 'rgba(255,255,255,0.72)',
+        fontSize: 14,
+        lineHeight: 20,
+    },
+
+    statusPill: {
+        position: 'absolute',
+        top: 132,
+        alignSelf: 'center',
+        maxWidth: '92%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 999,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.12)',
+    },
+    dot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
+    statusText: { color: 'rgba(255,255,255,0.9)', fontSize: 13, lineHeight: 18 },
+
+    centerOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
+
+    scanArea: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255,255,255,0.03)',
+    },
+    thinRing: { position: 'absolute', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
+
+    corner: { position: 'absolute', width: 28, height: 28, borderColor: 'rgba(255,255,255,0.65)' },
+    tl: { left: 18, top: 18, borderLeftWidth: 3, borderTopWidth: 3, borderTopLeftRadius: 10 },
+    tr: { right: 18, top: 18, borderRightWidth: 3, borderTopWidth: 3, borderTopRightRadius: 10 },
+    bl: { left: 18, bottom: 18, borderLeftWidth: 3, borderBottomWidth: 3, borderBottomLeftRadius: 10 },
+    br: { right: 18, bottom: 18, borderRightWidth: 3, borderBottomWidth: 3, borderBottomRightRadius: 10 },
+
+    sweepLine: {
+        position: 'absolute',
+        height: 2,
+        borderRadius: 2,
+        backgroundColor: 'rgba(96,165,250,0.9)',
+        shadowColor: '#60A5FA',
+        shadowOpacity: 0.6,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 0 },
+    },
+
+    centerDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.55)' },
+
+    progressRow: { marginTop: 22, alignItems: 'center' },
+    progressText: { color: 'rgba(255,255,255,0.92)', fontSize: 24, fontWeight: '700' },
+    stepRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+    stepPill: { width: 22, height: 6, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.18)' },
+    stepPillOn: { backgroundColor: 'rgba(96,165,250,0.95)' },
+
+    bottomArea: { position: 'absolute', bottom: 44, left: 0, right: 0, alignItems: 'center' },
+    captureOuter: {
+        width: 78,
+        height: 78,
+        borderRadius: 39,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.16)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    captureInner: {
+        width: 58,
+        height: 58,
+        borderRadius: 29,
+        backgroundColor: 'rgba(255,255,255,0.16)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.22)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    bottomHint: { marginTop: 12, color: 'rgba(255,255,255,0.75)', fontSize: 13 },
+});
+
+export default FaceScanWithDetection;

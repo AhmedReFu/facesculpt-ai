@@ -16,7 +16,7 @@
       "deploymentTarget": "15.5",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Allow camera access to scan your face",
+        "NSCameraUsageDescription": "This app uses the camera to capture facial images for AI-based face analysis, such as estimating facial symmetry, jawline structure, and visual appearance metrics. The captured images are processed only for providing personalized analysis results to the user",
         "NSLocationWhenInUseUsageDescription": "We use your location only for camera metadata needed for secure and accurate face scanning. Your location is not stored or tracked."
       }
     },
@@ -74,3 +74,4 @@
     }
   }
 }
+

@@ -17,21 +17,22 @@ const API_ENDPOINTS = {
 };
 
 interface PlanProps {
-  id: string
-  title: string
-  price: string
-  badge?: string
-  isSelected: boolean
-  onSelect: () => void
-}
-
-interface FormattedPackage {
   id: string;
   title: string;
-  price: string; // Display price in USD
-  localPrice?: string; // Local price for reference
+  price: string;
+  badge?: string;
+  isSelected: boolean;
+  onSelect: () => void;
+}
+
+type PlanId = 'monthly' | 'sixmonthly' | 'yearly';
+
+interface FormattedPackage {
+  id: PlanId;
+  title: string;
+  price: string;
   badge: string;
-  package: PurchasesPackage; // Store the actual RevenueCat package
+  package: PurchasesPackage;
   isTrialAvailable: boolean;
 }
 
@@ -46,651 +47,293 @@ const PlanItem = ({ title, price, badge, isSelected, onSelect }: PlanProps) => (
   >
     <View className="flex-row items-center justify-between">
       <View className="flex-row items-center flex-1">
-        <View className={`
-          w-6 h-6 rounded-full border-2 items-center justify-center mr-3
-          ${isSelected ? 'border-[#60A5FA]' : 'border-gray-500'}
-        `}>
-          {isSelected && (
-            <View className="w-3 h-3 rounded-full bg-[#60A5FA]" />
-          )}
+        <View
+          className={`
+            w-6 h-6 rounded-full border-2 items-center justify-center mr-3
+            ${isSelected ? 'border-[#60A5FA]' : 'border-gray-500'}
+          `}
+        >
+          {isSelected && <View className="w-3 h-3 rounded-full bg-[#60A5FA]" />}
         </View>
 
         <View className="flex-1">
           <View className="flex-row items-center">
-            <Text className="text-white text-xl font-bold">
-              {title}
-            </Text>
+            <Text className="text-white text-xl font-bold">{title}</Text>
           </View>
-          <Text className="text-[#9CA3AF] text-base mt-1">
-            {price}
-          </Text>
+          <Text className="text-[#9CA3AF] text-base mt-1">{price}</Text>
         </View>
-        {badge && (
+
+        {badge ? (
           <View className="bg-[#60A5FB66] px-3 py-2 rounded-2xl ml-3">
-            <Text className="text-white font-medium">
-              {badge}
-            </Text>
+            <Text className="text-white font-medium">{badge}</Text>
           </View>
-        )}
+        ) : null}
       </View>
     </View>
   </TouchableOpacity>
-)
+);
 
 const UnlockFacialGym = () => {
   const toast = useToast();
-  const navigator = useNavigation()
-  const [selectedPlan, setSelectedPlan] = useState<string>('')
-  const [plans, setPlans] = useState<FormattedPackage[]>([])
-  const [loading, setLoading] = useState(true)
-  const [purchasing, setPurchasing] = useState(false)
+  const navigator = useNavigation<any>();
 
-  // Fixed USD prices for display - these should match your RevenueCat USD prices
-  const displayPricesUSD = {
-    monthly: {
-      price: "$14.99/month",
-      title: "Monthly",
-      badge: ""
-    },
-    sixmonthly: {
-      price: "$69.99/6 months",
-      title: "6 Month Plan",
-      badge: "Popular"
-    },
-    yearly: {
-      price: "$119.99/year",
-      title: "Yearly",
-      badge: ""
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>('sixmonthly');
+  const [plans, setPlans] = useState<FormattedPackage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+
+  // ---------- API ----------
+  const callPaymentRequiredAPI = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return false;
+
+      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.PAYMENT_REQUIRED}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      return res.ok;
+    } catch (e) {
+      console.log('payment-required api error', e);
+      return false;
     }
   };
 
-  // Helper function to check if trial is available
-  const checkIfTrialAvailable = (product: any): boolean => {
-    // Method 1: Check introPrice directly
-    if (product.introPrice && product.introPrice.price === 0) {
-      return true;
-    }
+  // ✅ Same behavior like your previous: success/active -> API + redirect
+  const grantPremiumAndGo = async (planId: PlanId) => {
+    await AsyncStorage.setItem('subscribe', 'true');
+    await AsyncStorage.setItem('current_plan', planId);
 
-    // Method 2: Check subscription options
-    if (product.subscriptionOptions && Array.isArray(product.subscriptionOptions)) {
-      for (const option of product.subscriptionOptions) {
-        // Check if option has any property that indicates free trial
-        // Look for common patterns in RevenueCat data
-        const optionStr = JSON.stringify(option).toLowerCase();
-        if (optionStr.includes('free') || optionStr.includes('trial')) {
-          return true;
-        }
+    await callPaymentRequiredAPI();
 
-        // Check for specific properties that might indicate trial
-        if (option.introPrice && option.introPrice.price === 0) {
-          return true;
-        }
-
-        // Check for pricing phases if they exist
-        if ((option as any).phases && Array.isArray((option as any).phases)) {
-          const freePhase = (option as any).phases.find((phase: any) => phase.price === 0);
-          if (freePhase) {
-            return true;
-          }
-        }
-      }
-    }
-
-    // Method 3: Check product description
-    if (product.description && product.description.toLowerCase().includes('free trial')) {
-      return true;
-    }
-
-    return false;
+    toast.show({
+      message: '🎉 Premium unlocked! Welcome to FaceSculpt AI Premium!',
+      type: 'success',
+      style: 'center',
+      buttons: [
+        {
+          text: 'Get Started',
+          action: 'custom',
+          onPress: () => navigator.navigate('DailyTrack'),
+        },
+      ],
+    });
   };
 
-  // Get RevenueCat data and format it for UI
+  const hasPremium = async () => {
+    try {
+      const info = await Purchases.getCustomerInfo();
+      return !!info.entitlements.active?.premium;
+    } catch {
+      return false;
+    }
+  };
+
+  // ---------- Load RevenueCat plans ----------
   const getRevenueCatData = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
 
-      // Get user from storage for RevenueCat identification
+      // Optional login
       const stored = await AsyncStorage.getItem('user');
       const user = stored ? JSON.parse(stored) : null;
-
-      if (user && user.phone_number) {
+      if (user?.phone_number) {
         try {
           await Purchases.logIn(user.phone_number);
-          console.log("RevenueCat User Identified:", user.phone_number);
-        } catch (loginError) {
-          // console.log("RevenueCat login error:", loginError);
-          // Continue without login if it fails
+        } catch {
+        // ignore
         }
       }
 
-      // Fetch offerings from RevenueCat
       const offerings = await Purchases.getOfferings();
-      const premium = offerings?.current || offerings?.all?.premium;
+      const current = offerings?.current || offerings?.all?.premium;
 
-      // console.log("Premium offering:", JSON.stringify(premium, null, 2));
-
-      if (!premium || !premium.availablePackages || premium.availablePackages.length === 0) {
-        // console.log("No premium offering or packages found - using demo data");
-
-        // Use demo data with USD prices
-        const demoPlans: FormattedPackage[] = [
-          {
-            id: 'monthly',
-            title: displayPricesUSD.monthly.title,
-            price: displayPricesUSD.monthly.price,
-            badge: displayPricesUSD.monthly.badge,
-            package: null as any,
-            isTrialAvailable: true
-          },
-          {
-            id: 'sixmonthly',
-            title: displayPricesUSD.sixmonthly.title,
-            price: displayPricesUSD.sixmonthly.price,
-            badge: displayPricesUSD.sixmonthly.badge,
-            package: null as any,
-            isTrialAvailable: true
-          },
-          {
-            id: 'yearly',
-            title: displayPricesUSD.yearly.title,
-            price: displayPricesUSD.yearly.price,
-            badge: displayPricesUSD.yearly.badge,
-            package: null as any,
-            isTrialAvailable: true
-          }
-        ];
-        setPlans(demoPlans);
-        setSelectedPlan('sixmonthly'); // Default to popular plan
-        setLoading(false);
-        return;
+      if (!current || !current.availablePackages?.length) {
+        throw new Error('No offerings/packages found');
       }
 
-      // Mapping RevenueCat packageType → our IDs
-      const idMap: Record<string, string> = {
-        MONTHLY: "monthly",
-        SIX_MONTH: "sixmonthly",
-        ANNUAL: "yearly",
-        WEEKLY: "weekly",
-        THREE_MONTH: "threemonthly",
-        TWO_MONTH: "twomonthly"
-      };
+      // ✅ Map by packageType (this matches your debug output exactly)
+      const slot: Partial<Record<PlanId, FormattedPackage>> = {};
 
-      // Format packages for UI
-      const formatted: FormattedPackage[] = [];
+      for (const pkg of current.availablePackages) {
+        const type = String(pkg.packageType || '').toUpperCase();
 
-      for (const pkg of premium.availablePackages) {
-        const rcType = pkg.packageType;
-        const id = idMap[rcType];
+        let planId: PlanId | null = null;
+        if (type === 'MONTHLY') planId = 'monthly';
+        else if (type === 'SIX_MONTH') planId = 'sixmonthly';
+        else if (type === 'ANNUAL' || type === 'YEARLY') planId = 'yearly';
 
-        if (!id || !displayPricesUSD[id as keyof typeof displayPricesUSD]) {
-          console.warn(`Unknown or unsupported package type: ${rcType}`);
-          continue;
-        }
+        if (!planId) continue;
 
         const product = pkg.product;
-        const displayPrice = displayPricesUSD[id as keyof typeof displayPricesUSD];
 
-        // Check if free trial is available using helper function
-        const isTrialAvailable = checkIfTrialAvailable(product);
-
-        formatted.push({
-          id,
-          title: displayPrice.title,
-          price: displayPrice.price, // Always show USD price
-          localPrice: product.priceString, // Store local price for debugging
-          badge: displayPrice.badge,
+        slot[planId] = {
+          id: planId,
+          title: planId === 'monthly' ? 'Monthly' : planId === 'sixmonthly' ? '6 Month Plan' : 'Yearly',
+          badge: planId === 'sixmonthly' ? 'Popular' : '',
+          price: product.priceString || '—',
           package: pkg,
-          isTrialAvailable
-        });
-
-        // console.log(`Package ${id}:`, {
-        //   displayPrice: displayPrice.price,
-        //   localPrice: product.priceString,
-        //   hasTrial: isTrialAvailable,
-        //   productId: product.identifier,
-        //   introPrice: product.introPrice,
-        //   subscriptionOptions: product.subscriptionOptions
-        // });
+          isTrialAvailable: !!product.introPrice,
+        };
       }
 
-      // Sort plans: Popular first, then by order (monthly, sixmonthly, yearly)
-      const sortOrder = { monthly: 1, sixmonthly: 2, yearly: 3 };
-      formatted.sort((a, b) => {
-        // Popular badge first
-        if (a.badge === "Popular" && b.badge !== "Popular") return 1;
-        if (b.badge === "Popular" && a.badge !== "Popular") return 1;
+      const finalPlans: FormattedPackage[] = [];
+      if (slot.monthly) finalPlans.push(slot.monthly);
+      if (slot.sixmonthly) finalPlans.push(slot.sixmonthly);
+      if (slot.yearly) finalPlans.push(slot.yearly);
 
-        // Then by predefined order
-        return sortOrder[a.id as keyof typeof sortOrder] - sortOrder[b.id as keyof typeof sortOrder];
-      });
+      if (finalPlans.length === 0) {
+        throw new Error('No supported packages found (need MONTHLY/SIX_MONTH/ANNUAL)');
+      }
 
-      // console.log("FINAL PLANS DATA:", formatted);
-
-      setPlans(formatted);
-
-      // Set default selected plan
-      const popularPlan = formatted.find(p => p.badge === "Popular");
-      setSelectedPlan(popularPlan?.id || formatted[0]?.id || "");
-
+      setPlans(finalPlans);
+      setSelectedPlan(slot.sixmonthly ? 'sixmonthly' : finalPlans[0].id);
     } catch (error: any) {
-      console.error("RevenueCat Error:", error);
-
-      // Fallback to USD demo data on error
-      const demoPlans: FormattedPackage[] = [
-        {
-          id: 'monthly',
-          title: displayPricesUSD.monthly.title,
-          price: displayPricesUSD.monthly.price,
-          badge: displayPricesUSD.monthly.badge,
-          package: null as any,
-          isTrialAvailable: true
-        },
-        {
-          id: 'sixmonthly',
-          title: displayPricesUSD.sixmonthly.title,
-          price: displayPricesUSD.sixmonthly.price,
-          badge: displayPricesUSD.sixmonthly.badge,
-          package: null as any,
-          isTrialAvailable: true
-        },
-        {
-          id: 'yearly',
-          title: displayPricesUSD.yearly.title,
-          price: displayPricesUSD.yearly.price,
-          badge: displayPricesUSD.yearly.badge,
-          package: null as any,
-          isTrialAvailable: true
-        }
-      ];
-
-      setPlans(demoPlans);
-      setSelectedPlan('sixmonthly');
-
-      // Show error toast if needed
+      console.log('RevenueCat Error:', error);
       toast.show({
-        message: 'Unable to load subscription plans. Please check your internet connection.',
-        type: 'warning',
+        message: 'Unable to load subscription plans. Please try again.',
+        type: 'error',
         style: 'center',
-        buttons: [{ text: 'OK', action: 'dismiss' }]
+        buttons: [{ text: 'OK', action: 'dismiss' }],
       });
-
     } finally {
       setLoading(false);
     }
   };
 
-  // Load RevenueCat data on component mount
   useEffect(() => {
     getRevenueCatData();
-
-    // Optional: Add listener for purchases restored from outside the app
-    const setupPurchaseListeners = () => {
-      Purchases.addCustomerInfoUpdateListener((customerInfo) => {
-        // console.log("Customer info updated:", customerInfo);
-        if (customerInfo.entitlements.active?.premium) {
-          // console.log("User has active premium subscription");
-        }
-      });
-    };
-
-    setupPurchaseListeners();
-
-    return () => {
-      // Clean up listeners if needed
-    };
+    Purchases.addCustomerInfoUpdateListener((customerInfo) => {
+      if (customerInfo.entitlements.active?.premium) {
+        // premium
+      }
+    });
   }, []);
 
-  const handleSelectPlan = (planId: string) => {
-    setSelectedPlan(planId)
-    // console.log('Selected plan:', planId)
-  }
+  const handleSelectPlan = (planId: PlanId) => setSelectedPlan(planId);
 
-  // Helper function to call payment required API
-  const callPaymentRequiredAPI = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        console.warn('No token found for API call');
-        return false;
-      }
-
-      console.log('📡 Calling payment required API...');
-      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.PAYMENT_REQUIRED}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        console.log('✅ Payment required API called successfully');
-        return true;
-      } else {
-        console.warn('⚠️ Payment required API call failed:', response.status);
-        return false;
-      }
-    } catch (apiError) {
-      console.error('❌ API call error:', apiError);
-      return false;
-    }
-  };
-
+  // ---------- Subscribe ----------
   const handleSubscribe = async () => {
     if (purchasing) return;
 
     try {
       setPurchasing(true);
 
-      // Find the selected plan
+      // already premium -> old behavior
+      if (await hasPremium()) {
+        await grantPremiumAndGo(selectedPlan);
+        return;
+      }
+
       const selectedPlanData = plans.find(p => p.id === selectedPlan);
 
-      if (!selectedPlanData) {
+      if (!selectedPlanData?.package) {
         toast.show({
-          message: 'Please select a plan first',
+          message: 'Subscriptions are currently unavailable. Please try again later.',
           type: 'error',
           style: 'center',
-          buttons: [{ text: 'OK', action: 'dismiss' }]
+          buttons: [{ text: 'OK', action: 'dismiss' }],
         });
         return;
       }
 
-      // Check if we have a real RevenueCat package
-      if (!selectedPlanData.package) {
-        // Demo mode - simulate purchase
-        await new Promise(resolve => setTimeout(resolve, 1500));
+      const result = await Purchases.purchasePackage(selectedPlanData.package);
 
-        await AsyncStorage.setItem("subscribe", "true");
-        await AsyncStorage.setItem("current_plan", selectedPlan);
-
-        // ✅ Demo mode-এ API কল করুন
-        const apiSuccess = await callPaymentRequiredAPI();
-
-        toast.show({
-          message: '🎉 Your 7-day free trial has started. Welcome to FaceSculpt AI Premium!',
-          type: 'success',
-          style: 'center',
-          buttons: [
-            {
-              text: 'Get Started',
-              action: 'custom',
-              onPress: () => navigator.navigate("DailyTrack" as never)
-            }
-          ]
-        });
-
+      if (result?.customerInfo?.entitlements?.active?.premium) {
+        await grantPremiumAndGo(selectedPlanData.id);
         return;
       }
 
-      // Real purchase with RevenueCat
-      const makePurchaseResult = await Purchases.purchasePackage(
-        selectedPlanData.package,
-        null,
-        null,
-        null
-      );
-
-      // Check if purchase was successful
-      if (makePurchaseResult.customerInfo.entitlements.active?.premium) {
-        console.log('✅ Purchase successful!', makePurchaseResult.customerInfo);
-
-        // Store subscription info
-        await AsyncStorage.setItem("subscribe", "true");
-        await AsyncStorage.setItem("current_plan", selectedPlan);
-        await AsyncStorage.setItem("revenuecat_customer_info", JSON.stringify(makePurchaseResult.customerInfo));
-
-        // ✅ সফল Purchase হলে API কল করুন
-        await callPaymentRequiredAPI();
-
-        toast.show({
-          message: '🎉 Purchase successful! Welcome to FaceSculpt AI Premium!',
-          type: 'success',
-          style: 'center',
-          buttons: [
-            {
-              text: 'Get Started',
-              action: 'custom',
-              onPress: () => navigator.navigate("DailyTrack")
-            }
-          ]
-        });
-      } else {
-        // This shouldn't happen if purchase is successful, but handle it anyway
-        console.log('Purchase completed but no active entitlement');
-        await AsyncStorage.setItem("subscribe", "true");
-        await AsyncStorage.setItem("current_plan", selectedPlan);
-        await AsyncStorage.setItem("revenuecat_customer_info", JSON.stringify(makePurchaseResult.customerInfo));
-
-        // ✅ এখানেও API কল করুন
-        await callPaymentRequiredAPI();
-
-        toast.show({
-          message: '🎉 Purchase successful! Welcome to FaceSculpt AI Premium!',
-          type: 'success',
-          style: 'center',
-          buttons: [
-            {
-              text: 'Get Started',
-              action: 'custom',
-              onPress: () => navigator.navigate("DailyTrack")
-            }
-          ]
-        });
+      // entitlement may update slightly later
+      const again = await Purchases.getCustomerInfo();
+      if (again.entitlements.active?.premium) {
+        await grantPremiumAndGo(selectedPlanData.id);
+        return;
       }
 
+      toast.show({
+        message: 'Purchase completed. Verifying subscription… Please try again or Restore Purchases.',
+        type: 'warning',
+        style: 'center',
+        buttons: [{ text: 'OK', action: 'dismiss' }],
+      });
     } catch (error: any) {
-      console.log('Purchase error code:', error.code);
+      if (error?.userCancelled) return;
 
-      if (error.code === "ProductAlreadyPurchasedError") {
-        // ✅ ProductAlreadyPurchasedError হলে API কল করুন
-        await AsyncStorage.setItem("subscribe", "true");
-        await AsyncStorage.setItem("current_plan", selectedPlan);
+      const msg = String(error?.message || '').toLowerCase();
+      const code = String(error?.code || '');
 
-        // API কল করুন
-        await callPaymentRequiredAPI();
-
-        toast.show({
-          message: "You're already subscribed!",
-          type: "success",
-          style: 'top',
-          buttons: [{
-            text: 'OK',
-            action: 'custom',
-            onPress: () => navigator.navigate('DailyTrack')
-          }]
-        });
-      } else if (error.message === 'This product is already active for the user.') {
-        // ✅ Active product এর ক্ষেত্রেও API কল করুন
-        await AsyncStorage.setItem("subscribe", "true");
-        await AsyncStorage.setItem("current_plan", selectedPlan);
-
-        // API কল করুন
-        await callPaymentRequiredAPI();
-
-        toast.show({
-          message: "You're already subscribed!",
-          type: 'success',
-          style: 'center',
-          buttons: [
-            {
-              text: 'OK',
-              action: 'custom',
-              onPress: () => navigator.navigate('DailyTrack')
-            }
-          ]
-        });
+      // already subscribed/active -> API + redirect
+      if (
+        code === 'ProductAlreadyPurchasedError' ||
+        msg.includes('already active') ||
+        msg.includes('already subscribed') ||
+        msg.includes('already purchased')
+      ) {
+        await grantPremiumAndGo(selectedPlan);
+        return;
       }
-      // Check other error codes
-      else {
-        const errorCode = Purchases.PURCHASES_ERROR_CODE;
 
-        if (error.code === errorCode.PURCHASE_CANCELLED_ERROR) {
-          console.log('User cancelled purchase');
-          // Don't show error for cancellation
-        } else if (error.code === errorCode.NETWORK_ERROR) {
-          toast.show({
-            message: 'Network error. Please check your internet connection and try again.',
-            type: 'error',
-            style: 'center',
-            buttons: [{ text: 'OK', action: 'dismiss' }]
-          });
-        } else {
-          toast.show({
-            message: error.message || 'Something went wrong. Please try again.',
-            type: 'error',
-            style: 'center',
-            buttons: [{ text: 'OK', action: 'dismiss' }]
-          });
-        }
-      }
+      toast.show({
+        message: error?.message || 'Something went wrong. Please try again.',
+        type: 'error',
+        style: 'center',
+        buttons: [{ text: 'OK', action: 'dismiss' }],
+      });
     } finally {
       setPurchasing(false);
     }
-  }
+  };
 
+  // ---------- Restore ----------
   const handleRestorePurchases = async () => {
     try {
       setLoading(true);
-      const stored = await AsyncStorage.getItem('user');
-      const user = stored ? JSON.parse(stored) : null;
 
-      await Purchases.logIn(user.phone_number);
-      // console.log("RevenueCat User Identified:", user.phone_number);
-
-      // Restore purchases through RevenueCat
       const customerInfo = await Purchases.restorePurchases();
 
-      // Get the facesclupt_ai subscription data
-      const facesculptSubscription = customerInfo.subscriptionsByProductIdentifier?.facesclupt_ai;
-
-      if (facesculptSubscription) {
-        // Validate the subscription
-        const isActive = facesculptSubscription.isActive === true;
-        const isSandbox = facesculptSubscription.isSandbox === true;
-
-        // console.log("📱 Facesculpt AI Subscription Details:", {
-        //   productIdentifier: facesculptSubscription.productIdentifier,
-        //   isActive,
-        //   isSandbox,
-        //   expiresDate: facesculptSubscription.expiresDate,
-        //   purchaseDate: facesculptSubscription.purchaseDate,
-        //   willRenew: facesculptSubscription.willRenew,
-        //   store: facesculptSubscription.store
-        // });
-
-        // Validate if subscription is valid (active and not expired)
-        if (isActive) {
-          console.log("✅ Valid subscription - Grant access to premium features");
-          // Grant access to premium features
-          toast.show({
-            message: 'Your purchases have been restored successfully!',
-            type: 'success',
-            style: 'center',
-            buttons: [
-              {
-                text: 'OK',
-                action: 'custom',
-                onPress: () => navigator.navigate("DailyTrack" as never)
-              }
-            ]
-          });
-        } else {
-          console.log("❌ Subscription invalid - Restrict access");
-          // if (!isActive) console.log("   Reason: Subscription is not active");
-        }
-
-        // Check if it's a sandbox purchase (testing)
-        if (isSandbox) {
-          // console.log("🔧 Note: This is a SANDBOX purchase (testing environment)");
-          toast.show({
-            message: 'Your purchases have been restored successfully!',
-            type: 'success',
-            style: 'center',
-            buttons: [
-              {
-                text: 'OK',
-                action: 'custom',
-                onPress: () => navigator.navigate("DailyTrack" as never)
-              }
-            ]
-          });
-        }
-      } else {
-        // console.log("❌ No facesclupt_ai subscription found in subscriptionsByProductIdentifier");
-      }
-
-
       if (customerInfo.entitlements.active?.premium) {
-        // console.log('Restore successful:', customerInfo);
-
-        // Store updated customer info
-        await AsyncStorage.setItem("subscribe", "true");
-        await AsyncStorage.setItem("revenuecat_customer_info", JSON.stringify(customerInfo));
-
-        // ⚠️ Restore-এর ক্ষেত্রে API কল করবেন না (আপনার requirement অনুযায়ী)
-        // await callPaymentRequiredAPI(); // ❌ এটা রিমুভ করে দিয়েছি
-
-        toast.show({
-          message: 'Your purchases have been restored successfully!',
-          type: 'success',
-          style: 'center',
-          buttons: [
-            {
-              text: 'OK',
-              action: 'custom',
-              onPress: () => navigator.navigate("DailyTrack" as never)
-            }
-          ]
-        });
-      } else {
-        toast.show({
-          message: 'No active subscription found to restore.',
-          type: 'warning',
-          style: 'center',
-          buttons: [{ text: 'OK', action: 'dismiss' }]
-        });
+        await grantPremiumAndGo(selectedPlan);
+        return;
       }
-    } catch (error) {
-      console.error('Restore error:', error);
+
       toast.show({
-        message: 'Failed to restore purchases. Please try again.',
+        message: 'No active subscription found to restore.',
+        type: 'warning',
+        style: 'center',
+        buttons: [{ text: 'OK', action: 'dismiss' }],
+      });
+    } catch (error: any) {
+      console.log('Restore error:', error);
+      toast.show({
+        message: error?.message || 'Failed to restore purchases. Please try again.',
         type: 'error',
         style: 'center',
-        buttons: [{ text: 'OK', action: 'dismiss' }]
+        buttons: [{ text: 'OK', action: 'dismiss' }],
       });
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  // Get trial text based on selected plan
   const getTrialText = () => {
-    if (!selectedPlan) return '';
-
     const selectedPlanData = plans.find(p => p.id === selectedPlan);
     if (!selectedPlanData) return '';
 
     const hasTrial = selectedPlanData.isTrialAvailable;
     const priceText = selectedPlanData.price;
 
-    if (hasTrial) {
-      return `Try free for 7 days, then ${priceText}. Cancel anytime.`;
-    } else {
-      return `Subscribe for ${priceText}. Cancel anytime.`;
-    }
-  }
+    if (hasTrial) return `Try free for 7 days, then ${priceText}. Cancel anytime.`;
+    return `Subscribe for ${priceText}. Cancel anytime.`;
+  };
 
-  // Get button text based on trial availability
   const getButtonText = () => {
-    if (!selectedPlan) return "Subscribe Now";
-
     const selectedPlanData = plans.find(p => p.id === selectedPlan);
-    if (!selectedPlanData) return "Subscribe Now";
+    if (!selectedPlanData) return 'Subscribe Now';
 
-    return selectedPlanData.isTrialAvailable
-      ? "Start Free 7-Day Trial"
-      : "Subscribe Now";
-  }
+    return selectedPlanData.isTrialAvailable ? 'Start Free 7-Day Trial' : 'Start Free 7-Day Trial';
+  };
 
   if (loading) {
     return (
@@ -703,17 +346,14 @@ const UnlockFacialGym = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-[#000000] px-4">
-      <StatusBar style='light' />
+      <StatusBar style="light" />
       <View className="mt-2 flex-1">
         <View className="mb-6">
           <View className="flex-row justify-between items-start">
             <Text className="text-white text-2xl font-bold flex-1 mr-4">
               Unlock Your Facial Gym
             </Text>
-            <TouchableOpacity
-              onPress={() => navigator.goBack()}
-              className="mt-1"
-            >
+            <TouchableOpacity onPress={() => navigator.goBack()} className="mt-1">
               <Ionicons name="close" size={32} color="white" />
             </TouchableOpacity>
           </View>
@@ -743,6 +383,7 @@ const UnlockFacialGym = () => {
 
         <View className="mt-6">
           <Text className="text-white text-lg font-bold mb-2">Choose Your Plan:</Text>
+
           {plans.map((plan) => (
             <PlanItem
               key={plan.id}
@@ -779,21 +420,10 @@ const UnlockFacialGym = () => {
           </TouchableOpacity>
         </View>
 
-        {selectedPlan && (
-          <Text className="text-white text-center text-base mb-4">
-            {getTrialText()}
-          </Text>
-        )}
-
-        {/* Optional: Add a note about currency conversion */}
-
+        <Text className="text-white text-center text-base mb-4">{getTrialText()}</Text>
 
         <View className="my-4">
-          <TouchableOpacity
-            onPress={handleRestorePurchases}
-            className="py-3"
-            disabled={loading}
-          >
+          <TouchableOpacity onPress={handleRestorePurchases} className="py-3" disabled={loading}>
             <Text className={`text-lg font-medium ${loading ? 'text-gray-500' : 'text-[#60A5FB]'}`}>
               Restore Purchases
             </Text>
@@ -805,7 +435,6 @@ const UnlockFacialGym = () => {
         </View>
       </View>
 
-      {/* Toast Component */}
       <Toast
         style={toast.style}
         visible={toast.visible}
@@ -816,7 +445,7 @@ const UnlockFacialGym = () => {
         onHide={toast.hide}
       />
     </SafeAreaView>
-  )
-}
+  );
+};
 
-export default UnlockFacialGym
+export default UnlockFacialGym;

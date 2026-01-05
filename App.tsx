@@ -98,13 +98,15 @@ function RootStack() {
   const [showNoInternet, setShowNoInternet] = React.useState(false);
   const [isChecking, setIsChecking] = React.useState(true);
 
+  Purchases.configure({
+    apiKey: Platform.select({
+      ios: REVENUE_API_APPLE,     // iOS key
+      android: REVENUE_API_ANDROID, // Android key
+    })!,
+  });
+
   // Check internet connection + configure RevenueCat
   const checkConnection = React.useCallback(async () => {
-    if (Platform.OS === 'android') {
-      Purchases.configure({ apiKey: REVENUE_API_ANDROID });
-    } else if (Platform.OS === 'ios') {
-      Purchases.configure({ apiKey: REVENUE_API_APPLE });
-    }
 
     try {
       setIsChecking(true);
