@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Dimensions,
   LayoutChangeEvent,
+  Pressable,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -740,7 +741,7 @@ const DailyTrack = () => {
             </View>
           ))}
 
-          <View style={tw`my-5 bg-[#181C22] rounded-3xl p-5 mb-20`}>
+          <View style={tw`my-5 bg-[#181C22] rounded-3xl p-5 mb-4`}>
             <View style={tw`flex-row items-center justify-between mb-4`}>
               <View style={tw`flex-row items-center`}>
                 <FontAwesome6 name="chart-simple" size={24} color="#60A5FB" />
@@ -766,6 +767,11 @@ const DailyTrack = () => {
               <LeaderboardEntry key={entry.rank} entry={entry} />
             ))}
           </View>
+          <Pressable
+            style={tw`bg-red-600 rounded-2xl p-4 items-center mb-20`}
+          >
+            <Text style={tw`text-white font-bold text-base`}>Account Delete</Text>
+          </Pressable>
         </View>
       </ScrollView>
 

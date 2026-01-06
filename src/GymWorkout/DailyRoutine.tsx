@@ -27,7 +27,7 @@ const DailyRoutine = () => {
         });
     };
 
-    const handleStartWorkout = () => {
+    const handleStartWorkout = async () => {
         if (isWorkoutCompleted) {
             navigation.navigate('DailyTrack');
         } else {
@@ -66,7 +66,6 @@ const DailyRoutine = () => {
     }
 
     if (exercises.length === 0) {
-        useWorkout()
         return (
             <View className="flex-1 bg-[#000000] px-4">
                 <StatusBar style="light" />

@@ -100,6 +100,9 @@ const UnlockFacialGym = () => {
     }
   };
 
+  //debug alert
+
+
   // ✅ Same behavior like your previous: success/active -> API + redirect
   const grantPremiumAndGo = async (planId: PlanId) => {
     await AsyncStorage.setItem('subscribe', 'true');
@@ -152,6 +155,22 @@ const UnlockFacialGym = () => {
       if (!current || !current.availablePackages?.length) {
         throw new Error('No offerings/packages found');
       }
+
+      const debugText =
+        `Offer: ${current?.identifier || 'null'}\n` +
+        `Count: ${current?.availablePackages?.length || 0}\n` +
+        (current?.availablePackages || []).map((p: any) =>
+          `${p.identifier} | ${p.packageType} | ${p.product?.identifier} | ${p.product?.priceString}`
+        ).join('\n');
+
+      toast.show({
+        message: debugText,
+        type: 'warning',
+        style: 'center',
+        duration: 10000, // 10 sec so you can screenshot
+        buttons: [{ text: 'OK', action: 'dismiss' }],
+      });
+
 
       // ✅ Map by packageType (this matches your debug output exactly)
       const slot: Partial<Record<PlanId, FormattedPackage>> = {};
@@ -421,6 +440,30 @@ const UnlockFacialGym = () => {
         </View>
 
         <Text className="text-white text-center text-base mb-4">{getTrialText()}</Text>
+        <TouchableOpacity
+          onPress={async () => {
+            const offerings = await Purchases.getOfferings();
+            const current = offerings?.current || offerings?.all?.premium;
+
+            const debugText =
+              'OFFERING=' + (current?.identifier || 'null') + '\n' +
+              'PKG_COUNT=' + (current?.availablePackages?.length || 0) + '\n\n' +
+              (current?.availablePackages || []).map((p: any) => {
+                return `${p.identifier} | ${p.packageType} | ${p.product?.identifier} | ${p.product?.priceString}`;
+              }).join('\n');
+            toast.show({
+              message: 'RC DEBUG' + debugText,
+              type: 'warning',
+              style: 'center',
+              duration: 10000, // 10 sec so you can screenshot
+              buttons: [{ text: 'OK', action: 'dismiss' }],
+            });
+
+          }}
+          style={{ padding: 12, marginTop: 12 }}
+        >
+          <Text style={{ color: '#60A5FB', textAlign: 'center' }}>Show RC Debug</Text>
+        </TouchableOpacity>
 
         <View className="my-4">
           <TouchableOpacity onPress={handleRestorePurchases} className="py-3" disabled={loading}>

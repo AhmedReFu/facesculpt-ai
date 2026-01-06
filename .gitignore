@@ -8,7 +8,8 @@ node_modules/
 .expo/
 dist/
 web-build/
-_blank.txt  # ← Add this line
+
+# ← Add this line
 
 # Native
 .kotlin/
