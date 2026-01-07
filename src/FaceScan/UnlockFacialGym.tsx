@@ -155,7 +155,12 @@ const UnlockFacialGym = () => {
       if (!current || !current.availablePackages?.length) {
         throw new Error('No offerings/packages found');
       }
-
+      toast.show({
+        message: offerings.all?.premium.availablePackages.length.toString(),
+        type: "warning",
+        style: 'center',
+        buttons: [{ text: 'OK', action: 'dismiss' }],
+      })
       const debugText =
         `Offer: ${current?.identifier || 'null'}\n` +
         `Count: ${current?.availablePackages?.length || 0}\n` +
@@ -167,7 +172,6 @@ const UnlockFacialGym = () => {
         message: debugText,
         type: 'warning',
         style: 'center',
-        duration: 10000, // 10 sec so you can screenshot
         buttons: [{ text: 'OK', action: 'dismiss' }],
       });
 
@@ -451,11 +455,11 @@ const UnlockFacialGym = () => {
               (current?.availablePackages || []).map((p: any) => {
                 return `${p.identifier} | ${p.packageType} | ${p.product?.identifier} | ${p.product?.priceString}`;
               }).join('\n');
+
             toast.show({
-              message: 'RC DEBUG' + debugText,
+              message: debugText,
               type: 'warning',
               style: 'center',
-              duration: 10000, // 10 sec so you can screenshot
               buttons: [{ text: 'OK', action: 'dismiss' }],
             });
 
