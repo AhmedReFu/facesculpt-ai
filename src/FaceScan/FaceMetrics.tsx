@@ -64,7 +64,7 @@ const FaceMetrics = () => {
         // initial delay so backend has time to process
         const t = setTimeout(() => {
             getImageData();
-        }, 20000);
+        }, 10000);
 
         return () => {
             if (retryTimeoutRef.current) {

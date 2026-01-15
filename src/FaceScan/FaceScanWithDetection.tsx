@@ -318,6 +318,7 @@ const FaceScanWithDetection = () => {
                     setUploading(false);
                     (navigation as any).replace('FaceMetrics');
                 }, 1000);
+                return;
             } else {
                 throw new Error(result.message || 'Failed to upload image.');
             }
@@ -331,6 +332,7 @@ const FaceScanWithDetection = () => {
                 style: 'center',
                 buttons: [{ text: 'OK', action: 'dismiss' }],
             });
+            return;
         }
     };
 
